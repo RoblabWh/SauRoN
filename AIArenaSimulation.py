@@ -6,6 +6,10 @@ import pymunk.pyglet_util
 import random
 import time
 import math
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+
 
 options = DrawOptions()
 WIDTH = 1280
@@ -170,9 +174,17 @@ def compute_next_position(position, velocity, timestep):
 
 
 global soll_velocity
+
+
+array_velocity = np.array([])
+array_time_difference = np.array([])
+
 #velocity = 8
 i = 0
 def compute_next_velocity(old_velocity):
+    global array_velocity
+    global array_time_difference
+
     global i
     i += 1
    # print("i" + str(i))
@@ -204,6 +216,13 @@ def compute_next_velocity(old_velocity):
     if soll_velocity and old_velocity <= max_linear_velocity:
         if old_velocity > soll_velocity:
             velocity = old_velocity + max_brake_acceleration * dt
+
+    time_difference = time.time() - start_time
+
+    array_time_difference = np.append(array_time_difference, time_difference)
+
+    array_velocity = np.append(array_velocity, velocity)
+   # print("array_velocity" + str(array_velocity))
 
 
     print("velocity: " + str(velocity))
@@ -253,6 +272,7 @@ def compute_degrees(angle_radiant):
     angle_deg = angle_radiant * 180 / math.pi
     return angle_deg
 
+
 def compute_radiant(angle_degrees):
     angle_rad = angle_degrees * math.pi / 180
     return angle_rad
@@ -288,6 +308,8 @@ def compute_speed(velocity):
 
 def move(body):
 
+
+
     # speed = 5
     # Koordinatentransformation
  #   body.position += (math.cos(body.angle) * compute_speed(velocity=0),
@@ -320,8 +342,16 @@ def move(body):
 
 '''
 
+def plot_velocity():
+    plt.plot(array_time_difference, array_velocity)
+    plt.xlabel("Zeit t in Sekunden")
+    plt.ylabel("Geschwindigkeit in m/s")
+    plt.show()
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     pyglet.clock.schedule_interval(update, 1.0 / 60)
     pyglet.app.run()
+    print("--- %s seconds --- " % (time.time() - start_time))
+    plot_velocity()
