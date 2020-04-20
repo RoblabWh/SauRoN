@@ -163,6 +163,24 @@ class Simulation:
 
         self.timer.start(self.simTimestep * 1000)
 
+    def collideWithPickUp(self):
+            # rechts, links, oben, unten
+        if meterToPixel(self.robot.getPosX()) <= meterToPixel(self.pickUp.getPosX() + self.pickUp.getWidth()) and \
+                meterToPixel(self.robot.getPosX() + self.robot.getWidth()) >= meterToPixel(self.pickUp.getPosX()) and \
+                meterToPixel(self.robot.getPosY() + self.robot.getLength()) >= meterToPixel(self.pickUp.getPosY()) and \
+                meterToPixel(self.robot.getPosY()) <= meterToPixel(self.pickUp.getPosY() + self.pickUp.getLength()):
+
+            print("Found Pick Up Station")
+
+    def collideWithDeliveryStation(self):
+
+        if meterToPixel(self.robot.getPosX()) <= meterToPixel(self.delivery.getPosX() + self.delivery.getWidth()) and \
+                meterToPixel(self.robot.getPosX() + self.robot.getWidth()) >= meterToPixel(self.delivery.getPosX()) and \
+                meterToPixel(self.robot.getPosY() + self.robot.getLength()) >= meterToPixel(self.delivery.getPosY()) and \
+                meterToPixel(self.robot.getPosY()) <= meterToPixel(self.delivery.getPosY() + self.delivery.getLength()):
+
+            print("Found Delivery Station")
+
 
     def update(self):
         self.simTime += self.simTimestep
@@ -179,6 +197,8 @@ class Simulation:
             self.robot.setPose(5,5)
             self.robot.linearVelocity = 0
 
+        self.collideWithPickUp()
+        self.collideWithDeliveryStation()
         self.agent.update(self.simTimestep)
         self.robot.update(self.simTimestep)
 
@@ -220,6 +240,7 @@ class Robot:
     def setTargetVelocity(self, newTargetLinearVelocity, newTargetAngularVelocity):
         self.targetLinearVelocity = newTargetLinearVelocity
         self.targetAngularVelocity = newTargetAngularVelocity
+
 
 
     def update(self, dt):
