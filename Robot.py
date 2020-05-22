@@ -47,14 +47,14 @@ class Robot:
 
         # Tastatursteuerung des Roboters zu Testzwecken
 
-        if keyboard.is_pressed('right'):
-            self.posX += 0.05
-        if keyboard.is_pressed('left'):
-            self.posX -= 0.05
-        if keyboard.is_pressed('up'):
-            self.posY -= 0.05
-        if keyboard.is_pressed('down'):
-            self.posY += 0.05
+#        if keyboard.is_pressed('right'):
+#            self.posX += 0.05
+#        if keyboard.is_pressed('left'):
+#            self.posX -= 0.05
+#        if keyboard.is_pressed('up'):
+#            self.posY -= 0.05
+#        if keyboard.is_pressed('down'):
+#            self.posY += 0.05
 
 
     def compute_next_velocity(self, dt):

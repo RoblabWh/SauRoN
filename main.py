@@ -14,7 +14,7 @@ def main():
         obs = env.get_observation()
         possible_actions = env.get_actions()
         action, targetLinVel = agent.predict(obs, possible_actions)
-        print("Gewählte Aktion: " + str(action))
+        print("Gewaehlte Aktion: " + str(action))
         print("Target Linear Velocity: " + str(targetLinVel))
         reward = env.step(action, targetLinVel)
         agent.total_reward += reward

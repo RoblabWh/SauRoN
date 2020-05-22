@@ -44,8 +44,8 @@ class Environment:
         if action == 2:
             self.simulation.getRobot().setTargetVelocity(targetLinVel + 0.5, 0)
 
-        # Aktion = 3 = Bremsen / Rückwärtsfahren (wenn minLinearVelocity in Robot negativ ist,
-        # dann kann er rückwärts fahren, ansonsten stoppt er bei 0)
+        # Aktion = 3 = Bremsen / Rueckwaertsfahren (wenn minLinearVelocity in Robot negativ ist,
+        # dann kann er rueckwaerts fahren, ansonsten stoppt er bei 0)
         if action == 3:
             self.simulation.getRobot().setTargetVelocity(targetLinVel - 0.5, 0)
 
