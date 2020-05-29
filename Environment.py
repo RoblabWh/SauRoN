@@ -21,7 +21,7 @@ class Environment:
         return [xPos, yPos, linVel, angVel, xGoal, yGoal]  # Pos, Geschwindigkeit, Zielposition
 
     def get_actions(self):
-        return [0, 1, 2, 3]         # Links, Rechts, Oben, Unten
+        return [0, 1, 2]         # Links, Rechts, Oben, Unten
 
     def is_done(self):
         return self.steps_left <= 0
@@ -34,20 +34,27 @@ class Environment:
 
         # Aktion = 0 = Links
         if action == 0:
-            self.simulation.getRobot().setTargetVelocity(targetLinVel, angular - 0.5)
+            #self.simulation.getRobot().setTargetVelocity(targetLinVel, angular - 0.5)
+            self.simulation.getRobot().setTargetVelocity(1, -1)
 
         # Aktion = 1 = Rechts
         if action == 1:
-            self.simulation.getRobot().setTargetVelocity(targetLinVel, angular + 0.5)
+            #self.simulation.getRobot().setTargetVelocity(targetLinVel, angular + 0.5)
+            self.simulation.getRobot().setTargetVelocity(1, 1)
 
         # Aktion = 2 = Vorne
         if action == 2:
-            self.simulation.getRobot().setTargetVelocity(targetLinVel + 0.5, 0)
+            #self.simulation.getRobot().setTargetVelocity(targetLinVel + 0.5, 0)
+            self.simulation.getRobot().setTargetVelocity(1.5, 0)
 
         # Aktion = 3 = Bremsen / Rueckwaertsfahren (wenn minLinearVelocity in Robot negativ ist,
         # dann kann er rueckwaerts fahren, ansonsten stoppt er bei 0)
         if action == 3:
-            self.simulation.getRobot().setTargetVelocity(targetLinVel - 0.5, 0)
+            #self.simulation.getRobot().setTargetVelocity(targetLinVel - 0.5, 0)
+           # self.simulation.getRobot().setTargetVelocity(0, 0)   # stehen bleiben
+            pass
+
+
 
         # einzeln Abstand berechnen
         robot_pose_old_x = self.simulation.getRobot().getPosX()

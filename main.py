@@ -1,5 +1,7 @@
 import Environment, Agent, sys
+import tensorflow as tf
 from PyQt5.QtWidgets import QApplication
+
 
 # Workaround for not getting error message
 #def except_hook(cls, exception, traceback):
@@ -7,6 +9,7 @@ from PyQt5.QtWidgets import QApplication
 
 
 def main():
+    print(tf.__version__)   # Test für Tensorflow
     app = QApplication(sys.argv)
     env = Environment.Environment(app)
     agent = Agent.Agent()

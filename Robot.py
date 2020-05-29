@@ -1,5 +1,5 @@
 import math
-import keyboard
+# import keyboard
 
 
 class Robot:

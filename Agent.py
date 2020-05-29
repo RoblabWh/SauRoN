@@ -1,4 +1,6 @@
 import random
+import tensorflow as tf
+import keras as k
 
 
 class Agent:

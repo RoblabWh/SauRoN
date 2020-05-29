@@ -17,7 +17,7 @@ class Simulation:
       #  self.plotterWindow = plotterWindow
 
         self.simTime = 0         # s
-        self.simTimestep = 0.01  # s
+        self.simTimestep = 0.05  # s
 
         self.robot = Robot.Robot(5.0, 5.0, 0.0)
         self.pickUp = PickUpStation.PickUpStation(8.0, 1.0, 0.5, 0.5)
