@@ -8,6 +8,7 @@ class Environment:
         self.simulation = Simulation.Simulation(app)
 
 
+
   #  def show(self):
   #      self.simulation.show()
 
@@ -26,11 +27,16 @@ class Environment:
     def is_done(self):
         return self.steps_left <= 0
 
-    def step(self, action, targetLinVel):
+    def step(self, action):
+        done = False
         if self.is_done():
-            raise Exception("Game is over")
+            done = True
+            # raise Exception("Game is over")
         self.steps_left -= 1
         linear, angular = self.simulation.getRobot().getVelocity()
+        current_state = (self.simulation.getRobot().getPosX(), self.simulation.getRobot().getPosY(),
+                         self.simulation.getRobot().getLinearVelocity(), self.simulation.getRobot().getAngularVelocity(),
+                         self.simulation.getGoalX(), self.simulation.getGoalY())
 
         # Aktion = 0 = Links
         if action == 0:
@@ -65,6 +71,11 @@ class Environment:
         # Update der Simulation
         self.simulation.update()
 
+        next_state = (self.simulation.getRobot().getPosX(), self.simulation.getRobot().getPosY(),
+                     self.simulation.getRobot().getLinearVelocity(),
+                     self.simulation.getRobot().getAngularVelocity(),
+                     self.simulation.getGoalX(), self.simulation.getGoalY())
+
         robot_pose_current_x = self.simulation.getRobot().getPosX()
         robot_pose_current_y = self.simulation.getRobot().getPosY()
 
@@ -84,7 +95,7 @@ class Environment:
         # reward = factor * distance        # evtl. reward gewichten
 
         # print(self.steps_left)
-        return reward  # Output reward for action
+        return next_state, reward, done  # Output next_state, reward and done
 
     def reset(self):
         self.simulation.getRobot().setPose(5, 5)
