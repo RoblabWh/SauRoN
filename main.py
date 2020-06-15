@@ -7,7 +7,7 @@ from collections import namedtuple
 import keras.backend as K
 
 # HYPERPARAMETERS
-batch_size = 256
+batch_size = 10
 gamma = 0.999
 eps_start = 1
 eps_end = 0.01
@@ -33,9 +33,9 @@ def main():
     # TODO: Netze noch implementieren, target_net ist Kopie vom policy_net
     policy_net = Network.DQN(lr)
     target_net = Network.DQN(lr)
-    episode_durations = []
+    target_net.update_target_net(policy_net)
 
-    print(tf.__version__)   # Test für Tensorflow
+    # print(tf.__version__)   # Test für Tensorflow
 
     app = QApplication(sys.argv)
     env = Environment.Environment(app)
@@ -44,40 +44,36 @@ def main():
         env.reset()
         state = env.get_observation()
         state = np.expand_dims(state, axis=0)
-        #state = np.zeros(shape=(1, 4, 3, 3))
-
+        print(f'Episode: {episode}')
+        print(env.done)
         while not env.is_done():
             # obs = env.get_observation()
             possible_actions = env.get_actions()
             action = agent.choose_action(state, possible_actions, policy_net)
-            print("Gewaehlte Aktion: " + str(action))
-            next_state, reward, done = env.step(action)
+            # print("Gewaehlte Aktion: " + str(action))
+            next_state, reward = env.step(action)
             if K.is_tensor(next_state):
                 next_state = K.get_value(next_state)
             memory.push(Experience(state=state, action=action, next_state=next_state, reward=reward))
-            agent.total_reward += reward
+            env.total_reward += reward
             state = next_state
 
             if memory.can_provide_sample(batch_size):
                 experiences = memory.sample(batch_size)
-                states, actions, rewards, next_states = extract_tensors(experiences)
+                # print(len(experiences))
+                for sample in experiences:
+                    _state, _action, _next_state, _reward = sample
 
-                # evtl. besser in Netzwerk Klasse?
-                # current_q_values = QValues.QValues.get_current(policy_net, states, actions)
-                # next_q_values = QValues.QValues.get_next(target_net, next_states)
-                # target_q_values = (next_q_values * gamma) + rewards
+                    target = target_net.model.predict(_next_state)
+                    Q_future = np.amax(target_net.model.predict(_next_state)[0])
+                    target[0][_action] = _reward + Q_future * gamma
 
-                # PyTorch spezifisch -> evtl besser in Netzwerkklasse?
-                # loss = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
-                # optimizer.zero_grad()
-                # loss.backward()
-                # optimizer.step()
+                    policy_net.model.fit(_state, target, epochs=1, verbose=0)
 
         if episode % target_update == 0:
-            # TODO: Uebertrage die neuen Weights des Policy Networks auf das target_net
-            pass
+            target_net.update_target_net(policy_net)
 
-        print("Total reward got: %.4f" % agent.total_reward)
+        print("Total reward got: %.4f" % env.total_reward)
     # sys.exit(app.exec_())
     # sys.excepthook = except_hook
 

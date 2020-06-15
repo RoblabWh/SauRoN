@@ -20,7 +20,7 @@ class DQN:
 
         #flatten = Flatten()(conv)
 
-        dense = Dense(units=384, kernel_initializer='random_normal', use_bias=False)(input_shape)
+        dense = Dense(units=20, kernel_initializer='random_normal', use_bias=False)(input_shape)
         dense = ReLU()(dense)
         action = Dense(units=4, kernel_initializer='random_normal', use_bias=False)(dense)
         model = Model(inputs=input_shape, outputs=action)

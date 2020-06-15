@@ -5,6 +5,10 @@ import math
 class Robot:
 
     def __init__(self, startPosX, startPosY, startDirection):
+        self.startposX = startPosX
+        self.startposY = startPosY
+        self.startDirection = startDirection
+
         self.width  = 0.5   # m
         self.length = 0.5   # m
 
@@ -17,9 +21,13 @@ class Robot:
         self.maxAngularAcceleration =  2   # rad/s^2
         self.minAngularAcceleration = -2   # rad/s^2
 
-        self.posX = startPosX
-        self.posY = startPosY
-        self.direction = startDirection
+        self.init()
+
+
+    def init(self):
+        self.posX = self.startposX
+        self.posY = self.startposY
+        self.direction = self.startDirection
 
         self.linearVelocity = 0
         self.angularVelocity = 0

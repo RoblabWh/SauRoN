@@ -6,7 +6,6 @@ import keras as k
 
 class Agent:
     def __init__(self, strategy):
-        self.total_reward = 0.0
         self.current_step = 0
         self.strategy = strategy
 
@@ -14,14 +13,14 @@ class Agent:
         rate = self.strategy.get_exploration_rate(self.current_step)
         self.current_step += 1
 
-        print(rate)
+        # print(rate)
         # Exploration Exploitation Trade Off
         if rate > random.random():
-            print("CHOSE EXPLORATION")
+            # print("CHOSE EXPLORATION")
             return random.choice(possible_actions)  # explore
 
         else:
-            print("CHOSE EXPLOITATION")
+            # print("CHOSE EXPLOITATION")
             return np.argmax(policy_net.predict(state)[0])
 
             # return np.argmax(policy_net(state)[0])     # exploit

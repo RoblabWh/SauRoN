@@ -52,7 +52,10 @@ class Simulation:
                 meterToPixel(self.robot.getPosY()) <= meterToPixel(self.pickUp.getPosY() + self.pickUp.getLength()):
 
             print("Found Pick Up Station")
-            self.robot.setGoal(1)  # set Goal to be Delivery Station
+            if self.robot.getGoal() == 0:
+                self.robot.setGoal(1)  # set Goal to be Delivery Station
+                return True
+        return False
 
     def collideWithDeliveryStation(self):
 
@@ -62,6 +65,9 @@ class Simulation:
                 meterToPixel(self.robot.getPosY()) <= meterToPixel(self.delivery.getPosY() + self.delivery.getLength()):
 
             print("Found Delivery Station")
+            if self.robot.getGoal() == 1:
+                return True
+        return False
 
     def getRobot(self):
         return self.robot
@@ -88,22 +94,26 @@ class Simulation:
 
     def update(self):
         self.simTime += self.simTimestep
-        print("Goal:" + str(self.robot.getGoal()))
+        outOfArea = False
+        # print("Goal:" + str(self.robot.getGoal()))
 
         # nicht rechts oder links aus dem Fenster gehen
         if meterToPixel(self.robot.getPosX() + self.robot.width) > self.simulationWindow.width or meterToPixel(self.robot.getPosX()) < 0:
-            print("out width, posX: " + str(self.robot.getPosX()))
-            self.robot.setPose(5, 5)
-            self.robot.linearVelocity = 0
+            # print("out width, posX: " + str(self.robot.getPosX()))
+            # self.robot.setPose(5, 5)
+            # self.robot.linearVelocity = 0
+            outOfArea = True
 
         # nicht oben oder unten aus dem Fenster gehen
         if meterToPixel(self.robot.getPosY() + self.robot.length) > self.simulationWindow.height or meterToPixel(self.robot.getPosY()) < 0:
-            print("out height, posY: " + str(self.robot.getPosY()))
-            self.robot.setPose(5, 5)
-            self.robot.linearVelocity = 0
+            # print("out height, posY: " + str(self.robot.getPosY()))
+            # self.robot.setPose(5, 5)
+            # self.robot.linearVelocity = 0
+            outOfArea = True
 
-        self.collideWithPickUp()
-        self.collideWithDeliveryStation()
+        reachedPickup = self.collideWithPickUp()
+        reachedDelivery = self.collideWithDeliveryStation()
+
         self.robot.update(self.simTimestep)
 
         if self.simulationWindow != 0:
@@ -113,6 +123,7 @@ class Simulation:
         if self.plotterWindow != 0:
             self.plotterWindow.plot(self.robot.getLinearVelocity(), self.simTime)
 
+        return outOfArea, reachedPickup, reachedDelivery
 
 def meterToPixel(m):
     return 100 * m

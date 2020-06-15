@@ -18,18 +18,19 @@ class SimulationWindow(QMainWindow):
         self.robotRepresentation = 0
         self.pickUpStation = 0
         self.deliveryStation = 0
+        self.painter = QPainter(self)
+
 
     def paintEvent(self, event):
-        painter = QPainter(self)
 
-        painter.begin(self)
+        self.painter.begin(self)
         if self.pickUpStation != 0:
-            self.pickUpStation.paint(painter)
+            self.pickUpStation.paint(self.painter)
         if self.deliveryStation != 0:
-            self.deliveryStation.paint(painter)
+            self.deliveryStation.paint(self.painter)
         if self.robotRepresentation != 0:
-            self.robotRepresentation.paint(painter)
-        painter.end()
+            self.robotRepresentation.paint(self.painter)
+        self.painter.end()
 
     def initRobot(self, robotStartPosX, robotStartPosY, robotStartDirection, robotWidth, robotLength):
         self.robotRepresentation = RobotRepresentation.RobotRepresentation(robotStartPosX,
