@@ -1,5 +1,6 @@
 from keras.models import Model
-from keras.layers import Dense, Flatten, Input, Conv2D, ReLU
+from keras.layers import Dense, Flatten, Input, Conv2D, Conv1D, ReLU
+from keras.optimizers import Adam
 
 
 class DQN:
@@ -7,16 +8,19 @@ class DQN:
         self.model = self._create_model(lr)
 
     def _create_model(self, lr):
-        input_shape = Input(shape=(3, 3, 4))
+        # [X Rob] [Y Rob] [lin Vel]
+        # [X Goal] [Y Goal] [ang Vel]
+        # [lin acc] [ang acc] [orientation]
+        input_shape = Input(shape=(6,))
 
-        conv = Conv2D(filters=16, kernel_size=2, strides=1, padding="same")(input_shape)
-        conv = ReLU()(conv)
-        conv = Conv2D(filters=32, kernel_size=2, strides=1, padding="same")(conv)
-        conv = ReLU()(conv)
+        #conv = Conv1D(filters=16, kernel_size=2, strides=1, padding="same")(input_shape)
+        #conv = ReLU()(conv)
+        #conv = Conv1D(filters=32, kernel_size=2, strides=1, padding="same")(conv)
+        #conv = ReLU()(conv)
 
-        flatten = Flatten()(conv)
+        #flatten = Flatten()(conv)
 
-        dense = Dense(units=384, kernel_initializer='random_normal', use_bias=False)(flatten)
+        dense = Dense(units=384, kernel_initializer='random_normal', use_bias=False)(input_shape)
         dense = ReLU()(dense)
         action = Dense(units=4, kernel_initializer='random_normal', use_bias=False)(dense)
         model = Model(inputs=input_shape, outputs=action)

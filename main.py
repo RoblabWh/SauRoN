@@ -1,4 +1,4 @@
-import Environment, Agent, sys, ReplayMemory
+import Environment, Agent, sys, ReplayMemory, Network
 import tensorflow as tf
 import EpsilonGreedyStrategy
 import numpy as np
@@ -30,8 +30,8 @@ def main():
     memory = ReplayMemory.ReplayMemory(memory_size)
 
     # TODO: Netze noch implementieren, target_net ist Kopie vom policy_net
-    policy_net = 0
-    target_net = 0
+    policy_net = Network.DQN(lr)
+    target_net = Network.DQN(lr)
     episode_durations = []
 
     print(tf.__version__)   # Test für Tensorflow
@@ -42,11 +42,12 @@ def main():
     for episode in range(num_episodes):
         env.reset()
         state = env.get_observation()
+        #state = np.zeros(shape=(1, 4, 3, 3))
 
         while not env.is_done():
             # obs = env.get_observation()
             possible_actions = env.get_actions()
-            action = agent.predict(state, possible_actions, policy_net)
+            action = agent.choose_action(state, possible_actions, policy_net)
             print("Gewaehlte Aktion: " + str(action))
             next_state, reward, done = env.step(action)
             memory.push(Experience(state=state, action=action, next_state=next_state, reward=reward))

@@ -28,6 +28,7 @@ class Robot:
         self.targetAngularVelocity = 0
 
         self.goal = 0       # goal mit 0 initialisiert, muss zuerst zur PickUpStation, goal = 1 -> Delivery
+        self.goalOrientation = 0
 
     def setGoal(self, newGoal):
         self.goal = newGoal

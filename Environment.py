@@ -1,6 +1,6 @@
 import math
 import Simulation
-
+import numpy as np
 
 class Environment:
     def __init__(self, app):
@@ -19,7 +19,7 @@ class Environment:
         angVel = self.simulation.getRobot().getAngularVelocity()
         xGoal = self.simulation.getGoalX()
         yGoal = self.simulation.getGoalY()
-        return [xPos, yPos, linVel, angVel, xGoal, yGoal]  # Pos, Geschwindigkeit, Zielposition
+        return np.array([xPos, yPos, linVel, angVel, xGoal, yGoal])  # Pos, Geschwindigkeit, Zielposition
 
     def get_actions(self):
         return [0, 1, 2]         # Links, Rechts, Oben, Unten
@@ -71,10 +71,10 @@ class Environment:
         # Update der Simulation
         self.simulation.update()
 
-        next_state = (self.simulation.getRobot().getPosX(), self.simulation.getRobot().getPosY(),
-                     self.simulation.getRobot().getLinearVelocity(),
-                     self.simulation.getRobot().getAngularVelocity(),
-                     self.simulation.getGoalX(), self.simulation.getGoalY())
+        next_state = np.array([self.simulation.getRobot().getPosX(), self.simulation.getRobot().getPosY(),
+                               self.simulation.getRobot().getLinearVelocity(),
+                               self.simulation.getRobot().getAngularVelocity(),
+                               self.simulation.getGoalX(), self.simulation.getGoalY()])
 
         robot_pose_current_x = self.simulation.getRobot().getPosX()
         robot_pose_current_y = self.simulation.getRobot().getPosY()
