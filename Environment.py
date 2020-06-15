@@ -1,6 +1,8 @@
 import math
 import Simulation
 import numpy as np
+import keras.backend as K
+
 
 class Environment:
     def __init__(self, app):
@@ -93,7 +95,7 @@ class Environment:
         print ("Reward got for this action: " + str(reward))
 
         # reward = factor * distance        # evtl. reward gewichten
-
+        next_state = np.expand_dims(next_state, axis=0)
         # print(self.steps_left)
         return next_state, reward, done  # Output next_state, reward and done
 

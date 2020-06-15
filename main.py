@@ -4,6 +4,7 @@ import EpsilonGreedyStrategy
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 from collections import namedtuple
+import keras.backend as K
 
 # HYPERPARAMETERS
 batch_size = 256
@@ -42,6 +43,7 @@ def main():
     for episode in range(num_episodes):
         env.reset()
         state = env.get_observation()
+        state = np.expand_dims(state, axis=0)
         #state = np.zeros(shape=(1, 4, 3, 3))
 
         while not env.is_done():
@@ -50,6 +52,8 @@ def main():
             action = agent.choose_action(state, possible_actions, policy_net)
             print("Gewaehlte Aktion: " + str(action))
             next_state, reward, done = env.step(action)
+            if K.is_tensor(next_state):
+                next_state = K.get_value(next_state)
             memory.push(Experience(state=state, action=action, next_state=next_state, reward=reward))
             agent.total_reward += reward
             state = next_state
@@ -81,12 +85,12 @@ def main():
 def extract_tensors(experiences):
     batch = Experience(*zip(*experiences))
 
-    states = np.extract(batch.state, batch)
-    actions = np.extract(batch.action, batch)
-    rewards = np.extract(batch.reward, batch)
-    next_states = np.extract(batch.next_state, batch)
+    t1 = K.concatenate(batch.state, axis=0)
+    t2 = K.concatenate(batch.action, axis=0)
+    t3 = K.concatenate(batch.reward, axis=0)
+    t4 = K.concatenate(batch.next_state, axis=0)
 
-    return states, actions, rewards, next_states
+    return t1, t2, t3, t4
 
 
 if __name__ == '__main__':
