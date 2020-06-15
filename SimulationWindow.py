@@ -1,6 +1,7 @@
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import QMainWindow
-import RobotRepresentation, PickUpStation, DeliveryStation
+import RobotRepresentation
+from Station import Station
 
 
 class SimulationWindow(QMainWindow):
@@ -40,10 +41,10 @@ class SimulationWindow(QMainWindow):
                                                        robotLength)
 
     def initPickUpStation(self, posX, posY, width, length):
-        self.pickUpStation = PickUpStation.PickUpStation(posX, posY, width, length)
+        self.pickUpStation = Station(posX, posY, width, length, 0)
 
     def initDeliveryStation(self, posX, posY, width, length):
-        self.deliveryStation = DeliveryStation.DeliveryStation(posX, posY, width, length)
+        self.deliveryStation = Station(posX, posY, width, length, 1)
 
     def updateRobot(self, posX, posY, direction):
         self.robotRepresentation.update(posX, posY, direction)

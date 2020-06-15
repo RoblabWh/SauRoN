@@ -11,18 +11,18 @@ class DQN:
         # [X Rob] [Y Rob] [lin Vel]
         # [X Goal] [Y Goal] [ang Vel]
         # [lin acc] [ang acc] [orientation]
-        input_shape = Input(shape=(6,))
+        input_shape = Input(shape=(4, 9))
 
-        #conv = Conv1D(filters=16, kernel_size=2, strides=1, padding="same")(input_shape)
-        #conv = ReLU()(conv)
-        #conv = Conv1D(filters=32, kernel_size=2, strides=1, padding="same")(conv)
-        #conv = ReLU()(conv)
+        conv = Conv1D(filters=4, kernel_size=2, strides=1, padding="same")(input_shape)
+        conv = ReLU()(conv)
+        conv = Conv1D(filters=8, kernel_size=2, strides=1, padding="same")(conv)
+        conv = ReLU()(conv)
 
-        #flatten = Flatten()(conv)
+        flatten = Flatten()(conv)
 
-        dense = Dense(units=20, kernel_initializer='random_normal', use_bias=False)(input_shape)
+        dense = Dense(units=386, kernel_initializer='random_normal', use_bias=False)(flatten)
         dense = ReLU()(dense)
-        action = Dense(units=4, kernel_initializer='random_normal', use_bias=False)(dense)
+        action = Dense(units=3, kernel_initializer='random_normal', use_bias=False)(dense)
         model = Model(inputs=input_shape, outputs=action)
 
         adam = Adam(lr=lr)

@@ -1,18 +1,24 @@
-from PyQt5.QtGui import QPainter, QBrush, QPen
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QBrush, QPen
+from PyQt5.QtCore import Qt
 
-class DeliveryStation:
-    def __init__(self, posX, posY, width, length):
+
+class Station:
+    def __init__(self, posX, posY, width, length, color):
         self.posX = posX
         self.posY = posY
 
         self.width = width
         self.length = length
 
-        self.lineColor = Qt.red
+        self.color = Qt.blue
+        if color == 1:
+            self.color = Qt.red
+
+        self.lineColor = self.color  # Qt.red Qt.blue
+        self.fillColor = self.color  # Qt.red Qt.blue
+
         self.thickness = 2
         self.lineStyle = Qt.SolidLine
-        self.fillColor = Qt.red
         self.brushStyle = Qt.SolidPattern
 
     def paint(self, painter):

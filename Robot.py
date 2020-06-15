@@ -1,134 +1,145 @@
 import math
+
+
 # import keyboard
 
 
 class Robot:
 
-    def __init__(self, startPosX, startPosY, startDirection):
-        self.startposX = startPosX
-        self.startposY = startPosY
+    def __init__(self, position, startDirection, station):
+        self.startposX, self.startposY = position
         self.startDirection = startDirection
+        self.goalX, self.goalY = station.getPosX(), station.getPosY()
+        self.state = []
+        #[posX, posY, direction, linearVelocity, angularVelocity, targetLinearVelocity, targetAngularVelocity, goalX, goalY]
 
-        self.width  = 0.5   # m
-        self.length = 0.5   # m
+        self.time_steps = 4
+        # Robot Hardware Params
+        self.width = 0.5  # m
+        self.length = 0.5  # m
 
-        self.maxLinearVelocity      = 10   # m/s
-        self.minLinearVelocity      =  0   # m/s
-        self.maxLinearAcceleration  =  1   # m/s^2
-        self.minLinearAcceleration  = -5   # m/s^2
-        self.maxAngularVelocity     =  4   # rad/s
-        self.minAngularVelocity     = -4   # rad/s
-        self.maxAngularAcceleration =  2   # rad/s^2
-        self.minAngularAcceleration = -2   # rad/s^2
+        self.maxLinearVelocity = 10  # m/s
+        self.minLinearVelocity = 0  # m/s
+        self.maxLinearAcceleration = 1  # m/s^2
+        self.minLinearAcceleration = -5  # m/s^2
+        self.maxAngularVelocity = 4  # rad/s
+        self.minAngularVelocity = -4  # rad/s
+        self.maxAngularAcceleration = 2  # rad/s^2
+        self.minAngularAcceleration = -2  # rad/s^2
 
-        self.init()
+        self.reset()
 
+    def reset(self):
+        posX = self.startposX
+        posY = self.startposY
+        direction = self.startDirection
+        linearVelocity = 0
+        angularVelocity = 0
+        targetLinearVelocity = 0
+        targetAngularVelocity = 0
+        goalX = self.goalX
+        goalY = self.goalY
 
-    def init(self):
-        self.posX = self.startposX
-        self.posY = self.startposY
-        self.direction = self.startDirection
+        frame = [posX, posY, direction, linearVelocity, angularVelocity, targetLinearVelocity,
+                 targetAngularVelocity, goalX, goalY]
 
-        self.linearVelocity = 0
-        self.angularVelocity = 0
+        for i in range(self.time_steps):
+            self.push_frame(frame)
 
-        self.targetLinearVelocity = 0
-        self.targetAngularVelocity = 0
+    #TESTEN!
+    def push_frame(self, frame):
+        if len(self.state) >= self.time_steps:
+            self.state.pop(0)
+            self.state.append(frame)
+        else:
+            self.state.append(frame)
 
-        self.goal = 0       # goal mit 0 initialisiert, muss zuerst zur PickUpStation, goal = 1 -> Delivery
-        self.goalOrientation = 0
+    def update(self, dt, vel, goal):
+        goalX, goalY = goal
+        tarLinVel, tarAngVel = vel
+        linVel, angVel = self.compute_next_velocity(dt, self.getLinearVelocity(), self.getAngularVelocity(), tarLinVel, tarAngVel)
+        posX, posY = self.getPosX(), self.getPosY()
+        direction = self.getDirection()
+        posX += math.cos(self.getDirection()) * linVel * dt
+        posY += math.sin(self.getDirection()) * linVel * dt
+        direction += angVel * dt
 
-    def setGoal(self, newGoal):
-        self.goal = newGoal
+        frame = [posX, posY, direction, linVel, angVel, tarLinVel, tarAngVel, goalX, goalY]
+        self.push_frame(frame)
 
-    def getGoal(self):
-        return self.goal
-
-    def setTargetVelocity(self, newTargetLinearVelocity, newTargetAngularVelocity):
-        self.targetLinearVelocity = newTargetLinearVelocity
-        self.targetAngularVelocity = newTargetAngularVelocity
-
-    def update(self, dt):
-        self.compute_next_velocity(dt)
-        self.posX += math.cos(self.direction) * self.linearVelocity * dt
-        self.posY += math.sin(self.direction) * self.linearVelocity * dt
-        self.direction += self.angularVelocity * dt
-
-        # Tastatursteuerung des Roboters zu Testzwecken
-
-#        if keyboard.is_pressed('right'):
-#            self.posX += 0.05
-#        if keyboard.is_pressed('left'):
-#            self.posX -= 0.05
-#        if keyboard.is_pressed('up'):
-#            self.posY -= 0.05
-#        if keyboard.is_pressed('down'):
-#            self.posY += 0.05
-
-
-    def compute_next_velocity(self, dt):
-
+    def compute_next_velocity(self, dt, linVel, angVel, tarLinVel, tarAngVel):
         # beschleunigen
-        if self.linearVelocity < self.targetLinearVelocity:
-            if self.linearVelocity > self.maxLinearVelocity:
-                self.linearVelocity = self.maxLinearVelocity
+        if linVel < tarLinVel:
+            if linVel > self.maxLinearVelocity:
+                linVel = self.maxLinearVelocity
             else:
-                self.linearVelocity += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
+                linVel += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
 
         # bremsen
-        elif self.linearVelocity > self.targetLinearVelocity:
-            if self.linearVelocity < self.minLinearVelocity:
-                self.linearVelocity = self.minLinearVelocity
+        elif linVel > tarLinVel:
+            if linVel < self.minLinearVelocity:
+                linVel = self.minLinearVelocity
             else:
-                self.linearVelocity += self.minLinearAcceleration * dt
+                linVel += self.minLinearAcceleration * dt
 
         # nach links drehen
-        if self.angularVelocity < self.targetAngularVelocity:
-            if self.angularVelocity > self.maxAngularVelocity:
-                self.angularVelocity = self.maxAngularVelocity
+        if angVel < tarAngVel:
+            if angVel > self.maxAngularVelocity:
+                angVel = self.maxAngularVelocity
             else:
-                self.angularVelocity += self.maxAngularAcceleration * dt
+                angVel += self.maxAngularAcceleration * dt
 
         # nach rechts drehen
-        elif self.angularVelocity > self.targetAngularVelocity:
-            if self.angularVelocity < self.minAngularVelocity:
-                self.angularVelocity = self.minAngularVelocity
+        elif angVel > tarAngVel:
+            if angVel < self.minAngularVelocity:
+                angVel = self.minAngularVelocity
             else:
-                self.angularVelocity += self.minAngularAcceleration * dt
+                angVel += self.minAngularAcceleration * dt
 
-    def getPose(self):
-        return self.posX, self.posY, self.direction
+        return linVel, angVel
+
+    def collideWithStation(self, station):
+        if self.getPosX() <= station.getPosX() + station.getWidth() and \
+                self.getPosX() + self.width >= station.getPosX() and \
+                self.getPosY() + self.length >= station.getPosY() and \
+                self.getPosY() <= station.getPosY() + station.getLength():
+            return True
+        return False
+
+    def hasGoal(self, station):
+        if self.getGoalX() == station.getPosX() and self.getGoalY() == station.getPosY():
+            return True
+        return False
 
     def getPosX(self):
-        return self.posX
+        return self.state[3][0]
 
     def getPosY(self):
-        return self.posY
-
-    def getPosXY(self):
-        return [self.posX, self.getPosY()]
-
-    def setPose(self, PosX, PosY):
-        self.posX = PosX
-        self.posY = PosY
+        return self.state[3][1]
 
     def getDirection(self):
-        return self.direction
-
-    def getVelocity(self):
-        return self.linearVelocity, self.angularVelocity
+        return self.state[3][2]
 
     def getLinearVelocity(self):
-        return self.linearVelocity
+        return self.state[3][3]
 
-    def setLinearVelocity(self, value):
-        self.linearVelocity = value
+    def getGoalX(self):
+        return self.state[3][7]
+
+    def getGoalY(self):
+        return self.state[3][8]
+
+    def getVelocity(self):
+        return self.state[3][3], self.state[3][4]
+
+    def getLinearVelocity(self):
+        return self.state[3][3]
 
     def getAngularVelocity(self):
-        return self.angularVelocity
+        return self.state[3][4]
 
-    def getWidth(self):
-        return self.width
+    def getTargetLinearVelocity(self):
+        return self.state[3][5]
 
-    def getLength(self):
-        return self.length
+    def getTargetAngularVelocity(self):
+        return self.state[3][6]
