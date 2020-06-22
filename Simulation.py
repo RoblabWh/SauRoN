@@ -18,7 +18,7 @@ class Simulation:
         #  self.plotterWindow = plotterWindow
 
         self.simTime = 0  # s
-        self.simTimestep = 0.05  # s
+        self.simTimestep = 0.2  # s
 
         self.pickUp = Station(8.0, 1.0, 0.5, 0.5, 0)
         self.delivery = Station(1, 1, 0.5, 0.5, 1)
@@ -74,6 +74,8 @@ class Simulation:
         if self.robot.collideWithStation(self.pickUp):
             if self.robot.hasGoal(self.pickUp):
                 reachedPickUp = True
+                goal = (self.delivery.getPosX(), self.delivery.getPosY())
+            else:
                 goal = (self.delivery.getPosX(), self.delivery.getPosY())
         else:
             goal = (self.pickUp.getPosX(), self.pickUp.getPosY())

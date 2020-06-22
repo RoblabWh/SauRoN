@@ -46,6 +46,7 @@ class Agent:
 
         else:
             # print("CHOSE EXPLOITATION")
-            return np.argmax(policy_net.predict(state)[0])
+            test = policy_net.predict(state)[0]
+            return np.argmax(test)
 
 

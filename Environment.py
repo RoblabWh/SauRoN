@@ -42,11 +42,11 @@ class Environment:
 
         # Aktion = 0 = Links
         if action == 0:
-            vel = (1, -1)
+            vel = (0, -1)
 
         # Aktion = 1 = Rechts
         if action == 1:
-            vel = (1, 1)
+            vel = (0, 1)
 
         # Aktion = 2 = Vorne
         if action == 2:
@@ -71,12 +71,13 @@ class Environment:
         distance_old = math.sqrt((robot_pose_old_x - goal_pose_old_x)**2 + (robot_pose_old_y - goal_pose_old_y)**2)
         distance_new = math.sqrt((robot_pose_current_x - goal_pose_old_x)**2 + (robot_pose_current_y - goal_pose_old_y)**2)
 
-        if distance_old > distance_new:
-            reward = 3
-        if distance_old < distance_new:
-            reward = -2
+        reward = (distance_old - distance_new) * 10
+        # if distance_old > distance_new:
+        #     reward = 3
+        # if distance_old < distance_new:
+        #     reward = -3
         if distance_old == distance_new:
-            reward = -2
+            reward = -1
         if outOfArea:
             reward = -200
             self.done = True
@@ -86,7 +87,7 @@ class Environment:
             reward = 300
             self.done = True
         if self.steps_left <= 0:
-            reward += -100
+            reward += -10
         # print ("Reward got for this action: " + str(reward))
 
         # reward = factor * distance        # evtl. reward gewichten
