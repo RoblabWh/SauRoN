@@ -1,3 +1,5 @@
+## Umgebung
+
 conda create -n aiarena python=3.6
 
 conda install -c anaconda tensorflow-gpu 
