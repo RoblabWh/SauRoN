@@ -22,7 +22,7 @@ class ActorCritic:
         _, self.target_actor_model = self._create_actor_model(lr)
 
         self.actor_critic_grad = tf.placeholder(tf.float32,
-                                  [None, self.env.get_actions.length]) # where we will feed de/dC from critic, env.action_space austauschen
+                                  [None, self.env.get_actions.length]) # where we will feed de/dC from critic
 
         actor_model_weights = self.actor_model.trainable_weights
         self.actor_grads = tf.gradients(self.actor_model.output, actor_model_weights, -self.actor_critic_grad) # dC/dA from actor
@@ -34,7 +34,7 @@ class ActorCritic:
         _, _, self.target_critic_model = self._create_critic_model(lr)
 
         self.critic_grads = tf.gradients(self.critic_model.output, self.critic_action_input)  # where we calculate de/dC for feeding above
-        self.sess.run(tf.initialize_all_variables())   # unsicher mit session
+        self.sess.run(tf.initialize_all_variables())
 
         self.current_step = 0
 
