@@ -1,7 +1,5 @@
 import math
-
-
-# import keyboard
+import keyboard
 
 
 class Robot:
@@ -76,10 +74,22 @@ class Robot:
             self.state.append(frame)
 
     def update(self, dt, vel, goal):
+        posX, posY = self.getPosX(), self.getPosY()
+
+        # Tastatursteuerung
+        if keyboard.is_pressed('right'):
+            posX += 0.5
+        if keyboard.is_pressed('left'):
+            posX -= 0.5
+        if keyboard.is_pressed('up'):
+            posY -= 0.5
+        if keyboard.is_pressed('down'):
+            posY += 0.5
+
         goalX, goalY = goal
         tarLinVel, tarAngVel = vel
         linVel, angVel = self.compute_next_velocity(dt, self.getLinearVelocity(), self.getAngularVelocity(), tarLinVel, tarAngVel)
-        posX, posY = self.getPosX(), self.getPosY()
+
         direction = self.getDirection()
         posX += math.cos(self.getDirection()) * linVel * dt
         posY += math.sin(self.getDirection()) * linVel * dt
@@ -88,6 +98,8 @@ class Robot:
         # frame = [posX, posY, direction, linVel, angVel, tarLinVel, tarAngVel, goalX, goalY]
         frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
         self.push_frame(frame)
+
+
 
     def compute_next_velocity(self, dt, linVel, angVel, tarLinVel, tarAngVel):
         # beschleunigen
