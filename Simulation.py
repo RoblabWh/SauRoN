@@ -57,7 +57,6 @@ class Simulation:
         outOfArea = False
         reachedPickUp = False
         reachedDelivery = False
-        # print("Goal:" + str(self.robot.getGoal()))
 
         # nicht rechts oder links aus dem Fenster gehen
         if meterToPixel(self.robot.getPosX() + self.robot.width) > self.simulationWindow.width or meterToPixel(

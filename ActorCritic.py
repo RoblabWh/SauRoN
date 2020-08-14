@@ -2,8 +2,12 @@ from keras.models import Model, Sequential
 from keras.layers import Dense, Flatten, Input, Conv2D, Conv1D, ReLU, Add
 from keras.optimizers import Adam
 import random, math
-import tensorflow as tf
+import numpy as np
+# import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from collections import deque
+
+tf.disable_v2_behavior()
 
 class ActorCritic:
     def __init__(self, env, lr, start, end, decay, sess, batch_size):
@@ -22,7 +26,7 @@ class ActorCritic:
         _, self.target_actor_model = self._create_actor_model(lr)
 
         self.actor_critic_grad = tf.placeholder(tf.float32,
-                                  [None, self.env.get_actions.length]) # where we will feed de/dC from critic
+                                  [None, 3]) # where we will feed de/dC from critic
 
         actor_model_weights = self.actor_model.trainable_weights
         self.actor_grads = tf.gradients(self.actor_model.output, actor_model_weights, -self.actor_critic_grad) # dC/dA from actor
@@ -34,7 +38,7 @@ class ActorCritic:
         _, _, self.target_critic_model = self._create_critic_model(lr)
 
         self.critic_grads = tf.gradients(self.critic_model.output, self.critic_action_input)  # where we calculate de/dC for feeding above
-        self.sess.run(tf.initialize_all_variables())
+        self.sess.run(tf.global_variables_initializer())
 
         self.current_step = 0
 
@@ -60,10 +64,12 @@ class ActorCritic:
 
     def _create_critic_model(self, lr):
         state_input = Input(shape=(4, 7))
-        state_h1 = Dense(24, activation='relu')(state_input)
+        flatten = Flatten()(state_input)
+
+        state_h1 = Dense(24, activation='relu')(flatten)
         state_h2 = Dense(48)(state_h1)
 
-        action_input = Input(shape=3)
+        action_input = Input(shape=(3,))
         action_h1 = Dense(48)(action_input)
 
         merged = Add()([state_h2, action_h1])
@@ -102,8 +108,11 @@ class ActorCritic:
             if not done:
                 target_action = self.target_actor_model.predict(new_state)
                 future_reward = self.target_critic_model.predict(
-                    [new_state, target_action])[0][0]
+                    [new_state, target_action])
                 reward += self.gamma * future_reward
+            else:
+                reward = np.asarray([reward])
+                reward = reward.reshape((1, 1))
             self.critic_model.fit([cur_state, action], reward, verbose=0)
 
     def train(self):
@@ -157,4 +166,4 @@ class ActorCritic:
 
         else:
             # print("CHOSE EXPLOITATION")
-            return self.actor_model.predict(cur_state)
+            return np.argmax(self.actor_model.predict(cur_state)[0])

@@ -1,5 +1,5 @@
 import math
-import keyboard
+# import keyboard
 
 
 class Robot:
@@ -77,14 +77,14 @@ class Robot:
         posX, posY = self.getPosX(), self.getPosY()
 
         # Tastatursteuerung
-        if keyboard.is_pressed('right'):
-            posX += 0.5
-        if keyboard.is_pressed('left'):
-            posX -= 0.5
-        if keyboard.is_pressed('up'):
-            posY -= 0.5
-        if keyboard.is_pressed('down'):
-            posY += 0.5
+        # if keyboard.is_pressed('right'):
+        #     posX += 0.5
+        # if keyboard.is_pressed('left'):
+        #     posX -= 0.5
+        # if keyboard.is_pressed('up'):
+        #     posY -= 0.5
+        # if keyboard.is_pressed('down'):
+        #     posY += 0.5
 
         goalX, goalY = goal
         tarLinVel, tarAngVel = vel

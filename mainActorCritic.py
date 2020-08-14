@@ -1,9 +1,12 @@
-import Environment, Agent, sys, Network, ActorCritic, AgentActorCritic
-import tensorflow as tf
+import Environment, Agent, sys, Network, ActorCritic
+# import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 from collections import namedtuple
 import keras.backend as K
+
+tf.disable_v2_behavior()
 
 # HYPERPARAMETERS
 batch_size = 40
@@ -27,23 +30,30 @@ steps_left = 200
 def main():
     # unsicher mit Session
     sess = tf.Session()
-    K.set_session(sess)
+    tf.keras.backend.set_session(sess)
+    # K.set_session(sess)
 
     app = QApplication(sys.argv)
     env = Environment.Environment(app, steps_left)
 
     actor_critic = ActorCritic.ActorCritic(env, lr, eps_start, eps_end, eps_decay, sess, batch_size)
 
+    actor_critic.critic_model.summary()
+    #
+    # return
+
     for episode in range(num_episodes):
-        cur_state = env.reset()
-        state = env.get_observation()
-        state = np.expand_dims(state, axis=0)
+        env.reset()
+        cur_state = env.get_observation()
+        cur_state = np.expand_dims(cur_state, axis=0)
         print(f'Episode: {episode}')
         # print(f'Steps Agent: {agent.current_step}')
         # print(f'Epsilon Greedy: {agent.epsilon_greedy_strategy(agent.current_step)}')
         while not env.is_done():
             possible_actions = env.get_actions()
             action = actor_critic.act(cur_state, possible_actions)
+            action = np.asarray([action, action, action])
+            action = action.reshape((1, 3))
             next_state, reward = env.step(action)
             done = env.is_done()
             if K.is_tensor(next_state):
@@ -52,6 +62,9 @@ def main():
             env.total_reward += reward
             actor_critic.train()
             cur_state = next_state
+
+        # if episode % target_update == 0:
+        #     actor_critic.update_target()
 
         print("Total reward got: %.4f" % env.total_reward)
     # sys.exit(app.exec_())

@@ -11,6 +11,7 @@ class Environment:
         self.simulation = Simulation.Simulation(app)
         self.total_reward = 0.0
         self.done = False
+        self.shape = np.asarray([0]).shape
 
   #  def show(self):
   #      self.simulation.show()
@@ -25,7 +26,7 @@ class Environment:
         return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
 
     def get_actions(self):
-        return [0, 1, 2]         # Links, Rechts, Oben, Unten
+        return [0, 1, 2]     # Links, Rechts, Oben, Unten
 
     def is_done(self):
         return self.steps_left <= 0 or self.done
@@ -40,21 +41,26 @@ class Environment:
         robot_pose_old_x = self.simulation.getRobot().getPosX()
         robot_pose_old_y = self.simulation.getRobot().getPosY()
 
+        action_v = action[0][0]
+
+        if action_v < 0 or action_v > 3:
+            action_v = np.around(action_v, decimals=0)
+
         # Aktion = 0 = Links
-        if action == 0:
+        if action_v == 0:
             vel = (0, -1)
 
         # Aktion = 1 = Rechts
-        if action == 1:
+        if action_v == 1:
             vel = (0, 1)
 
         # Aktion = 2 = Vorne
-        if action == 2:
+        if action_v == 2:
             vel = (1.5, 0)
 
         # Aktion = 3 = Bremsen / Rueckwaertsfahren (wenn minLinearVelocity in Robot negativ ist,
         # dann kann er rueckwaerts fahren, ansonsten stoppt er bei 0)
-        if action == 3:
+        if action_v == 3:
             vel = (0, 0)   # stehen bleiben
 
 
