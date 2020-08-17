@@ -63,8 +63,8 @@ def main():
             actor_critic.train()
             cur_state = next_state
 
-        # if episode % target_update == 0:
-        #     actor_critic.update_target()
+        if episode % target_update == 0:
+            actor_critic.update_target()
 
         print("Total reward got: %.4f" % env.total_reward)
     # sys.exit(app.exec_())
