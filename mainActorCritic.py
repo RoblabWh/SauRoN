@@ -5,8 +5,13 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication
 from collections import namedtuple
 import keras.backend as K
+from A2C import A2C
 
-tf.disable_v2_behavior()
+from keras.layers import Input
+import argparse
+
+
+# tf.disable_v2_behavior()
 
 # HYPERPARAMETERS
 batch_size = 40
@@ -25,6 +30,23 @@ steps_left = 200
 #    sys.__excepthook__(cls, exception, traceback)
 
 # Experience = namedtuple('Experience', ('state', 'action', 'next_state', 'reward', 'done'))
+
+def main2():
+    args = None
+    parser = argparse.ArgumentParser(description='Training parameters')
+    parser.add_argument('--nb_episodes', type=int, default=1000, help="Number of training episodes")
+
+    args = parser.parse_args(args)
+
+    app = QApplication(sys.argv)
+    env = Environment.Environment(app, steps_left)
+
+    act_dim = np.asarray(env.get_actions()).shape[0]
+    env_dim = (4, 7)
+
+    actorcritic = A2C(act_dim, env_dim)
+
+    actorcritic.train(env, args)
 
 
 def main():
@@ -72,4 +94,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main2()

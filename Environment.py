@@ -41,7 +41,7 @@ class Environment:
         robot_pose_old_x = self.simulation.getRobot().getPosX()
         robot_pose_old_y = self.simulation.getRobot().getPosY()
 
-        action_v = action[0][0]
+        action_v = action
 
         if action_v < 0 or action_v > 3:
             action_v = np.around(action_v, decimals=0)
@@ -98,7 +98,7 @@ class Environment:
 
         # reward = factor * distance        # evtl. reward gewichten
         # print(self.steps_left)
-        return next_state, reward  # Output next_state, reward and done
+        return next_state, reward, self.is_done()  # Output next_state, reward and done
 
     def reset(self):
         # self.simulation.getRobot().setPose(5, 5)
