@@ -13,20 +13,11 @@ class Environment:
         self.done = False
         self.shape = np.asarray([0]).shape
 
-  #  def show(self):
-  #      self.simulation.show()
-
     def get_observation(self):
-        # xPos = self.simulation.getRobot().getPosX()     # Robot.Robot.getPosX(self.robot)
-        # yPos = self.simulation.getRobot().getPosY()
-        # linVel = self.simulation.getRobot().getLinearVelocity()
-        # angVel = self.simulation.getRobot().getAngularVelocity()
-        # xGoal = self.simulation.getGoalX()
-        # yGoal = self.simulation.getGoalY()
         return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
 
     def get_actions(self):
-        return [0, 1, 2]     # Links, Rechts, Oben, Unten
+        return [0, 1, 2, 3]  # Links, Rechts, Oben, Unten
 
     def is_done(self):
         return self.steps_left <= 0 or self.done
@@ -35,74 +26,92 @@ class Environment:
 
         self.steps_left -= 1
 
-        # einzeln Abstand berechnen
-        goal_pose_old_x = self.simulation.robot.getGoalX()
-        goal_pose_old_y = self.simulation.robot.getGoalY()
-        robot_pose_old_x = self.simulation.getRobot().getPosX()
-        robot_pose_old_y = self.simulation.getRobot().getPosY()
-
-        action_v = action
-
-        if action_v < 0 or action_v > 3:
-            action_v = np.around(action_v, decimals=0)
+        if action < 0 or action > 3:
+            action = np.around(action, decimals=0)
 
         # Aktion = 0 = Links
-        if action_v == 0:
-            vel = (0, -1)
+        if action == 0: vel = (0, -1)
 
         # Aktion = 1 = Rechts
-        if action_v == 1:
-            vel = (0, 1)
+        if action == 1: vel = (0, 1)
 
         # Aktion = 2 = Vorne
-        if action_v == 2:
-            vel = (1.5, 0)
+        if action == 2: vel = (1, 0)
 
         # Aktion = 3 = Bremsen / Rueckwaertsfahren (wenn minLinearVelocity in Robot negativ ist,
         # dann kann er rueckwaerts fahren, ansonsten stoppt er bei 0)
-        if action_v == 3:
-            vel = (0, 0)   # stehen bleiben
+        if action == 3: vel = (0, 0)  # stehen bleiben
 
+        ######## Update der Simulation #######
+        radius = self.simulation.getRobot().radius
+        goal_pose_old_x = self.simulation.robot.getGoalX()
+        goal_pose_old_y = self.simulation.robot.getGoalY()
+        robot_pose_old_x = self.simulation.getRobot().getPosX() + radius
+        robot_pose_old_y = self.simulation.getRobot().getPosY() + radius
 
-        # Update der Simulation
         outOfArea, reachedPickup, reachedDelivery = self.simulation.update(vel)
 
         next_state = self.get_observation()
         next_state = np.expand_dims(next_state, axis=0)
+        #######################################
 
-        robot_pose_current_x = self.simulation.getRobot().getPosX()
-        robot_pose_current_y = self.simulation.getRobot().getPosY()
+        ############ Euklidsche Distanz und Orientierung ##############
 
-        # euklidsche Distanz
-        distance_old = math.sqrt((robot_pose_old_x - goal_pose_old_x)**2 + (robot_pose_old_y - goal_pose_old_y)**2)
-        distance_new = math.sqrt((robot_pose_current_x - goal_pose_old_x)**2 + (robot_pose_current_y - goal_pose_old_y)**2)
+        # einzeln Abstand berechnen
+        robot_pose_current_x = self.simulation.getRobot().getPosX() + radius
+        robot_pose_current_y = self.simulation.getRobot().getPosY() + radius
 
-        reward = (distance_old - distance_new) * 10
+
+        # distance_old = math.sqrt((robot_pose_old_x - goal_pose_old_x) ** 2 +
+        #                          (robot_pose_old_y - goal_pose_old_y) ** 2)
+        #
+        # distance_new = math.sqrt((robot_pose_current_x - goal_pose_old_x) ** 2 +
+        #                          (robot_pose_current_y - goal_pose_old_y) ** 2)
+
+        robot_orientation = self.simulation.getRobot().getDirection()
+        orientation_goal_new = math.atan2(goal_pose_old_y - (robot_pose_current_y + radius),
+                                          goal_pose_old_x - (robot_pose_current_x + radius))
+        orientation_goal_new += (2 * math.pi)
+
+        # print("Robot Orientation: " + str(robot_orientation))
+        # print("Goal Orientation: " + str(orientation_goal_new))
+        # print("DeltaDirection: " + str(robot_orientation - orientation_goal_new))
+        #####################################################################################################
+
+        ########### REWARD CALCULATION ################
+
+        # reward = (distance_old - distance_new) * 100
+        if math.fabs(robot_orientation - orientation_goal_new) < 0.05:
+            reward = 2.0
+        else:
+            reward = 0
         # if distance_old > distance_new:
-        #     reward = 3
+        #     reward += 2
         # if distance_old < distance_new:
-        #     reward = -3
-        if distance_old == distance_new:
-            reward = -1
+        #     reward = -1
+        # if distance_old == distance_new:
+        #     reward += -0.5
+        if self.simulation.getRobot().isInCircleOfGoal(3):
+            reward += 1.0
         if outOfArea:
-            reward = -200
+            reward += -40.0
             self.done = True
         if reachedPickup:
-            reward = 200
+            reward = 10.0
         if reachedDelivery:
-            reward = 300
+            reward = 10.0
             self.done = True
         if self.steps_left <= 0:
-            reward += -10
-        # print ("Reward got for this action: " + str(reward))
+            reward += -1.0
 
+        # print ("Reward got for this action: " + str(reward))
         # reward = factor * distance        # evtl. reward gewichten
-        # print(self.steps_left)
-        return next_state, reward, self.is_done()  # Output next_state, reward and done
+
+        ################
+
+        return next_state, reward, self.is_done()
 
     def reset(self):
-        # self.simulation.getRobot().setPose(5, 5)
-        # self.simulation.getRobot().setLinearVelocity(0)
         self.simulation.getRobot().reset()
         self.steps_left = self.steps
         self.total_reward = 0.0

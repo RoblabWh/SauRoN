@@ -2,13 +2,14 @@ from PyQt5.QtCore import QTimer
 import Robot
 from Station import Station
 import PlotterWindow, SimulationWindow
+import math
 
 
 class Simulation:
 
     def __init__(self, app):
-        self.plotterWindow = PlotterWindow.PlotterWindow(app)
-        self.simulationWindow = SimulationWindow.SimulationWindow()
+        # self.plotterWindow = PlotterWindow.PlotterWindow(app)
+        self.simulationWindow = SimulationWindow.SimulationWindow(app)
         self.timer = QTimer()  # to create a thread that calls a function at intervals
         # self.timer.timeout.connect(self.update)  # the update function keeps getting called at intervals
         self.timer.setSingleShot(False)
@@ -22,7 +23,7 @@ class Simulation:
 
         self.pickUp = Station(8.0, 1.0, 0.5, 0.5, 0)
         self.delivery = Station(1, 1, 0.5, 0.5, 1)
-        self.robot = Robot.Robot((3.0, 5.0), -1.5, self.pickUp)
+        self.robot = Robot.Robot((3.0, 5.0), 3*math.pi/2, self.pickUp)
 
         if self.simulationWindow != 0:
             self.simulationWindow.initRobot(meterToPixel(self.robot.getPosX()),
@@ -89,8 +90,8 @@ class Simulation:
             self.simulationWindow.updateRobot(meterToPixel(self.robot.getPosX()),
                                               meterToPixel(self.robot.getPosY()),
                                               self.robot.getDirection())
-        if self.plotterWindow != 0:
-            self.plotterWindow.plot(self.robot.getLinearVelocity(), self.simTime)
+        # if self.plotterWindow != 0:
+        #     self.plotterWindow.plot(self.robot.getLinearVelocity(), self.simTime)
 
         return outOfArea, reachedPickUp, reachedDelivery
 

@@ -1,12 +1,12 @@
 import Environment, Agent, sys, Network, ActorCritic
-# import tensorflow as tf
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
+# import tensorflow.compat.v1 as tf
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 from collections import namedtuple
 import keras.backend as K
 from A2C import A2C
-
+import os
 from keras.layers import Input
 import argparse
 
@@ -23,7 +23,7 @@ target_update = 10
 memory_size = 10000
 lr = 0.001
 num_episodes = 1000
-steps_left = 200
+steps_left = 500
 
 # Workaround for not getting error message
 #def except_hook(cls, exception, traceback):
@@ -34,9 +34,15 @@ steps_left = 200
 def main2():
     args = None
     parser = argparse.ArgumentParser(description='Training parameters')
-    parser.add_argument('--nb_episodes', type=int, default=1000, help="Number of training episodes")
+    parser.add_argument('--nb_episodes', type=int, default=20000, help="Number of training episodes")
+    parser.add_argument('--save_intervall', type=int, default=200, help="Save Intervall")
+    parser.add_argument('--path', type=str, default="/home/nex/models/", help="Safe Space")
 
     args = parser.parse_args(args)
+
+    exp_dir = args.path
+    if not os.path.exists(exp_dir):
+        os.makedirs(exp_dir)
 
     app = QApplication(sys.argv)
     env = Environment.Environment(app, steps_left)

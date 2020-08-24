@@ -3,11 +3,11 @@ from keras.layers import Dense, Flatten, Input, Conv2D, Conv1D, ReLU, Add
 from keras.optimizers import Adam
 import random, math
 import numpy as np
-# import tensorflow as tf
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
+# import tensorflow.compat.v1 as tf
 from collections import deque
 
-tf.disable_v2_behavior()
+# tf.disable_v2_behavior()
 
 class ActorCritic:
     def __init__(self, env, lr, start, end, decay, sess, batch_size):

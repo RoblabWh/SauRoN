@@ -6,9 +6,10 @@ from Station import Station
 
 class SimulationWindow(QMainWindow):
 
-    def __init__(self):
+    def __init__(self, application):
         super().__init__()
 
+        self.app = application
         self.setWindowTitle("Simulation")
         self.width = 1000
         self.height = 600
@@ -49,3 +50,4 @@ class SimulationWindow(QMainWindow):
     def updateRobot(self, posX, posY, direction):
         self.robotRepresentation.update(posX, posY, direction)
         self.repaint()
+        self.app.processEvents()
