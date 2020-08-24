@@ -19,7 +19,7 @@ class Actor(Agent):
     def addHead(self, network):
         """ Assemble Actor network to predict probability of each action
         """
-        x = Dense(128, activation='relu')(network.output)
+        x = Dense(128, activation='relu')(network.output) #128
         out = Dense(self.out_dim, activation='softmax')(x)
         return Model(network.input, out)
 

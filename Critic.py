@@ -19,7 +19,7 @@ class Critic(Agent):
     def addHead(self, network):
         """ Assemble Critic network to predict value of each state
         """
-        x = Dense(128, activation='relu')(network.output)
+        x = Dense(128, activation='relu')(network.output) #128
         out = Dense(1, activation='linear')(x)
         return Model(network.input, out)
 

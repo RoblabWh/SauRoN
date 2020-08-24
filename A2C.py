@@ -10,6 +10,7 @@ from keras.optimizers import RMSprop
 
 from Critic import Critic
 from Actor import Actor
+from utils import AverageMeter
 
 
 class A2C:
@@ -31,6 +32,7 @@ class A2C:
         # Build optimizers
         self.actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=lr))
         self.critic.compile(loss='mse', optimizer=RMSprop(lr=lr))
+        self.av_meter = AverageMeter()
 
         # self.a_opt = self.actor.optimizer()
         # self.c_opt = self.critic.optimizer()
@@ -40,8 +42,8 @@ class A2C:
         """
         inp = Input(self.env_dim)
         x = Flatten()(inp)
-        x = Dense(64, activation='relu')(x)
-        x = Dense(128, activation='relu')(x)
+        x = Dense(64, activation='relu')(x) #64
+        # x = Dense(128, activation='relu')(x) #128
         return Model(inp, x)
 
     def policy_action(self, s):
@@ -52,7 +54,8 @@ class A2C:
     def discount(self, r):
         """ Compute the gamma-discounted rewards over an episode
         """
-        discounted_r, cumul_r = np.zeros_like(r), 0
+        discounted_r = np.zeros_like(r, dtype=float)
+        cumul_r = 0
         for t in reversed(range(0, len(r))):
             cumul_r = r[t] + cumul_r * self.gamma
             discounted_r[t] = cumul_r
@@ -117,21 +120,27 @@ class A2C:
             #     mean, stdev = gather_stats(self, env)
             #     results.append([e, mean, stdev])
 
+            if e % args.save_intervall == 0:
+                self.save_weights(args.path)
+
             # Export results for Tensorboard
             # score = tfSummary('score', cumul_reward)
             # summary_writer.add_summary(score, global_step=e)
             # summary_writer.flush()
 
+            #Update Average Rewards
+            self.av_meter.update(cumul_reward)
+
             # Display score
-            tqdm_e.set_description("Score: " + str(cumul_reward))
+            tqdm_e.set_description("Reward Episode: " + str(cumul_reward) + " -- Averarge Reward: " + str(self.av_meter.avg))
             tqdm_e.refresh()
 
         return results
 
     def save_weights(self, path):
-        path += '_LR_{}'.format(self.lr)
-        self.actor.save(path)
-        self.critic.save(path)
+        path += 'MODEL_LR_{}'.format(self.lr)
+        self.actor.save_weights(path + '_actor.h5')
+        self.critic.save_weights(path + '_critic.h5')
 
     def load_weights(self, path_actor, path_critic):
         self.critic.load_weights(path_critic)
