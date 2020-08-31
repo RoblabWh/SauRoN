@@ -7,14 +7,15 @@ from pynput.keyboard import Key, Listener
 
 class Robot:
 
-    def __init__(self, position, startDirection, station):
+    def __init__(self, position, startDirection, station, args):
         self.startposX, self.startposY = position
         self.startDirection = startDirection
         self.goalX, self.goalY = station.getPosX(), station.getPosY()
         self.state = []
+        self.state_raw = []
         # [posX, posY, direction, linearVelocity, angularVelocity, targetLinearVelocity, targetAngularVelocity, goalX, goalY]
 
-        self.time_steps = 4
+        self.time_steps = 8
         # Robot Hardware Params
         self.width = 50  # cm
         self.length = 50  # cm
@@ -32,7 +33,7 @@ class Robot:
         self.XYnorm = [1000, 600]
         self.directionnom = [0, 2 * math.pi]
 
-        self.manuell = True
+        self.manuell = args.manually
 
         if self.manuell:
             self.listener = Listener(on_press=self.on_press, on_release=self.on_release)
@@ -57,7 +58,7 @@ class Robot:
         #          targetAngularVelocity, goalX, goalY]
         frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
 
-        for i in range(self.time_steps):
+        for _ in range(self.time_steps):
             self.push_frame(frame)
 
     def denormdata(self, data, limits):
@@ -78,12 +79,15 @@ class Robot:
 
     # TESTEN!
     def push_frame(self, frame):
-        frame = self.normalize(frame)
+        frame_norm = self.normalize(frame)
         if len(self.state) >= self.time_steps:
             self.state.pop(0)
-            self.state.append(frame)
+            self.state.append(frame_norm)
+            self.state_raw.pop(0)
+            self.state_raw.append(frame)
         else:
-            self.state.append(frame)
+            self.state.append(frame_norm)
+            self.state_raw.append(frame)
 
     def update(self, dt, vel, goal):
 
@@ -161,26 +165,47 @@ class Robot:
             return True
         return False
 
+    # def getPosX(self):
+    #     return self.denormdata(self.state[self.time_steps - 1][0], [0, self.XYnorm[0]])
+    #
+    # def getPosY(self):
+    #     return self.denormdata(self.state[self.time_steps - 1][1], [0, self.XYnorm[1]])
+    #
+    # def getDirection(self):
+    #     return self.denormdata(self.state[self.time_steps - 1][2], self.directionnom)
+    #
+    # def getLinearVelocity(self):
+    #     return self.denormdata(self.state[self.time_steps - 1][3], [self.minLinearVelocity, self.maxLinearVelocity])
+    #
+    # def getAngularVelocity(self):
+    #     return self.denormdata(self.state[self.time_steps - 1][4], [self.minAngularVelocity, self.maxAngularVelocity])
+    #
+    # def getGoalX(self):
+    #     return self.denormdata(self.state[self.time_steps - 1][5], [0, self.XYnorm[0]])
+    #
+    # def getGoalY(self):
+    #     return self.denormdata(self.state[self.time_steps - 1][6], [0, self.XYnorm[1]])
+
     def getPosX(self):
-        return self.denormdata(self.state[3][0], [0, self.XYnorm[0]])
+        return self.state_raw[self.time_steps - 1][0]
 
     def getPosY(self):
-        return self.denormdata(self.state[3][1], [0, self.XYnorm[1]])
+        return self.state_raw[self.time_steps - 1][1]
 
     def getDirection(self):
-        return self.denormdata(self.state[3][2], self.directionnom)
+        return self.state_raw[self.time_steps - 1][2]
 
     def getLinearVelocity(self):
-        return self.denormdata(self.state[3][3], [self.minLinearVelocity, self.maxLinearVelocity])
+        return self.state_raw[self.time_steps - 1][3]
 
     def getAngularVelocity(self):
-        return self.denormdata(self.state[3][4], [self.minAngularVelocity, self.maxAngularVelocity])
+        return self.state_raw[self.time_steps - 1][4]
 
     def getGoalX(self):
-        return self.denormdata(self.state[3][5], [0, self.XYnorm[0]])
+        return self.state_raw[self.time_steps - 1][5]
 
     def getGoalY(self):
-        return self.denormdata(self.state[3][6], [0, self.XYnorm[1]])
+        return self.denormdata(self.state[self.time_steps - 1][6], [0, self.XYnorm[1]])
 
     def getVelocity(self):
         return self.getLinearVelocity(), self.getAngularVelocity()

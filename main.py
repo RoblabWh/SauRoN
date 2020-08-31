@@ -7,6 +7,7 @@ import Environment
 import sys
 from algorithms.DQN import DQN
 from algorithms.A2C import A2C
+from utils import str2bool
 
 # HYPERPARAMETERS
 batch_size = 40
@@ -24,10 +25,10 @@ steps = 1500
 
 def main_a2c(args):
     app = QApplication(sys.argv)
-    env = Environment.Environment(app, args.steps)
+    env = Environment.Environment(app, args.steps, args)
 
     act_dim = np.asarray(env.get_actions()).shape[0]
-    env_dim = (4, 7)
+    env_dim = (8, 7)
 
     a2c = A2C(act_dim, env_dim, args)
 
@@ -36,10 +37,10 @@ def main_a2c(args):
 
 def main_dqn(args):
     app = QApplication(sys.argv)
-    env = Environment.Environment(app, args.steps)
+    env = Environment.Environment(app, args.steps, args)
 
     act_dim = np.asarray(env.get_actions()).shape[0]
-    env_dim = (4, 7)
+    env_dim = (1, 7)
 
     dqn = DQN(act_dim, env_dim, args)
 
@@ -49,6 +50,7 @@ def main_dqn(args):
 if __name__ == '__main__':
     args = None
     parser = argparse.ArgumentParser(description='Training parameters')
+    parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=False, help='Moving robot manually with wasd')
     parser.add_argument('--nb_episodes', type=int, default=num_episodes, help='Number of training episodes')
     parser.add_argument('--save_intervall', type=int, default=200, help='Save Intervall')
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
@@ -71,6 +73,9 @@ if __name__ == '__main__':
 
     if not os.path.exists(args.path):
         os.makedirs(args.path)
+
+    if args.manually:
+        args.steps = 1000000
 
     if args.alg == 'a2c':
         main_a2c(args)

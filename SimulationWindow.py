@@ -4,9 +4,29 @@ import RobotRepresentation
 from Station import Station
 
 
+def initRobots(robots):
+    robotRepresentations = []
+    for robot in robots:
+        robot_draw = RobotRepresentation.RobotRepresentation(robot.getPosX(),
+                                                             robot.getPosY(),
+                                                             robot.startDirection,
+                                                             robot.width,
+                                                             robot.length)
+        robotRepresentations.append(robot_draw)
+    return robotRepresentations
+
+
+def initStations(stations):
+    _stations = []
+    for i, station in enumerate(stations):
+        station_draw = Station(station.posX, station.posY, station.width, station.length, i)
+        _stations.append(station_draw)
+    return _stations
+
+
 class SimulationWindow(QMainWindow):
 
-    def __init__(self, application):
+    def __init__(self, application, robots, stations):
         super().__init__()
 
         self.app = application
@@ -17,37 +37,21 @@ class SimulationWindow(QMainWindow):
         self.setFixedWidth(self.width)
         self.setFixedHeight(self.height)
 
-        self.robotRepresentation = 0
-        self.pickUpStation = 0
-        self.deliveryStation = 0
-        self.painter = QPainter(self)
+        self.robotRepresentations = initRobots(robots)
+        self.stations = initStations(stations)
 
+        self.painter = QPainter(self)
 
     def paintEvent(self, event):
 
         self.painter.begin(self)
-        if self.pickUpStation != 0:
-            self.pickUpStation.paint(self.painter)
-        if self.deliveryStation != 0:
-            self.deliveryStation.paint(self.painter)
-        if self.robotRepresentation != 0:
-            self.robotRepresentation.paint(self.painter)
+        for station in self.stations:
+            station.paint(self.painter)
+        for robot in self.robotRepresentations:
+            robot.paint(self.painter)
         self.painter.end()
 
-    def initRobot(self, robotStartPosX, robotStartPosY, robotStartDirection, robotWidth, robotLength):
-        self.robotRepresentation = RobotRepresentation.RobotRepresentation(robotStartPosX,
-                                                       robotStartPosY,
-                                                       robotStartDirection,
-                                                       robotWidth,
-                                                       robotLength)
-
-    def initPickUpStation(self, posX, posY, width, length):
-        self.pickUpStation = Station(posX, posY, width, length, 0)
-
-    def initDeliveryStation(self, posX, posY, width, length):
-        self.deliveryStation = Station(posX, posY, width, length, 1)
-
-    def updateRobot(self, posX, posY, direction):
-        self.robotRepresentation.update(posX, posY, direction)
+    def updateRobot(self, robot, num):
+        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirection())
         self.repaint()
         self.app.processEvents()

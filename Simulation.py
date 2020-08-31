@@ -7,61 +7,22 @@ import math
 
 class Simulation:
 
-    def __init__(self, app):
-        # self.plotterWindow = PlotterWindow.PlotterWindow(app)
-        self.simulationWindow = SimulationWindow.SimulationWindow(app)
-        self.timer = QTimer()  # to create a thread that calls a function at intervals
-        # self.timer.timeout.connect(self.update)  # the update function keeps getting called at intervals
-        self.timer.setSingleShot(False)
+    def __init__(self, app, args):
+        # Erstelle Stationen und Roboter
+        self.pickUp = Station(800.0, 100.0, 50, 50, 0)
+        self.delivery = Station(100, 100, 50, 50, 1)
+        self.robot = Robot.Robot((400.0, 500.0), 3*math.pi/2, self.pickUp, args)
+        self.robot2 = Robot.Robot((700.0, 500.0), 3*math.pi/2, self.pickUp, args)
 
-        #  self.simulationWindow = simulationWindow
+        # Erstelle Liste aller Stationen und Roboter (Für Multiroboter Multistation Support!) TODO
+        self.robots = [self.robot, self.robot2]
+        self.stations = [self.pickUp, self.delivery]
+
+        self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations)
         self.simulationWindow.show()
-        #  self.plotterWindow = plotterWindow
 
         self.simTime = 0  # s
         self.simTimestep = 1  # s
-
-        self.pickUp = Station(800.0, 100.0, 50, 50, 0)
-        self.delivery = Station(100, 100, 50, 50, 1)
-        self.robot = Robot.Robot((400.0, 500.0), 3*math.pi/2, self.pickUp)
-
-        # if self.simulationWindow != 0:
-        #     self.simulationWindow.initRobot(meterToPixel(self.robot.getPosX()),
-        #                                     meterToPixel(self.robot.getPosY()),
-        #                                     self.robot.getDirection(),
-        #                                     meterToPixel(self.robot.width),
-        #                                     meterToPixel(self.robot.length))
-        #
-        #     self.simulationWindow.initPickUpStation(meterToPixel(self.pickUp.getPosX()),
-        #                                             meterToPixel(self.pickUp.getPosY()),
-        #                                             meterToPixel(self.pickUp.getWidth()),
-        #                                             meterToPixel(self.pickUp.getLength()))
-        #
-        #     self.simulationWindow.initDeliveryStation(meterToPixel(self.delivery.getPosX()),
-        #                                               meterToPixel(self.delivery.getPosY()),
-        #                                               meterToPixel(self.delivery.getWidth()),
-        #                                               meterToPixel(self.delivery.getLength()))
-        #
-        # self.timer.start(self.simTimestep * 1000)
-
-        if self.simulationWindow != 0:
-            self.simulationWindow.initRobot(self.robot.getPosX(),
-                                            self.robot.getPosY(),
-                                            self.robot.getDirection(),
-                                            self.robot.width,
-                                            self.robot.length)
-
-            self.simulationWindow.initPickUpStation(self.pickUp.getPosX(),
-                                                    self.pickUp.getPosY(),
-                                                    self.pickUp.getWidth(),
-                                                    self.pickUp.getLength())
-
-            self.simulationWindow.initDeliveryStation(self.delivery.getPosX(),
-                                                      self.delivery.getPosY(),
-                                                      self.delivery.getWidth(),
-                                                      self.delivery.getLength())
-
-        self.timer.start(self.simTimestep * 1000)
 
     def getRobot(self):
         return self.robot
@@ -120,14 +81,7 @@ class Simulation:
         self.robot.update(self.simTimestep, vel, goal)
 
         if self.simulationWindow != 0:
-            self.simulationWindow.updateRobot((self.robot.getPosX()),
-                                              (self.robot.getPosY()),
-                                              self.robot.getDirection())
-        # if self.plotterWindow != 0:
-        #     self.plotterWindow.plot(self.robot.getLinearVelocity(), self.simTime)
+            for i, robot in enumerate(self.robots):
+                self.simulationWindow.updateRobot(robot, i)
 
         return outOfArea, reachedPickUp, reachedDelivery
-
-
-def meterToPixel(m):
-    return 100 * m

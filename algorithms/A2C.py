@@ -7,7 +7,6 @@ from keras.optimizers import RMSprop, Adam
 
 from utils import AverageMeter
 
-
 class A2C:
     """ Actor-Critic Main Algorithm
     """
@@ -26,8 +25,8 @@ class A2C:
         self.critic = self.buildCritic(self.shared)
 
         # Compile Models
-        self.actor.compile(loss='categorical_crossentropy', optimizer=Adam(lr=self.lr))
-        self.critic.compile(loss='mse', optimizer=Adam(lr=self.lr))
+        self.actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=self.lr))
+        self.critic.compile(loss='mse', optimizer=RMSprop(lr=self.lr))
         # self.actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=self.lr))
         # self.critic.compile(loss='mse', optimizer=RMSprop(lr=self.lr))
         self.av_meter = AverageMeter()
