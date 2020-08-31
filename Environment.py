@@ -62,15 +62,15 @@ class Environment:
         robot_pose_current_y = self.simulation.getRobot().getPosY() + radius
 
 
-        # distance_old = math.sqrt((robot_pose_old_x - goal_pose_old_x) ** 2 +
-        #                          (robot_pose_old_y - goal_pose_old_y) ** 2)
+        distance_old = math.sqrt((robot_pose_old_x - goal_pose_old_x) ** 2 +
+                                  (robot_pose_old_y - goal_pose_old_y) ** 2)
         #
-        # distance_new = math.sqrt((robot_pose_current_x - goal_pose_old_x) ** 2 +
-        #                          (robot_pose_current_y - goal_pose_old_y) ** 2)
+        distance_new = math.sqrt((robot_pose_current_x - goal_pose_old_x) ** 2 +
+                                 (robot_pose_current_y - goal_pose_old_y) ** 2)
 
         robot_orientation = self.simulation.getRobot().getDirection()
-        orientation_goal_new = math.atan2(goal_pose_old_y - (robot_pose_current_y + radius),
-                                          goal_pose_old_x - (robot_pose_current_x + radius))
+        orientation_goal_new = math.atan2((goal_pose_old_y + self.simulation.getGoalLength()) - (robot_pose_current_y + radius),
+                                          (goal_pose_old_x + self.simulation.getGoalWidth()) - (robot_pose_current_x + radius))
         orientation_goal_new += (2 * math.pi)
 
         # print("Robot Orientation: " + str(robot_orientation))
@@ -80,31 +80,30 @@ class Environment:
 
         ########### REWARD CALCULATION ################
 
-        # reward = (distance_old - distance_new) * 100
-        if math.fabs(robot_orientation - orientation_goal_new) < 0.05:
-            reward = 2.0
-            # print("Looking to Goal")
+        reward = (distance_old - distance_new) * 100
+        if math.fabs(robot_orientation - orientation_goal_new) < 0.3:  # 0.05
+            reward += 2.0
         else:
-            reward = 0
+            reward += -0.1
         # if distance_old > distance_new:
         #     reward += 2
         # if distance_old < distance_new:
         #     reward = -1
         # if distance_old == distance_new:
         #     reward += -0.5
-        if self.simulation.getRobot().isInCircleOfGoal(100):
-            reward += 3.0
-        if self.simulation.getRobot().isInCircleOfGoal(200):
-            reward += 2.0
         if self.simulation.getRobot().isInCircleOfGoal(300):
             reward += 1.0
+        if self.simulation.getRobot().isInCircleOfGoal(200):
+            reward += 2.0
+        if self.simulation.getRobot().isInCircleOfGoal(100):
+            reward += 3.0
         if outOfArea:
-            reward += -10.0
+            reward += -40.0
             self.done = True
         if reachedPickup:
-            reward = 10.0
-        if reachedDelivery:
             reward = 20.0
+        if reachedDelivery:
+            reward = 30.0
             self.done = True
         if self.steps_left <= 0:
             reward += -1.0

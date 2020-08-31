@@ -72,6 +72,22 @@ class Simulation:
     def getDeliveryStation(self):
         return self.delivery
 
+    def getGoalWidth(self):
+        goalWidth = 0
+        if self.robot.hasGoal(self.pickUp):
+            goalWidth = self.pickUp.getWidth()
+        if self.robot.hasGoal(self.delivery):
+            goalWidth = self.delivery.getWidth()
+        return goalWidth
+
+    def getGoalLength(self):
+        goalLength = 0
+        if self.robot.hasGoal(self.pickUp):
+            goalLength = self.pickUp.getLength()
+        if self.robot.hasGoal(self.delivery):
+            goalLength = self.delivery.getLength()
+        return goalLength
+
     def update(self, vel):
         self.simTime += self.simTimestep
         outOfArea = False

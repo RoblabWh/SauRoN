@@ -21,5 +21,7 @@ class Agent:
         return self.model.predict(self.reshape(inp))
 
     def reshape(self, x):
-        if len(x.shape) < 3: return np.expand_dims(x, axis=0)
-        else: return x
+        if len(x.shape) < 3:
+            return np.expand_dims(x, axis=0)
+        else:
+            return x
