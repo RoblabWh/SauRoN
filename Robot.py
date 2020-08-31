@@ -2,6 +2,7 @@ import math
 
 
 # import keyboard
+from pynput.keyboard import Key, Listener
 
 
 class Robot:
@@ -15,23 +16,29 @@ class Robot:
 
         self.time_steps = 4
         # Robot Hardware Params
-        self.width = 0.5  # m
-        self.length = 0.5  # m
+        self.width = 50  # cm
+        self.length = 50  # cm
         self.radius = self.width / 2
 
-        self.maxLinearVelocity = 1  # m/s
+        self.maxLinearVelocity = 10  # m/s
         self.minLinearVelocity = 0  # m/s
-        self.maxLinearAcceleration = 0.5  # m/s^2
-        self.minLinearAcceleration = -0.5  # m/s^2
+        self.maxLinearAcceleration = 5  # m/s^2
+        self.minLinearAcceleration = -5  # m/s^2
         self.maxAngularVelocity = 1  # rad/s
         self.minAngularVelocity = -1  # rad/s
-        self.maxAngularAcceleration = 0.2  # rad/s^2
-        self.minAngularAcceleration = -0.2 # rad/s^2
+        self.maxAngularAcceleration = 0.02  # rad/s^2
+        self.minAngularAcceleration = -0.02 # rad/s^2
 
-        self.XYnom = [10, 6]
-        self.dt = 0.2
-        # self.directionnom = [self.minAngularVelocity * self.dt, self.maxAngularVelocity * self.dt]
+        self.XYnorm = [1000, 600]
         self.directionnom = [0, 2 * math.pi]
+
+        self.manuell = True
+
+        if self.manuell:
+            self.listener = Listener(on_press=self.on_press, on_release=self.on_release)
+            self.listener.start()
+            self.linTast = 0
+            self.angTast = 0
 
         self.reset()
 
@@ -57,13 +64,13 @@ class Robot:
         return (data * (limits[1] - limits[0])) + limits[0]
 
     def normalize(self, frame):
-        posX = frame[0] / self.XYnom[0]
-        posY = frame[1] / self.XYnom[1]
+        posX = frame[0] / self.XYnorm[0]
+        posY = frame[1] / self.XYnorm[1]
         direction = (frame[2] - self.directionnom[0]) / (self.directionnom[1] - self.directionnom[0])
         linVel = (frame[3] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
         angVel = (frame[4] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
-        goalX = frame[5] / self.XYnom[0]
-        goalY = frame[6] / self.XYnom[1]
+        goalX = frame[5] / self.XYnorm[0]
+        goalY = frame[6] / self.XYnorm[1]
 
         frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
 
@@ -80,16 +87,6 @@ class Robot:
 
     def update(self, dt, vel, goal):
 
-        # Tastatursteuerung
-        # if keyboard.is_pressed('right'):
-        #     posX += 0.5
-        # if keyboard.is_pressed('left'):
-        #     posX -= 0.5
-        # if keyboard.is_pressed('up'):
-        #     posY -= 0.5
-        # if keyboard.is_pressed('down'):
-        #     posY += 0.5
-
         ##### OLD ########
         # direction = self.getDirection()
         # posX += math.cos(self.getDirection()) * linVel * dt
@@ -105,8 +102,12 @@ class Robot:
         goalX, goalY = goal
         tarLinVel, tarAngVel = vel
 
-        linVel, angVel = self.compute_next_velocity(dt, self.getLinearVelocity(), self.getAngularVelocity(), tarLinVel,
-                                                    tarAngVel)
+        if not self.manuell:
+            linVel, angVel = self.compute_next_velocity(dt, self.getLinearVelocity(), self.getAngularVelocity(),
+                                                        tarLinVel, tarAngVel)
+        else:
+            linVel = self.linTast
+            angVel = self.angTast
 
         direction = (self.getDirection() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
         posX += math.cos(direction) * linVel * dt
@@ -161,10 +162,10 @@ class Robot:
         return False
 
     def getPosX(self):
-        return self.denormdata(self.state[3][0], [0, self.XYnom[0]])
+        return self.denormdata(self.state[3][0], [0, self.XYnorm[0]])
 
     def getPosY(self):
-        return self.denormdata(self.state[3][1], [0, self.XYnom[1]])
+        return self.denormdata(self.state[3][1], [0, self.XYnorm[1]])
 
     def getDirection(self):
         return self.denormdata(self.state[3][2], self.directionnom)
@@ -176,10 +177,29 @@ class Robot:
         return self.denormdata(self.state[3][4], [self.minAngularVelocity, self.maxAngularVelocity])
 
     def getGoalX(self):
-        return self.denormdata(self.state[3][5], [0, self.XYnom[0]])
+        return self.denormdata(self.state[3][5], [0, self.XYnorm[0]])
 
     def getGoalY(self):
-        return self.denormdata(self.state[3][6], [0, self.XYnom[1]])
+        return self.denormdata(self.state[3][6], [0, self.XYnorm[1]])
 
     def getVelocity(self):
         return self.getLinearVelocity(), self.getAngularVelocity()
+
+    def on_press(self, key):
+
+        if key.char == 'w':
+            self.linTast = 0.5
+        if key.char == 'a':
+            self.angTast = -0.02
+        if key.char == 's':
+            self.linTast = 0
+        if key.char == 'd':
+            self.angTast = 0.02
+        if key.char == 'c':
+            self.angTast = 0
+
+    def on_release(self, key):
+        self.linTast = 0
+        self.angTast = 0
+
+

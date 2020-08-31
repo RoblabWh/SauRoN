@@ -24,10 +24,6 @@ class RobotRepresentation:
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
         painter.setBrush(QBrush(self.fillColor, self.brushStyle))
         painter.drawEllipse(self.posX, self.posY, self.width, self.height)
-        # painter.drawLine(self.posX + self.width / 2,
-        #                  self.posY + self.height / 2,
-        #                  self.posX + self.width / 2 + (self.width / 2) * math.cos(self.direction),
-        #                  self.posY + self.height / 2 - (self.height / 2) * math.sin(- self.direction))
 
         middlex = self.posX + self.radius
         middley = self.posY + self.radius

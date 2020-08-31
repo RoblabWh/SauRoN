@@ -10,3 +10,5 @@ conda install -c anaconda pyqt
 
 conda install -c anaconda pyqtgraph
 
+conda install -c conda-forge pynput
+

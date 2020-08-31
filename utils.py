@@ -1,3 +1,5 @@
+from pynput.keyboard import Key, Listener
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):
@@ -14,3 +16,4 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
+

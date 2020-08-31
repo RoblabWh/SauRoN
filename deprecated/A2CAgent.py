@@ -8,7 +8,7 @@ class Agent:
     def __init__(self, inp_dim, out_dim, lr):
         self.inp_dim = inp_dim
         self.out_dim = out_dim
-        self.rms_optimizer =  RMSprop(lr=lr, epsilon=0.1, rho=0.99)
+        self.rms_optimizer = RMSprop(lr=lr, epsilon=0.1, rho=0.99)
 
     def fit(self, inp, targ):
         """ Perform one epoch of training

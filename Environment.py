@@ -1,7 +1,6 @@
 import math
 import Simulation
 import numpy as np
-import keras.backend as K
 
 
 class Environment:
@@ -16,7 +15,8 @@ class Environment:
     def get_observation(self):
         return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
 
-    def get_actions(self):
+    @staticmethod
+    def get_actions():
         return [0, 1, 2, 3]  # Links, Rechts, Oben, Unten
 
     def is_done(self):
@@ -46,8 +46,8 @@ class Environment:
         radius = self.simulation.getRobot().radius
         goal_pose_old_x = self.simulation.robot.getGoalX()
         goal_pose_old_y = self.simulation.robot.getGoalY()
-        robot_pose_old_x = self.simulation.getRobot().getPosX() + radius
-        robot_pose_old_y = self.simulation.getRobot().getPosY() + radius
+        # robot_pose_old_x = self.simulation.getRobot().getPosX() + radius
+        # robot_pose_old_y = self.simulation.getRobot().getPosY() + radius
 
         outOfArea, reachedPickup, reachedDelivery = self.simulation.update(vel)
 
@@ -83,6 +83,7 @@ class Environment:
         # reward = (distance_old - distance_new) * 100
         if math.fabs(robot_orientation - orientation_goal_new) < 0.05:
             reward = 2.0
+            # print("Looking to Goal")
         else:
             reward = 0
         # if distance_old > distance_new:
@@ -91,15 +92,19 @@ class Environment:
         #     reward = -1
         # if distance_old == distance_new:
         #     reward += -0.5
-        if self.simulation.getRobot().isInCircleOfGoal(3):
+        if self.simulation.getRobot().isInCircleOfGoal(100):
+            reward += 3.0
+        if self.simulation.getRobot().isInCircleOfGoal(200):
+            reward += 2.0
+        if self.simulation.getRobot().isInCircleOfGoal(300):
             reward += 1.0
         if outOfArea:
-            reward += -40.0
+            reward += -10.0
             self.done = True
         if reachedPickup:
             reward = 10.0
         if reachedDelivery:
-            reward = 10.0
+            reward = 20.0
             self.done = True
         if self.steps_left <= 0:
             reward += -1.0
