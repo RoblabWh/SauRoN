@@ -1,15 +1,10 @@
-import random
 import numpy as np
 
 from tqdm import tqdm
 from keras.models import Model
-from keras import regularizers
-from keras.utils import to_categorical
 from keras.layers import Input, Dense, Flatten
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, Adam
 
-from Critic import Critic
-from Actor import Actor
 from utils import AverageMeter
 
 
@@ -17,21 +12,24 @@ class A2C:
     """ Actor-Critic Main Algorithm
     """
 
-    def __init__(self, act_dim, env_dim, gamma=0.99, lr=0.0001):
+    def __init__(self, act_dim, env_dim, args):
         """ Initialization
         """
         # Environment and A2C parameters
         self.act_dim = act_dim
         self.env_dim = env_dim
-        self.gamma = gamma
-        self.lr = lr
+        self.gamma = args.gamma
+        self.lr = args.learningrate
         # Create actor and critic networks
         self.shared = self.buildNetwork()
-        self.actor = Actor(self.env_dim, act_dim, self.shared, lr).model
-        self.critic = Critic(self.env_dim, act_dim, self.shared, lr).model
-        # Build optimizers
-        self.actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=lr))
-        self.critic.compile(loss='mse', optimizer=RMSprop(lr=lr))
+        self.actor = self.buildActor(self.shared)
+        self.critic = self.buildCritic(self.shared)
+
+        # Compile Models
+        self.actor.compile(loss='categorical_crossentropy', optimizer=Adam(lr=self.lr))
+        self.critic.compile(loss='mse', optimizer=Adam(lr=self.lr))
+        # self.actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=self.lr))
+        # self.critic.compile(loss='mse', optimizer=RMSprop(lr=self.lr))
         self.av_meter = AverageMeter()
 
         # self.a_opt = self.actor.optimizer()
@@ -43,8 +41,18 @@ class A2C:
         inp = Input(self.env_dim)
         x = Flatten()(inp)
         x = Dense(64, activation='relu')(x) #64
-        # x = Dense(128, activation='relu')(x) #128
+        x = Dense(128, activation='relu')(x) #128
         return Model(inp, x)
+
+    def buildActor(self, network):
+        x = Dense(128, activation='relu')(network.output) #128
+        out = Dense(self.act_dim, activation='softmax')(x)
+        return Model(network.input, out)
+
+    def buildCritic(self, network):
+        x = Dense(128, activation='relu')(network.output) #128
+        out = Dense(1, activation='linear')(x)
+        return Model(network.input, out)
 
     def policy_action(self, s):
         """ Use the actor to predict the next action to take, using the policy
@@ -104,7 +112,6 @@ class A2C:
                 action_onehot[a] = 1
                 actions.append(action_onehot)
 
-                # actions.append(to_categorical(a, self.act_dim))
                 rewards.append(r)
                 states.append(old_state)
                 # Update current state
@@ -116,19 +123,12 @@ class A2C:
             self.train_models(states, actions, rewards, done)
 
             # Gather stats every episode for plotting
-            # if args.gather_stats:
-            #     mean, stdev = gather_stats(self, env)
-            #     results.append([e, mean, stdev])
+            # TODO
 
             if e % args.save_intervall == 0:
                 self.save_weights(args.path)
 
-            # Export results for Tensorboard
-            # score = tfSummary('score', cumul_reward)
-            # summary_writer.add_summary(score, global_step=e)
-            # summary_writer.flush()
-
-            #Update Average Rewards
+            # Update Average Rewards
             self.av_meter.update(cumul_reward)
 
             # Display score
@@ -138,7 +138,7 @@ class A2C:
         return results
 
     def save_weights(self, path):
-        path += 'MODEL_LR_{}'.format(self.lr)
+        path += 'A2C'
         self.actor.save_weights(path + '_actor.h5')
         self.critic.save_weights(path + '_critic.h5')
 

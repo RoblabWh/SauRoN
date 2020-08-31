@@ -1,87 +1,78 @@
-import Environment, Agent, sys, Network
-import tensorflow as tf
+import argparse
 import numpy as np
+import os
 from PyQt5.QtWidgets import QApplication
-from collections import namedtuple
-import keras.backend as K
+
+import Environment
+import sys
+from algorithms.DQN import DQN
+from algorithms.A2C import A2C
 
 # HYPERPARAMETERS
 batch_size = 40
-gamma = 0.8
 eps_start = 1
 eps_end = 0.01
 eps_decay = 0.0001
 target_update = 10
 memory_size = 10000
-lr = 0.001
+
+gamma = 0.999
+lr = 0.0001
 num_episodes = 1000
-steps_left = 200
-
-# Workaround for not getting error message
-#def except_hook(cls, exception, traceback):
-#    sys.__excepthook__(cls, exception, traceback)
-
-Experience = namedtuple('Experience', ('state', 'action', 'next_state', 'reward', 'done'))
+steps = 1500
 
 
-def main():
-    agent = Agent.Agent(eps_start, eps_end, eps_decay, memory_size)
-
-    # TODO: Netze noch implementieren, target_net ist Kopie vom policy_net
-    policy_net = Network.DQN(lr)
-    target_net = Network.DQN(lr)
-    target_net.update_target_net(policy_net)
-
-    # print(tf.__version__)   # Test für Tensorflow
-
+def main_a2c(args):
     app = QApplication(sys.argv)
-    env = Environment.Environment(app, steps_left)
+    env = Environment.Environment(app, args.steps)
 
-    for episode in range(num_episodes):
-        env.reset()
-        state = env.get_observation()
-        state = np.expand_dims(state, axis=0)
-        print(f'Episode: {episode}')
-        # print(f'Steps Agent: {agent.current_step}')
-        print(f'Epsilon Greedy: {agent.epsilon_greedy_strategy(agent.current_step)}')
-        while not env.is_done():
-            possible_actions = env.get_actions()
-            action = agent.choose_action(state, possible_actions, policy_net)
-            next_state, reward = env.step(action)
-            done = env.is_done()
-            if K.is_tensor(next_state):
-                next_state = K.get_value(next_state)
-            agent.push_memory(Experience(state=state, action=action, next_state=next_state, reward=reward, done=done))
-            env.total_reward += reward
-            state = next_state
+    act_dim = np.asarray(env.get_actions()).shape[0]
+    env_dim = (4, 7)
 
-            if agent.can_provide_sample(batch_size):
-                experiences = agent.sample_memory(batch_size)
-                states = []
-                targets = []
-                # print(len(experiences))
-                for sample in experiences:
-                    _state, _action, _next_state, _reward, _done = sample
+    a2c = A2C(act_dim, env_dim, args)
 
-                    if _done:
-                        target[0][_action] = _reward
-                    else:
-                        target = target_net.model.predict(_next_state)
-                        Q_future = np.amax(target_net.model.predict(_next_state)[0])
-                        target[0][_action] = _reward + Q_future * gamma
-                    states.append(_state)
-                    targets.append(target)
-                states = np.squeeze(np.asarray(states), axis=1)
-                targets = np.squeeze(np.asarray(targets), axis=1)
-                policy_net.model.fit(states, targets, batch_size=batch_size, epochs=1, verbose=0)
+    a2c.train(env, args)
 
-        if episode % target_update == 0:
-            target_net.update_target_net(policy_net)
 
-        print("Total reward got: %.4f" % env.total_reward)
-    # sys.exit(app.exec_())
-    # sys.excepthook = except_hook
+def main_dqn(args):
+    app = QApplication(sys.argv)
+    env = Environment.Environment(app, args.steps)
+
+    act_dim = np.asarray(env.get_actions()).shape[0]
+    env_dim = (4, 7)
+
+    dqn = DQN(act_dim, env_dim, args)
+
+    dqn.train(env, args)
 
 
 if __name__ == '__main__':
-    main()
+    args = None
+    parser = argparse.ArgumentParser(description='Training parameters')
+    parser.add_argument('--nb_episodes', type=int, default=num_episodes, help='Number of training episodes')
+    parser.add_argument('--save_intervall', type=int, default=200, help='Save Intervall')
+    parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
+    parser.add_argument('--alg', type=str, default='a2c', choices=['a2c', 'dqn'], help='Reinforcement Learning Algorithm')
+    parser.add_argument('-lr', '--learningrate', type=float, default=lr, help='Learning Rate')
+    parser.add_argument('--gamma', type=float, default=gamma, help='Gamma')
+    parser.add_argument('--steps', type=int, default=steps, help='Steps in Environment per Episode')
+    # FOR DQN
+    parser.add_argument('--target_update', type=int, default=target_update, help='How often is the Agent updated')
+    parser.add_argument('--batchsize', type=int, default=batch_size, help='batch_size')
+    parser.add_argument('--memory_size', type=int, default=memory_size, help='Replay Memory Size')
+    parser.add_argument('--eps_start', type=float, default=eps_start, help='Epsilon Start')
+    parser.add_argument('--eps_end', type=float, default=eps_end, help='Epsilon End')
+    parser.add_argument('--eps_decay', type=float, default=eps_decay, help='Epsilon Decay')
+
+    args = parser.parse_args(args)
+
+    if args.path == "":
+        args.path = os.path.join(os.getcwd(), "models", "")
+
+    if not os.path.exists(args.path):
+        os.makedirs(args.path)
+
+    if args.alg == 'a2c':
+        main_a2c(args)
+    elif args.alg == 'dqn':
+        main_dqn(args)

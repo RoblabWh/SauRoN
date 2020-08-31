@@ -1,10 +1,8 @@
-import numpy as np
 import keras.backend as K
 
-from keras.models import Model, load_model
-from keras.layers import Input, Dense, Flatten
-from keras.optimizers import Adam
-from A2CAgent import Agent
+from keras.models import Model
+from keras.layers import Dense
+from deprecated.A2CAgent import Agent
 
 class Actor(Agent):
     """ Actor for the A2C Algorithm
