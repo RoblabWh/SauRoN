@@ -7,15 +7,15 @@ from pynput.keyboard import Key, Listener
 
 class Robot:
 
-    def __init__(self, position, startDirection, station, args):
+    def __init__(self, position, startDirection, station, args, timeframes):
         self.startposX, self.startposY = position
         self.startDirection = startDirection
         self.goalX, self.goalY = station.getPosX(), station.getPosY()
         self.state = []
         self.state_raw = []
-        # [posX, posY, direction, linearVelocity, angularVelocity, targetLinearVelocity, targetAngularVelocity, goalX, goalY]
+        # [posX, posY, direction, linearVelocity, angularVelocity, goalX, goalY, targetLinearVelocity, targetAngularVelocity]
 
-        self.time_steps = 8
+        self.time_steps = timeframes #4
         # Robot Hardware Params
         self.width = 50  # cm
         self.length = 50  # cm
@@ -49,13 +49,12 @@ class Robot:
         direction = self.startDirection
         linVel = 0
         angVel = 0
-        targetLinearVelocity = 0
-        targetAngularVelocity = 0
+        tarLinVel = 0
+        tarAngVel = 0
         goalX = self.goalX
         goalY = self.goalY
 
-        # frame = [posX, posY, direction, linearVelocity, angularVelocity, targetLinearVelocity,
-        #          targetAngularVelocity, goalX, goalY]
+        # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
         frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
 
         for _ in range(self.time_steps):
@@ -64,6 +63,7 @@ class Robot:
     def denormdata(self, data, limits):
         return (data * (limits[1] - limits[0])) + limits[0]
 
+    # Hier nochmal Debuggen. Werte vllt Runden??
     def normalize(self, frame):
         posX = frame[0] / self.XYnorm[0]
         posY = frame[1] / self.XYnorm[1]
@@ -72,12 +72,14 @@ class Robot:
         angVel = (frame[4] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
         goalX = frame[5] / self.XYnorm[0]
         goalY = frame[6] / self.XYnorm[1]
+        # tarLinVel = (frame[7] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
+        # tarAngVel = (frame[8] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
 
         frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
+        # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
 
         return frame
 
-    # TESTEN!
     def push_frame(self, frame):
         frame_norm = self.normalize(frame)
         if len(self.state) >= self.time_steps:
@@ -89,22 +91,31 @@ class Robot:
             self.state.append(frame_norm)
             self.state_raw.append(frame)
 
+    def getTarVel(self, tarLinVel, tarAngVel):
+        if tarLinVel == 0:
+            linVel = 0
+        elif tarLinVel == 1:
+            linVel = self.maxLinearVelocity
+        elif tarLinVel == -1:
+            linVel == self.minLinearVelocity
+
+        if tarAngVel == 0:
+            angVel = 0
+        elif tarAngVel == 1:
+            angVel = self.maxAngularVelocity
+        elif tarAngVel == -1:
+            angVel = self.minAngularVelocity
+
+        return linVel, angVel
+
     def update(self, dt, vel, goal):
-
-        ##### OLD ########
-        # direction = self.getDirection()
-        # posX += math.cos(self.getDirection()) * linVel * dt
-        # posY += math.sin(self.getDirection()) * linVel * dt
-        # direction += angVel * dt
-
-        # posX += math.cos(direction) * linVel * dt
-        # posY += math.sin(-direction) * linVel * dt
-        # direction = self.getDirection() + angVel * dt
-        ##################
 
         posX, posY = self.getPosX(), self.getPosY()
         goalX, goalY = goal
-        tarLinVel, tarAngVel = vel
+        tarLinVel, tarAngVel = vel # Hier Werte zwischen -1 und 1 daher...
+
+        tarLinVel, tarAngVel = self.getTarVel(tarLinVel, tarAngVel) #möglw. Aktionen so gestalten dass LinVel und
+                                                                    #unabhängig voneinander sind
 
         if not self.manuell:
             linVel, angVel = self.compute_next_velocity(dt, self.getLinearVelocity(), self.getAngularVelocity(),
@@ -117,7 +128,7 @@ class Robot:
         posX += math.cos(direction) * linVel * dt
         posY += math.sin(direction) * linVel * dt
 
-        # frame = [posX, posY, direction, linVel, angVel, tarLinVel, tarAngVel, goalX, goalY]
+        # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
         frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
         self.push_frame(frame)
 
@@ -164,27 +175,6 @@ class Robot:
         if self.getGoalX() == station.getPosX() and self.getGoalY() == station.getPosY():
             return True
         return False
-
-    # def getPosX(self):
-    #     return self.denormdata(self.state[self.time_steps - 1][0], [0, self.XYnorm[0]])
-    #
-    # def getPosY(self):
-    #     return self.denormdata(self.state[self.time_steps - 1][1], [0, self.XYnorm[1]])
-    #
-    # def getDirection(self):
-    #     return self.denormdata(self.state[self.time_steps - 1][2], self.directionnom)
-    #
-    # def getLinearVelocity(self):
-    #     return self.denormdata(self.state[self.time_steps - 1][3], [self.minLinearVelocity, self.maxLinearVelocity])
-    #
-    # def getAngularVelocity(self):
-    #     return self.denormdata(self.state[self.time_steps - 1][4], [self.minAngularVelocity, self.maxAngularVelocity])
-    #
-    # def getGoalX(self):
-    #     return self.denormdata(self.state[self.time_steps - 1][5], [0, self.XYnorm[0]])
-    #
-    # def getGoalY(self):
-    #     return self.denormdata(self.state[self.time_steps - 1][6], [0, self.XYnorm[1]])
 
     def getPosX(self):
         return self.state_raw[self.time_steps - 1][0]

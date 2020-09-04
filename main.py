@@ -23,30 +23,6 @@ num_episodes = 1000
 steps = 1500
 
 
-def main_a2c(args):
-    app = QApplication(sys.argv)
-    env = Environment.Environment(app, args.steps, args)
-
-    act_dim = np.asarray(env.get_actions()).shape[0]
-    env_dim = (8, 7)
-
-    a2c = A2C(act_dim, env_dim, args)
-
-    a2c.train(env, args)
-
-
-def main_dqn(args):
-    app = QApplication(sys.argv)
-    env = Environment.Environment(app, args.steps, args)
-
-    act_dim = np.asarray(env.get_actions()).shape[0]
-    env_dim = (1, 7)
-
-    dqn = DQN(act_dim, env_dim, args)
-
-    dqn.train(env, args)
-
-
 if __name__ == '__main__':
     args = None
     parser = argparse.ArgumentParser(description='Training parameters')
@@ -68,6 +44,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args(args)
 
+    env_dim = (32, 7) #Timeframes, Robotstates
+
+    app = QApplication(sys.argv)
+    env = Environment.Environment(app, args.steps, args, env_dim[0])
+
+    act_dim = np.asarray(env.get_actions()).shape[0]
+
     if args.path == "":
         args.path = os.path.join(os.getcwd(), "models", "")
 
@@ -78,6 +61,10 @@ if __name__ == '__main__':
         args.steps = 1000000
 
     if args.alg == 'a2c':
-        main_a2c(args)
+        model = A2C(act_dim, env_dim, args)
+
     elif args.alg == 'dqn':
-        main_dqn(args)
+        model = DQN(act_dim, env_dim, args)
+
+    model.train(env, args)
+

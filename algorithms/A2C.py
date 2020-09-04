@@ -7,6 +7,7 @@ from keras.optimizers import RMSprop, Adam
 
 from utils import AverageMeter
 
+
 class A2C:
     """ Actor-Critic Main Algorithm
     """
@@ -39,17 +40,17 @@ class A2C:
         """
         inp = Input(self.env_dim)
         x = Flatten()(inp)
-        x = Dense(64, activation='relu')(x) #64
-        x = Dense(128, activation='relu')(x) #128
+        x = Dense(128, activation='relu')(x) #64
+        x = Dense(256, activation='relu')(x) #128
         return Model(inp, x)
 
     def buildActor(self, network):
-        x = Dense(128, activation='relu')(network.output) #128
+        x = Dense(64, activation='relu')(network.output) #128
         out = Dense(self.act_dim, activation='softmax')(x)
         return Model(network.input, out)
 
     def buildCritic(self, network):
-        x = Dense(128, activation='relu')(network.output) #128
+        x = Dense(64, activation='relu')(network.output) #128
         out = Dense(1, activation='linear')(x)
         return Model(network.input, out)
 

@@ -7,22 +7,22 @@ import math
 
 class Simulation:
 
-    def __init__(self, app, args):
+    def __init__(self, app, args, timeframes):
         # Erstelle Stationen und Roboter
         self.pickUp = Station(800.0, 100.0, 50, 50, 0)
         self.delivery = Station(100, 100, 50, 50, 1)
-        self.robot = Robot.Robot((400.0, 500.0), 3*math.pi/2, self.pickUp, args)
-        self.robot2 = Robot.Robot((700.0, 500.0), 3*math.pi/2, self.pickUp, args)
+        self.robot = Robot.Robot((400.0, 500.0), 3*math.pi/2, self.pickUp, args, timeframes)
+        # self.robot2 = Robot.Robot((700.0, 500.0), 3*math.pi/2, self.pickUp, args, timeframes)
 
         # Erstelle Liste aller Stationen und Roboter (Für Multiroboter Multistation Support!) TODO
-        self.robots = [self.robot, self.robot2]
+        self.robots = [self.robot]
         self.stations = [self.pickUp, self.delivery]
 
         self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations)
         self.simulationWindow.show()
 
         self.simTime = 0  # s
-        self.simTimestep = 1  # s
+        self.simTimestep = 0.2  # s
 
     def getRobot(self):
         return self.robot
@@ -51,6 +51,8 @@ class Simulation:
 
     def update(self, vel):
         self.simTime += self.simTimestep
+        #TODO hier Schleife für jeden Agenten
+
         outOfArea = False
         reachedPickUp = False
         reachedDelivery = False

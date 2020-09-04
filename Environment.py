@@ -4,10 +4,10 @@ import numpy as np
 
 
 class Environment:
-    def __init__(self, app, steps, args):
+    def __init__(self, app, steps, args, timeframes):
         self.steps = steps
         self.steps_left = steps
-        self.simulation = Simulation.Simulation(app, args)
+        self.simulation = Simulation.Simulation(app, args, timeframes)
         self.total_reward = 0.0
         self.done = False
         self.shape = np.asarray([0]).shape
@@ -76,6 +76,8 @@ class Environment:
         distance_new = math.sqrt((robot_pose_current_x - goal_pose_old_x) ** 2 +
                                  (robot_pose_current_y - goal_pose_old_y) ** 2)
 
+        delta_dist = distance_old - distance_new
+
         # print("Robot Orientation: " + str(robot_orientation))
         # print("Goal Orientation: " + str(orientation_goal_new))
         # print("DeltaDirection: " + str(robot_orientation - orientation_goal_new))
@@ -83,22 +85,18 @@ class Environment:
 
         ########### REWARD CALCULATION ################
 
-        reward = 0
-        # reward = (distance_old - distance_new) * 0.01
+        if delta_dist > 0.0:
+            reward = delta_dist * 0.01
+        else:
+            reward = delta_dist * 0.001
+
         if math.fabs(robot_orientation - orientation_goal_new) < 0.3:  # 0.05
             if(distance_old - distance_new) > 0:
-                reward += 1
-            reward += 0.1
+                reward += 0.1
 
         if math.fabs(robot_orientation - orientation_goal_new) < 0.5:  # 0.05
             if(distance_old - distance_new) > 0:
-                reward += 1
-            reward += 0.01
-
-        if math.fabs(robot_orientation - orientation_goal_new) < 0.8:  # 0.05
-            if(distance_old - distance_new) > 0:
-                reward += 1
-            reward += 0.001
+                reward += 0.01
         # else:
         #     reward += -0.1
         # if distance_old > distance_new:
@@ -114,7 +112,7 @@ class Environment:
         if self.simulation.getRobot().isInCircleOfGoal(100):
             reward += 0.003
         if outOfArea:
-            reward += -40.0
+            reward += -2.0
             self.done = True
         if reachedPickup:
             reward = 20.0
