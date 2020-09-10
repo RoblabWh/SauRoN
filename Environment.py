@@ -85,18 +85,26 @@ class Environment:
 
         ########### REWARD CALCULATION ################
 
-        if delta_dist > 0.0:
-            reward = delta_dist * 0.01
-        else:
-            reward = delta_dist * 0.001
+        reward = delta_dist
+        #print("Delta Dist: " + str(delta_dist))
+
+        # if delta_dist > 0.0:
+        #     reward += reward * 2 # * 0.01
+        # if delta_dist == 0.0:
+        #     reward += 0
+        # if delta_dist < 0.0:
+        #     reward += delta_dist * 0.5 # * 0.001
+
 
         if math.fabs(robot_orientation - orientation_goal_new) < 0.3:  # 0.05
-            if(distance_old - distance_new) > 0:
-                reward += 0.1
+            #if(distance_old - distance_new) > 0:
+            reward += 0.01
 
         if math.fabs(robot_orientation - orientation_goal_new) < 0.5:  # 0.05
-            if(distance_old - distance_new) > 0:
-                reward += 0.01
+            #if(distance_old - distance_new) > 0:
+           reward += 0.001
+
+
         # else:
         #     reward += -0.1
         # if distance_old > distance_new:
@@ -106,27 +114,27 @@ class Environment:
         # if distance_old == distance_new:
         #     reward += -1
         if self.simulation.getRobot().isInCircleOfGoal(300):
-            reward += 0.001
+            reward += 0.01
         if self.simulation.getRobot().isInCircleOfGoal(200):
-            reward += 0.002
+            reward += 0.02
         if self.simulation.getRobot().isInCircleOfGoal(100):
-            reward += 0.003
+            reward += 0.03
         if outOfArea:
-            reward += -2.0
+            reward += -20.0
             self.done = True
         if reachedPickup:
-            reward = 20.0
+            reward += 20.0
         if reachedDelivery:
-            reward = 30.0
+            reward += 30.0
             self.done = True
-        if self.steps_left <= 0:
-            reward += -1.0
+        # if self.steps_left <= 0:
+        #    reward += -1.0
 
         # print ("Reward got for this action: " + str(reward))
         # reward = factor * distance        # evtl. reward gewichten
 
         ################
-        # print(reward)
+        #print("Reward: " + str(reward))
         return next_state, reward, self.is_done()
 
     def reset(self):

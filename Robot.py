@@ -97,7 +97,7 @@ class Robot:
         elif tarLinVel == 1:
             linVel = self.maxLinearVelocity
         elif tarLinVel == -1:
-            linVel == self.minLinearVelocity
+            linVel = self.minLinearVelocity
 
         if tarAngVel == 0:
             angVel = 0

@@ -107,6 +107,7 @@ class A2C:
                 a = self.policy_action(old_state)
                 # Retrieve new state, reward, and whether the state is terminal
                 new_state, r, done = env.step(a)
+                #print("reward " + str(r))
                 # Memorize (s, a, r) for training
                 action_onehot = np.zeros([self.act_dim])
                 action_onehot[a] = 1
@@ -117,6 +118,7 @@ class A2C:
                 # Update current state
                 old_state = new_state
                 cumul_reward += r
+                #print("Kumulierter Reward: " + str(cumul_reward) + ", Reward: " + str(r))
                 time += 1
 
             # Train using discounted rewards ie. compute updates
@@ -132,7 +134,7 @@ class A2C:
             self.av_meter.update(cumul_reward)
 
             # Display score
-            tqdm_e.set_description("Reward Episode: " + str(cumul_reward) + " -- Averarge Reward: " + str(self.av_meter.avg))
+            tqdm_e.set_description("Reward Episode: " + str(cumul_reward) + " -- Average Reward: " + str(self.av_meter.avg))
             tqdm_e.refresh()
 
         return results
