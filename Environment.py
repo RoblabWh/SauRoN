@@ -93,7 +93,7 @@ class Environment:
         # if delta_dist == 0.0:
         #     reward += 0
         # if delta_dist < 0.0:
-        #     reward += delta_dist * 0.5 # * 0.001
+        #     reward += reward * 0.5 # * 0.001
 
 
         if math.fabs(robot_orientation - orientation_goal_new) < 0.3:  # 0.05
