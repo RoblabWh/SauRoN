@@ -17,25 +17,42 @@ class Environment:
 
     @staticmethod
     def get_actions():
-        return [0, 1, 2, 3]  # Links, Rechts, Oben, Unten
+        return [0, 1, 2, 3, 4]  # Links, Rechts, Oben, Unten
 
-    @staticmethod
-    def get_velocity(action):
+   # @staticmethod
+    def get_velocity(self, action):
+        actualLinVel = self.simulation.robot.getLinearVelocity()
+        actualAngVel = self.simulation.robot.getAngularVelocity()
 
-        # Aktion = 0 = Links
-        if action == 0: vel = (0, -1)
+        tarLinVel = actualLinVel
+        tarAngVel = actualAngVel
 
-        # Aktion = 1 = Rechts
-        if action == 1: vel = (0, 1)
+        # Links drehen mit vorheriger Linear Velocity
+        if action == 0:
+            tarLinVel = actualLinVel
+            tarAngVel = self.simulation.robot.minAngularVelocity
 
-        # Aktion = 2 = Vorne
-        if action == 2: vel = (1, 0)
+        # Rechts drehen mit vorheriger Linear Velocity
+        if action == 1:
+            tarLinVel = actualLinVel
+            tarAngVel = self.simulation.robot.maxAngularVelocity
 
-        # Aktion = 3 = Bremsen / Rueckwaertsfahren (wenn minLinearVelocity in Robot negativ ist,
-        # dann kann er rueckwaerts fahren, ansonsten stoppt er bei 0)
-        if action == 3: vel = (0, 0)  # stehen bleiben
+        # Geradeaus fahren mit vorheriger Linear Velocity
+        if action == 2:
+            tarLinVel = actualLinVel
+            tarAngVel = 0
 
-        return vel
+        # Beschleunigen auf maximale Linear Velocity, drehen mit vorheriger Angular Velocity
+        if action == 3:
+            tarLinVel = self.simulation.robot.maxLinearVelocity
+            tarAngVel = actualAngVel
+
+        # stehen bleiben, Angular Velocity wie vorher
+        if action == 4:
+            tarLinVel = 0
+            tarAngVel = actualAngVel
+
+        return tarLinVel, tarAngVel
 
     def is_done(self):
         return self.steps_left <= 0 or self.done
@@ -44,7 +61,7 @@ class Environment:
 
         self.steps_left -= 1
 
-        vel = self.get_velocity(action)
+        tarLinVel, tarAngVel = self.get_velocity(action)
 
         ######## Update der Simulation #######
         radius = self.simulation.getRobot().radius
@@ -53,7 +70,7 @@ class Environment:
         robot_pose_old_x = self.simulation.getRobot().getPosX() + radius
         robot_pose_old_y = self.simulation.getRobot().getPosY() + radius
 
-        outOfArea, reachedPickup, reachedDelivery = self.simulation.update(vel)
+        outOfArea, reachedPickup, reachedDelivery = self.simulation.update(tarLinVel, tarAngVel)
         #######################################
 
         next_state = self.get_observation()
@@ -66,15 +83,16 @@ class Environment:
         robot_pose_current_y = self.simulation.getRobot().getPosY() + radius
 
         robot_orientation = self.simulation.getRobot().getDirection()
-        orientation_goal_new = math.atan2((goal_pose_old_y + self.simulation.getGoalLength()) - (robot_pose_current_y + radius),
-                                          (goal_pose_old_x + self.simulation.getGoalWidth()) - (robot_pose_current_x + radius))
-        orientation_goal_new += (2 * math.pi)
+        orientation_goal_new = math.atan2((goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_current_y + radius),
+                                          (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_current_x + radius))
+        if orientation_goal_new < 0:
+            orientation_goal_new += (2 * math.pi)
 
-        distance_old = math.sqrt((robot_pose_old_x - goal_pose_old_x) ** 2 +
-                                 (robot_pose_old_y - goal_pose_old_y) ** 2)
+        distance_old = math.sqrt((robot_pose_old_x - (goal_pose_old_x + (self.simulation.getGoalWidth() / 2))) ** 2 +
+                                 (robot_pose_old_y - (goal_pose_old_y + (self.simulation.getGoalLength() / 2))) ** 2)
 
-        distance_new = math.sqrt((robot_pose_current_x - goal_pose_old_x) ** 2 +
-                                 (robot_pose_current_y - goal_pose_old_y) ** 2)
+        distance_new = math.sqrt((robot_pose_current_x - (goal_pose_old_x + (self.simulation.getGoalWidth() / 2))) ** 2 +
+                                  (robot_pose_current_y - (goal_pose_old_y + (self.simulation.getGoalLength() / 2))) ** 2)
 
         delta_dist = distance_old - distance_new
 
@@ -85,24 +103,31 @@ class Environment:
 
         ########### REWARD CALCULATION ################
 
+
         reward = delta_dist
         #print("Delta Dist: " + str(delta_dist))
 
-        # if delta_dist > 0.0:
-        #     reward += reward * 2 # * 0.01
-        # if delta_dist == 0.0:
-        #     reward += 0
-        # if delta_dist < 0.0:
-        #     reward += reward * 0.5 # * 0.001
+        reward -= (self.steps - self.steps_left) / self.steps
 
+        if delta_dist > 0.0:
+            reward += reward  # * 0.01
+        if delta_dist == 0.0:
+            reward += -0.5
+        if delta_dist < 0.0:
+            reward += reward * 0.5 # * 0.001
 
-        if math.fabs(robot_orientation - orientation_goal_new) < 0.3:  # 0.05
-            #if(distance_old - distance_new) > 0:
-            reward += 0.01
+        anglDeviation = math.fabs(robot_orientation - orientation_goal_new)
+        reward += (anglDeviation * -1 + 0.35) * 2
+        if anglDeviation < 0.2 and delta_dist > 0:
+            reward = reward * 2
 
-        if math.fabs(robot_orientation - orientation_goal_new) < 0.5:  # 0.05
-            #if(distance_old - distance_new) > 0:
-           reward += 0.001
+        # if math.fabs(robot_orientation - orientation_goal_new) < 0.001:  # 0.05 0.3
+        #     #if(distance_old - distance_new) > 0:
+        #     reward += 1.0
+        #
+        # if math.fabs(robot_orientation - orientation_goal_new) < 0.05:  # 0.5
+        #     #if(distance_old - distance_new) > 0:
+        #     reward += 0.01
 
 
         # else:
@@ -120,17 +145,19 @@ class Environment:
         if self.simulation.getRobot().isInCircleOfGoal(100):
             reward += 0.03
         if outOfArea:
-            reward += -20.0
+            reward += -30.0
             self.done = True
         if reachedPickup:
-            reward += 20.0
+            reward += 100.0
+            self.done = True
         if reachedDelivery:
             reward += 30.0
             self.done = True
+
+
         # if self.steps_left <= 0:
         #    reward += -1.0
 
-        # print ("Reward got for this action: " + str(reward))
         # reward = factor * distance        # evtl. reward gewichten
 
         ################

@@ -91,31 +91,10 @@ class Robot:
             self.state.append(frame_norm)
             self.state_raw.append(frame)
 
-    def getTarVel(self, tarLinVel, tarAngVel):
-        if tarLinVel == 0:
-            linVel = 0
-        elif tarLinVel == 1:
-            linVel = self.maxLinearVelocity
-        elif tarLinVel == -1:
-            linVel = self.minLinearVelocity
-
-        if tarAngVel == 0:
-            angVel = 0
-        elif tarAngVel == 1:
-            angVel = self.maxAngularVelocity
-        elif tarAngVel == -1:
-            angVel = self.minAngularVelocity
-
-        return linVel, angVel
-
-    def update(self, dt, vel, goal):
+    def update(self, dt, tarLinVel, tarAngVel, goal):
 
         posX, posY = self.getPosX(), self.getPosY()
         goalX, goalY = goal
-        tarLinVel, tarAngVel = vel # Hier Werte zwischen -1 und 1 daher...
-
-        tarLinVel, tarAngVel = self.getTarVel(tarLinVel, tarAngVel) #möglw. Aktionen so gestalten dass LinVel und
-                                                                    #unabhängig voneinander sind
 
         if not self.manuell:
             linVel, angVel = self.compute_next_velocity(dt, self.getLinearVelocity(), self.getAngularVelocity(),

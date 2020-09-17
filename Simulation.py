@@ -22,7 +22,7 @@ class Simulation:
         self.simulationWindow.show()
 
         self.simTime = 0  # s
-        self.simTimestep = 0.2  # s
+        self.simTimestep = 0.4  # s
 
     def getRobot(self):
         return self.robot
@@ -49,7 +49,7 @@ class Simulation:
             goalLength = self.delivery.getLength()
         return goalLength
 
-    def update(self, vel):
+    def update(self, tarLinVel, tarAngVel):
         self.simTime += self.simTimestep
         #TODO hier Schleife für jeden Agenten
 
@@ -80,7 +80,7 @@ class Simulation:
             if self.robot.collideWithStation(self.delivery):
                 reachedDelivery = True
 
-        self.robot.update(self.simTimestep, vel, goal)
+        self.robot.update(self.simTimestep, tarLinVel, tarAngVel, goal)
 
         if self.simulationWindow != 0:
             for i, robot in enumerate(self.robots):

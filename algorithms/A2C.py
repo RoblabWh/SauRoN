@@ -57,6 +57,7 @@ class A2C:
     def policy_action(self, s):
         """ Use the actor to predict the next action to take, using the policy
         """
+        #print(self.actor.predict(s).ravel())
         return np.random.choice(np.arange(self.act_dim), 1, p=self.actor.predict(s).ravel())[0]
 
     def discount(self, r):
