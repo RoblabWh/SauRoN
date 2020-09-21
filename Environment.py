@@ -1,5 +1,6 @@
 import math
 import Simulation
+import time
 import numpy as np
 
 
@@ -29,28 +30,23 @@ class Environment:
 
         # Links drehen mit vorheriger Linear Velocity
         if action == 0:
-            tarLinVel = actualLinVel
             tarAngVel = self.simulation.robot.minAngularVelocity
 
         # Rechts drehen mit vorheriger Linear Velocity
         if action == 1:
-            tarLinVel = actualLinVel
             tarAngVel = self.simulation.robot.maxAngularVelocity
 
         # Geradeaus fahren mit vorheriger Linear Velocity
         if action == 2:
-            tarLinVel = actualLinVel
             tarAngVel = 0
 
         # Beschleunigen auf maximale Linear Velocity, drehen mit vorheriger Angular Velocity
         if action == 3:
             tarLinVel = self.simulation.robot.maxLinearVelocity
-            tarAngVel = actualAngVel
 
         # stehen bleiben, Angular Velocity wie vorher
         if action == 4:
-            tarLinVel = 0
-            tarAngVel = actualAngVel
+            tarLinVel = self.simulation.robot.minLinearVelocity
 
         return tarLinVel, tarAngVel
 
@@ -107,14 +103,14 @@ class Environment:
         reward = delta_dist
         #print("Delta Dist: " + str(delta_dist))
 
-        reward -= (self.steps - self.steps_left) / self.steps
+
 
         if delta_dist > 0.0:
             reward += reward  # * 0.01
         if delta_dist == 0.0:
             reward += -0.5
         if delta_dist < 0.0:
-            reward += reward * 0.5 # * 0.001
+            reward += reward #* 0.5 # * 0.001
 
         anglDeviation = math.fabs(robot_orientation - orientation_goal_new)
         reward += (anglDeviation * -1 + 0.35) * 2
@@ -154,7 +150,7 @@ class Environment:
             reward += 30.0
             self.done = True
 
-
+        reward -= (self.steps - self.steps_left) / self.steps
         # if self.steps_left <= 0:
         #    reward += -1.0
 

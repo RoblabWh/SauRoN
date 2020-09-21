@@ -8,6 +8,14 @@ import math
 class Simulation:
 
     def __init__(self, app, args, timeframes):
+        """
+        Creates a simulation containing the robots, stations and simulation window
+        :param app: PyQt5.QtWidgets.QApplication
+        :param args:
+            args defined in main
+        :param timeframes: int -
+            the amount of frames saved as a history by the robots to train the neural net
+        """
         # Erstelle Stationen und Roboter
         self.pickUp = Station(800.0, 100.0, 50, 50, 0)
         self.delivery = Station(100, 100, 50, 50, 1)
@@ -22,7 +30,7 @@ class Simulation:
         self.simulationWindow.show()
 
         self.simTime = 0  # s
-        self.simTimestep = 0.4  # s
+        self.simTimestep = 0.25  # s
 
     def getRobot(self):
         return self.robot
@@ -50,6 +58,16 @@ class Simulation:
         return goalLength
 
     def update(self, tarLinVel, tarAngVel):
+        """
+        updates the robots and checks the exit conditions of the current epoch
+        :param tarLinVel: int/ float -
+            target linear velocity
+        :param tarAngVel: int/ float -
+            target angular velocity
+        :return: tuple -
+            (Boolean - out of area, Boolean - reached pickup, Boolean - reached Delivery)
+        """
+
         self.simTime += self.simTimestep
         #TODO hier Schleife für jeden Agenten
 
@@ -85,5 +103,4 @@ class Simulation:
         if self.simulationWindow != 0:
             for i, robot in enumerate(self.robots):
                 self.simulationWindow.updateRobot(robot, i)
-
         return outOfArea, reachedPickUp, reachedDelivery

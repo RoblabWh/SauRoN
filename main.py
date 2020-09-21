@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args(args)
 
-    env_dim = (32, 7) #Timeframes, Robotstates
+    env_dim = (4, 7) #Timeframes, Robotstates
 
     app = QApplication(sys.argv)
     env = Environment.Environment(app, args.steps, args, env_dim[0])
