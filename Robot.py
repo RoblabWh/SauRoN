@@ -36,19 +36,21 @@ class Robot:
         self.length = 50  # cm
         self.radius = self.width / 2
 
-        self.maxLinearVelocity = 10  # m/s
+        self.maxLinearVelocity = 1000  # cm/s entspricht 10m/s
         self.minLinearVelocity = 0  # m/s
-        self.maxLinearAcceleration = 50  # m/s^2
-        self.minLinearAcceleration = -50  # m/s^2
+        self.maxLinearAcceleration = 500  # cm/s^2 entspricht 5m/s^2
+        self.minLinearAcceleration = -500  # cm/s^2 entspricht 5m/s^2
         self.maxAngularVelocity = 1  # rad/s
         self.minAngularVelocity = -1  # rad/s
-        self.maxAngularAcceleration = 0.02  # rad/s^2
-        self.minAngularAcceleration = -0.02 # rad/s^2
+        self.maxAngularAcceleration = 0.5  # rad/s^2
+        self.minAngularAcceleration = -0.5 # rad/s^2
 
-        self.XYnorm = [1000, 600]
+        #TODO zentral die Werte holen
+        self.XYnorm = [3000, 2000]
         self.directionnom = [0, 2 * math.pi]
 
         self.manuell = args.manually
+
 
         if self.manuell:
             self.listener = Listener(on_press=self.on_press, on_release=self.on_release)

@@ -2,6 +2,7 @@ import math
 import Simulation
 import time
 import numpy as np
+from old.PlotterWindow import PlotterWindow
 
 
 class Environment:
@@ -12,6 +13,8 @@ class Environment:
         self.total_reward = 0.0
         self.done = False
         self.shape = np.asarray([0]).shape
+
+        self.plotterWindow = PlotterWindow(app)
 
     def get_observation(self):
         return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
@@ -92,6 +95,7 @@ class Environment:
 
         delta_dist = distance_old - distance_new
 
+
         # print("Robot Orientation: " + str(robot_orientation))
         # print("Goal Orientation: " + str(orientation_goal_new))
         # print("DeltaDirection: " + str(robot_orientation - orientation_goal_new))
@@ -100,7 +104,7 @@ class Environment:
         ########### REWARD CALCULATION ################
 
 
-        reward = delta_dist
+        reward = delta_dist / 10
         #print("Delta Dist: " + str(delta_dist))
 
 
@@ -134,7 +138,7 @@ class Environment:
         #     reward = -1
         # if distance_old == distance_new:
         #     reward += -1
-        if self.simulation.getRobot().isInCircleOfGoal(300):
+        if self.simulation.getRobot().isInCircleOfGoal(500):
             reward += 0.01
         if self.simulation.getRobot().isInCircleOfGoal(200):
             reward += 0.02
@@ -144,7 +148,7 @@ class Environment:
             reward += -30.0
             self.done = True
         if reachedPickup:
-            reward += 100.0
+            reward += 30.0
             self.done = True
         if reachedDelivery:
             reward += 30.0
@@ -158,6 +162,10 @@ class Environment:
 
         ################
         #print("Reward: " + str(reward))
+        self.plotterWindow.plot(reward, self.simulation.simTime)
+        time.sleep(0.05)
+
+
         return next_state, reward, self.is_done()
 
     def reset(self):

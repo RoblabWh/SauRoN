@@ -3,15 +3,17 @@ from PyQt5.QtWidgets import QMainWindow
 import RobotRepresentation
 from Station import Station
 
-
+scaleFactor = 2
 def initRobots(robots):
+
     robotRepresentations = []
     for robot in robots:
         robot_draw = RobotRepresentation.RobotRepresentation(robot.getPosX(),
                                                              robot.getPosY(),
                                                              robot.startDirection,
                                                              robot.width,
-                                                             robot.length)
+                                                             robot.length,
+                                                             scaleFactor)
         robotRepresentations.append(robot_draw)
     return robotRepresentations
 
@@ -19,7 +21,8 @@ def initRobots(robots):
 def initStations(stations):
     _stations = []
     for i, station in enumerate(stations):
-        station_draw = Station(station.posX, station.posY, station.width, station.length, i)
+        #TODO scale faktor der Station mit übergeben und nicht im Konstruktor berechnen
+        station_draw = Station(station.posX/scaleFactor, station.posY/scaleFactor, station.width/scaleFactor, station.length/scaleFactor, i)
         _stations.append(station_draw)
     return _stations
 
@@ -31,8 +34,8 @@ class SimulationWindow(QMainWindow):
 
         self.app = application
         self.setWindowTitle("Simulation")
-        self.width = 1000
-        self.height = 600
+        self.width = 3000/scaleFactor #30 Meter
+        self.height = 2000/scaleFactor #20 Meter
         self.setGeometry(200, 100, self.width, self.height)
         self.setFixedWidth(self.width)
         self.setFixedHeight(self.height)
