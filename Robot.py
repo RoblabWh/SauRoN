@@ -45,12 +45,10 @@ class Robot:
         self.maxAngularAcceleration = 0.5  # rad/s^2
         self.minAngularAcceleration = -0.5 # rad/s^2
 
-        #TODO zentral die Werte holen
-        self.XYnorm = [3000, 2000]
+        self.XYnorm = [args.arena_width, args.arena_length]
         self.directionnom = [0, 2 * math.pi]
 
         self.manuell = args.manually
-
 
         if self.manuell:
             self.listener = Listener(on_press=self.on_press, on_release=self.on_release)

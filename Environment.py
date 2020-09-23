@@ -14,7 +14,7 @@ class Environment:
         self.done = False
         self.shape = np.asarray([0]).shape
 
-        self.plotterWindow = PlotterWindow(app)
+        #self.plotterWindow = PlotterWindow(app)
 
     def get_observation(self):
         return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
@@ -162,7 +162,7 @@ class Environment:
 
         ################
         #print("Reward: " + str(reward))
-        self.plotterWindow.plot(reward, self.simulation.simTime)
+        #self.plotterWindow.plot(reward, self.simulation.simTime)
         time.sleep(0.05)
 
 

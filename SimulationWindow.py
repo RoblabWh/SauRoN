@@ -3,8 +3,8 @@ from PyQt5.QtWidgets import QMainWindow
 import RobotRepresentation
 from Station import Station
 
-scaleFactor = 2
-def initRobots(robots):
+
+def initRobots(robots, scaleFactor):
 
     robotRepresentations = []
     for robot in robots:
@@ -18,30 +18,29 @@ def initRobots(robots):
     return robotRepresentations
 
 
-def initStations(stations):
+def initStations(stations, scaleFactor):
     _stations = []
     for i, station in enumerate(stations):
-        #TODO scale faktor der Station mit übergeben und nicht im Konstruktor berechnen
-        station_draw = Station(station.posX/scaleFactor, station.posY/scaleFactor, station.width/scaleFactor, station.length/scaleFactor, i)
+        station_draw = Station(station.posX, station.posY, station.width, station.length, i, scaleFactor)
         _stations.append(station_draw)
     return _stations
 
 
 class SimulationWindow(QMainWindow):
 
-    def __init__(self, application, robots, stations):
+    def __init__(self, application, robots, stations, args):
         super().__init__()
 
         self.app = application
         self.setWindowTitle("Simulation")
-        self.width = 3000/scaleFactor #30 Meter
-        self.height = 2000/scaleFactor #20 Meter
+        self.width = int(args.arena_width/args.scale_factor)
+        self.height = int(args.arena_length/args.scale_factor)
         self.setGeometry(200, 100, self.width, self.height)
         self.setFixedWidth(self.width)
         self.setFixedHeight(self.height)
 
-        self.robotRepresentations = initRobots(robots)
-        self.stations = initStations(stations)
+        self.robotRepresentations = initRobots(robots, args.scale_factor)
+        self.stations = initStations(stations, args.scale_factor)
 
         self.painter = QPainter(self)
 

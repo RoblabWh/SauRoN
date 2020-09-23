@@ -129,11 +129,11 @@ class DQN:
                     # print(len(experiences))
                     for sample in experiences:
                         _state, _action, _next_state, _reward, _done = sample
+                        target = self.target_net.predict(_state)
 
                         if _done:
                             target[0][_action] = _reward
                         else:
-                            target = self.target_net.predict(_next_state)
                             Q_future = np.amax(self.target_net.predict(_next_state)[0])
                             target[0][_action] = _reward + Q_future * args.gamma
                         states.append(_state)

@@ -22,11 +22,15 @@ lr = 0.0001
 num_episodes = 1000
 steps = 1500
 
+arenaWidth = 3000  # cm entspricht 30m
+arenaLength = 2000  # cm entspricht 20m
+
+scaleFactor = 2
 
 if __name__ == '__main__':
     args = None
     parser = argparse.ArgumentParser(description='Training parameters')
-    parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=False, help='Moving robot manually with wasd')
+    parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=True, help='Moving robot manually with wasd')
     parser.add_argument('--nb_episodes', type=int, default=num_episodes, help='Number of training episodes')
     parser.add_argument('--save_intervall', type=int, default=200, help='Save Intervall')
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
@@ -42,12 +46,18 @@ if __name__ == '__main__':
     parser.add_argument('--eps_end', type=float, default=eps_end, help='Epsilon End')
     parser.add_argument('--eps_decay', type=float, default=eps_decay, help='Epsilon Decay')
 
+    parser.add_argument('--arena_width', type=int, default=arenaWidth, help='Width of the AI Arena')
+    parser.add_argument('--arena_length', type=int, default=arenaLength, help='Length of the AI Arena')
+
+    parser.add_argument('--scale_factor', type=int, default=scaleFactor, help='Scale Factor for visualisation')
+
     args = parser.parse_args(args)
 
     env_dim = (4, 7) #Timeframes, Robotstates
 
     app = QApplication(sys.argv)
     env = Environment.Environment(app, args.steps, args, env_dim[0])
+
 
     act_dim = np.asarray(env.get_actions()).shape[0]
 

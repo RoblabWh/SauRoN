@@ -17,21 +17,30 @@ class Simulation:
         :param timeframes: int -
             the amount of frames saved as a history by the robots to train the neural net
         """
+        # Skalierungsparameter für Visualisierung
+        self.scaleFactor = args.scale_factor
+
+        # Parameter width & length über args
+        self.arenaWidth = args.arena_width
+        self.arenaLength = args.arena_length
+
+
         # Erstelle Stationen und Roboter
-        self.pickUp = Station(800.0, 900.0, 100, 100, 0)
-        self.delivery = Station(100, 100, 50, 50, 1)
-        self.robot = Robot.Robot((1500.0,1800.0), 3*math.pi/2, self.pickUp, args, timeframes)
+        self.pickUp = Station(1500.0, 1000.0, 100, 100, 0, self.scaleFactor)
+        self.delivery = Station(100, 100, 50, 50, 1, self.scaleFactor)
+        self.robot = Robot.Robot((1500.0, 1800.0), 3*math.pi/2, self.pickUp, args, timeframes)
         # self.robot2 = Robot.Robot((700.0, 500.0), 3*math.pi/2, self.pickUp, args, timeframes)
 
         # Erstelle Liste aller Stationen und Roboter (Für Multiroboter Multistation Support!) TODO
         self.robots = [self.robot]
         self.stations = [self.pickUp, self.delivery]
 
-        self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations)
+        self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args)
         self.simulationWindow.show()
 
         self.simTime = 0  # s
         self.simTimestep = 0.1  # s
+
 
 
         # self.plotterWindow = PlotterWindow(app)
@@ -81,15 +90,14 @@ class Simulation:
         reachedPickUp = False
         reachedDelivery = False
 
-        #TODO: 3000 & 2000 aus main holen/ Zentral über variable
 
         # nicht rechts oder links aus dem Fenster gehen
-        if (self.robot.getPosX() + self.robot.width) > 3000 \
+        if (self.robot.getPosX() + self.robot.width) > self.arenaWidth \
                 or (self.robot.getPosX()) < 0: #self.simulationWindow.width ersetzt durch 3000
             outOfArea = True
 
         # nicht oben oder unten aus dem Fenster gehen
-        if (self.robot.getPosY() + self.robot.length) > 2000 or \
+        if (self.robot.getPosY() + self.robot.length) > self.arenaLength or \
                 (self.robot.getPosY()) < 0: #  self.simulationWindow.height ersetzt durch 2000
             outOfArea = True
 

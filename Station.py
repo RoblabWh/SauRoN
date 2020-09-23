@@ -3,7 +3,8 @@ from PyQt5.QtCore import Qt
 
 
 class Station:
-    def __init__(self, posX, posY, width, length, color):
+    def __init__(self, posX, posY, width, length, color, scaleFactor):
+        self.scaleFactor = scaleFactor
         self.posX = posX
         self.posY = posY
 
@@ -24,7 +25,7 @@ class Station:
     def paint(self, painter):
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
         painter.setBrush(QBrush(self.fillColor, self.brushStyle))
-        painter.drawRect(self.posX, self.posY, self.width, self.length)
+        painter.drawRect(self.posX / self.scaleFactor, self.posY / self.scaleFactor, self.width / self.scaleFactor, self.length / self.scaleFactor)
 
     def getPosX(self):
         return self.posX

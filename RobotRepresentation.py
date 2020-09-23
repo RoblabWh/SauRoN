@@ -4,8 +4,8 @@ import math
 
 
 class RobotRepresentation:
-    def __init__(self, x, y, direction, width, height, scale):
-        self.scale = scale
+    def __init__(self, x, y, direction, width, height, scaleFactor):
+        self.scale = scaleFactor
         self.width = width / self.scale
         self.height = height / self.scale
 
