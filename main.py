@@ -19,18 +19,18 @@ memory_size = 10000
 
 gamma = 0.999
 lr = 0.0001
-num_episodes = 1000
+num_episodes = 2000
 steps = 1500
 
 arenaWidth = 3000  # cm entspricht 30m
 arenaLength = 2000  # cm entspricht 20m
 
-scaleFactor = 2
+scaleFactor = 1.8
 
 if __name__ == '__main__':
     args = None
     parser = argparse.ArgumentParser(description='Training parameters')
-    parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=True, help='Moving robot manually with wasd')
+    parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=False, help='Moving robot manually with wasd')
     parser.add_argument('--nb_episodes', type=int, default=num_episodes, help='Number of training episodes')
     parser.add_argument('--save_intervall', type=int, default=200, help='Save Intervall')
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args(args)
 
-    env_dim = (4, 7) #Timeframes, Robotstates
+    env_dim = (4, 9) #Timeframes, Robotstates
 
     app = QApplication(sys.argv)
     env = Environment.Environment(app, args.steps, args, env_dim[0])

@@ -10,7 +10,7 @@ def initRobots(robots, scaleFactor):
     for robot in robots:
         robot_draw = RobotRepresentation.RobotRepresentation(robot.getPosX(),
                                                              robot.getPosY(),
-                                                             robot.startDirection,
+                                                             robot.getDirectionAngle(),
                                                              robot.width,
                                                              robot.length,
                                                              scaleFactor)
@@ -40,7 +40,7 @@ class SimulationWindow(QMainWindow):
         self.setFixedHeight(self.height)
 
         self.robotRepresentations = initRobots(robots, args.scale_factor)
-        self.stations = initStations(stations, args.scale_factor)
+        self.stations = stations#initStations(stations, args.scale_factor)
 
         self.painter = QPainter(self)
 
@@ -54,6 +54,6 @@ class SimulationWindow(QMainWindow):
         self.painter.end()
 
     def updateRobot(self, robot, num):
-        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirection())
+        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle())
         self.repaint()
         self.app.processEvents()

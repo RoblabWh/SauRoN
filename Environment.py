@@ -14,7 +14,7 @@ class Environment:
         self.done = False
         self.shape = np.asarray([0]).shape
 
-        #self.plotterWindow = PlotterWindow(app)
+        self.plotterWindow = PlotterWindow(app)
 
     def get_observation(self):
         return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
@@ -81,7 +81,7 @@ class Environment:
         robot_pose_current_x = self.simulation.getRobot().getPosX() + radius
         robot_pose_current_y = self.simulation.getRobot().getPosY() + radius
 
-        robot_orientation = self.simulation.getRobot().getDirection()
+        robot_orientation = self.simulation.getRobot().getDirectionAngle()
         orientation_goal_new = math.atan2((goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_current_y + radius),
                                           (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_current_x + radius))
         if orientation_goal_new < 0:
@@ -162,11 +162,11 @@ class Environment:
 
         ################
         #print("Reward: " + str(reward))
-        #self.plotterWindow.plot(reward, self.simulation.simTime)
-        time.sleep(0.05)
+        self.plotterWindow.plot(reward, self.simulation.simTime)
+        # time.sleep(0.02)
 
 
-        return next_state, reward, self.is_done()
+        return next_state, reward/10, self.is_done()
 
     def reset(self):
         self.simulation.getRobot().reset()

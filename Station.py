@@ -38,3 +38,7 @@ class Station:
 
     def getLength(self):
         return self.length
+
+    def reposition(self, posX, posY):
+        self.posX = posX
+        self.posY = posY

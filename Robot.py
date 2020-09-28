@@ -1,4 +1,5 @@
 import math
+import random
 
 
 # import keyboard
@@ -24,11 +25,13 @@ class Robot:
             the amount of frames saved as a history to train the neural net
         """
         self.startposX, self.startposY = position
-        self.startDirection = startDirection
+        self.startDirectionX = math.cos((startDirection))
+        self.startDirectionY = math.sin((startDirection))
+        print(self.startDirectionX, self.startDirectionY, startDirection)
         self.goalX, self.goalY = station.getPosX(), station.getPosY()
         self.state = []
         self.state_raw = []
-        # [posX, posY, direction, linearVelocity, angularVelocity, goalX, goalY, targetLinearVelocity, targetAngularVelocity]
+        # [posX, posY, directionX, directionY, linearVelocity, angularVelocity, goalX, goalY, targetLinearVelocity, targetAngularVelocity]
 
         self.time_steps = timeframes #4
         # Robot Hardware Params
@@ -46,9 +49,11 @@ class Robot:
         self.minAngularAcceleration = -0.5 # rad/s^2
 
         self.XYnorm = [args.arena_width, args.arena_length]
-        self.directionnom = [0, 2 * math.pi]
+        self.directionnom = [-1, 1]#2 * math.pi]
 
         self.manuell = args.manually
+
+        self.station = station
 
         if self.manuell:
             self.listener = Listener(on_press=self.on_press, on_release=self.on_release)
@@ -65,18 +70,23 @@ class Robot:
         In addition the state gets cleared.
         This method is typically called at the beginning of a training epoch.
         """
-        posX = self.startposX
-        posY = self.startposY
-        direction = self.startDirection
+        posX = self.startposX # random.randrange(100, self.XYnorm[0]-100)#self.startposX
+        posY = self.startposY # random.randrange(100, self.XYnorm[1]-100)#self.startposY
+        randDirection = random.uniform(0, 2*math.pi)
+        directionX = self.startDirectionX #self.directionVectorFromAngle(randDirection)[0]#self.startDirectionX
+        directionY = self.startDirectionY #self.directionVectorFromAngle(randDirection)[1]#self.startDirectionY
         linVel = 0
         angVel = 0
         tarLinVel = 0
         tarAngVel = 0
-        goalX = self.goalX
-        goalY = self.goalY
+        goalX = self.goalX #random.randrange(100, self.XYnorm[0]-100)#self.goalX
+        goalY = self.goalY #random.randrange(100, self.XYnorm[1]-100)#self.goalY
+        self.station.reposition(goalX,goalY)
+
+        goalDist = math.sqrt((posX - goalX) ** 2 + (posY - goalY) ** 2)
 
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
-        frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
+        frame = [posX, posY, directionX, directionY, linVel, angVel, goalX, goalY, goalDist]
 
         for _ in range(self.time_steps):
             self.push_frame(frame)
@@ -106,15 +116,18 @@ class Robot:
         """
         posX = frame[0] / self.XYnorm[0]
         posY = frame[1] / self.XYnorm[1]
-        direction = (frame[2] - self.directionnom[0]) / (self.directionnom[1] - self.directionnom[0])
-        linVel = (frame[3] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
-        angVel = (frame[4] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
-        goalX = frame[5] / self.XYnorm[0]
-        goalY = frame[6] / self.XYnorm[1]
+        directionX = (frame[2] - self.directionnom[0]) / (self.directionnom[1] - self.directionnom[0])
+        directionY = (frame[3] - self.directionnom[0]) / (self.directionnom[1] - self.directionnom[0])
+        linVel = (frame[4] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
+        angVel = (frame[5] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
+        goalX = frame[6] / self.XYnorm[0]
+        goalY = frame[7] / self.XYnorm[1]
+        dist = frame[8] / math.sqrt(self.XYnorm[0]**2+self.XYnorm[0]**2)
         # tarLinVel = (frame[7] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
         # tarAngVel = (frame[8] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
 
-        frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
+        frame = [posX, posY, directionX, directionY, linVel, angVel, goalX, goalY, dist]
+        # frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
 
         return frame
@@ -162,12 +175,15 @@ class Robot:
             linVel = self.linTast
             angVel = self.angTast
 
-        direction = (self.getDirection() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
+        goalDist=math.sqrt((posX-goalX)**2+(posY-goalY)**2)
+
+        direction = (self.getDirectionAngle() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
         posX += math.cos(direction) * linVel * dt
         posY += math.sin(direction) * linVel * dt
-
+        directionVector = self.directionVectorFromAngle(direction)
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
-        frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
+        # frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
+        frame = [posX, posY, directionVector[0],directionVector[1], linVel, angVel, goalX, goalY, goalDist]
         self.push_frame(frame)
 
     def compute_next_velocity(self, dt, linVel, angVel, tarLinVel, tarAngVel):
@@ -213,6 +229,11 @@ class Robot:
 
         return linVel, angVel
 
+    def directionVectorFromAngle(self, direction):
+        angX = math.cos(direction)
+        angY = math.sin(direction)
+        return(angX,angY)
+
     def collideWithStation(self, station):
         """
         :param station: Station.station -
@@ -253,23 +274,54 @@ class Robot:
     def getPosY(self):
         return self.state_raw[self.time_steps - 1][1]
 
-    def getDirection(self):
+    def getDirectionX(self):
         return self.state_raw[self.time_steps - 1][2]
 
-    def getLinearVelocity(self):
+    def getDirectionY(self):
         return self.state_raw[self.time_steps - 1][3]
 
-    def getAngularVelocity(self):
+    def getLinearVelocity(self):
+        return self.state_raw[self.time_steps - 1][4]
         return self.state_raw[self.time_steps - 1][4]
 
-    def getGoalX(self):
+    def getAngularVelocity(self):
         return self.state_raw[self.time_steps - 1][5]
 
+    def getGoalX(self):
+        return self.state_raw[self.time_steps - 1][6]
+
     def getGoalY(self):
-        return self.denormdata(self.state[self.time_steps - 1][6], [0, self.XYnorm[1]])
+        return self.denormdata(self.state[self.time_steps - 1][7], [0, self.XYnorm[1]])
 
     def getVelocity(self):
         return self.getLinearVelocity(), self.getAngularVelocity()
+
+    def getDirectionAngle(self):
+        angX = self.getDirectionX()
+        angY = self.getDirectionY()
+
+        direction = 0
+        if angX == 0:
+            if (angY > 0):
+                direction = 0.5 * math.pi
+            elif angY < -1:
+                direction = 1.5 * math.pi
+            else:
+                print("error! wrong input vector length | angX: ", angX, " | angY: " + angY)
+        elif angY == 1:
+            direction = 0.5 * math.pi
+        elif angY == -1:
+            direction = 1.5 * math.pi
+        else:
+            direction = math.atan(angY / angX)
+            if angX < 0:
+                direction = direction + math.pi
+            elif angY < 0:
+                direction = direction + 2 * math.pi
+
+        direction = (direction+ (2*math.pi))%(2*math.pi)
+
+        return direction
 
     def on_press(self, key):
 

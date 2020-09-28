@@ -16,7 +16,7 @@ class PlotterWindow:
         self.win.nextRow()
 
         self.curve1 = self.p1.plot()
-        self.p1.setYRange(-25, 25)
+        self.p1.setYRange(-10, 10)
         self.p1.setLabel(axis='left', text='Geschwindigkeit in m/s')
         self.p1.setLabel(axis='bottom', text='Simulation Time in s')
 

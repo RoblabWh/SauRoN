@@ -4,6 +4,7 @@ from tqdm import tqdm
 from keras.models import Model
 from keras.layers import Input, Dense, Flatten
 from keras.optimizers import RMSprop, Adam
+import tensorflow as tf
 
 from utils import AverageMeter
 
@@ -26,8 +27,8 @@ class A2C:
         self.critic = self.buildCritic(self.shared)
 
         # Compile Models
-        self.actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=self.lr))
-        self.critic.compile(loss='mse', optimizer=RMSprop(lr=self.lr))
+        self.actor.compile(loss='categorical_crossentropy', optimizer=Adam(lr=self.lr))
+        self.critic.compile(loss='mse', optimizer=Adam(lr=self.lr))
         # self.actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=self.lr))
         # self.critic.compile(loss='mse', optimizer=RMSprop(lr=self.lr))
         self.av_meter = AverageMeter()
@@ -78,6 +79,7 @@ class A2C:
         states = np.vstack(states)
         state_values = self.critic.predict(np.asarray(states))[:,0]
         advantages = discounted_rewards - np.reshape(state_values, len(state_values))
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         # Networks optimization
         # self.a_opt([states, actions, advantages])
         # self.c_opt([states, discounted_rewards])
@@ -121,7 +123,6 @@ class A2C:
                 cumul_reward += r
                 #print("Kumulierter Reward: " + str(cumul_reward) + ", Reward: " + str(r))
                 time += 1
-
             # Train using discounted rewards ie. compute updates
             self.train_models(states, actions, rewards, done)
 

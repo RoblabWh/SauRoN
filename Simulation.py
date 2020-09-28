@@ -26,7 +26,7 @@ class Simulation:
 
 
         # Erstelle Stationen und Roboter
-        self.pickUp = Station(1500.0, 1000.0, 100, 100, 0, self.scaleFactor)
+        self.pickUp = Station(800.0, 900.0, 100, 100, 0, self.scaleFactor)
         self.delivery = Station(100, 100, 50, 50, 1, self.scaleFactor)
         self.robot = Robot.Robot((1500.0, 1800.0), 3*math.pi/2, self.pickUp, args, timeframes)
         # self.robot2 = Robot.Robot((700.0, 500.0), 3*math.pi/2, self.pickUp, args, timeframes)
@@ -40,7 +40,6 @@ class Simulation:
 
         self.simTime = 0  # s
         self.simTimestep = 0.1  # s
-
 
 
         # self.plotterWindow = PlotterWindow(app)
