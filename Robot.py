@@ -1,5 +1,4 @@
-import math
-import random
+import math, random
 
 
 # import keyboard
@@ -281,7 +280,6 @@ class Robot:
         return self.state_raw[self.time_steps - 1][3]
 
     def getLinearVelocity(self):
-        return self.state_raw[self.time_steps - 1][4]
         return self.state_raw[self.time_steps - 1][4]
 
     def getAngularVelocity(self):

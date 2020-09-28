@@ -4,7 +4,6 @@ from tqdm import tqdm
 from keras.models import Model
 from keras.layers import Input, Dense, Flatten
 from keras.optimizers import RMSprop, Adam
-import tensorflow as tf
 
 from utils import AverageMeter
 
@@ -78,7 +77,7 @@ class A2C:
         discounted_rewards = self.discount(rewards)
         states = np.vstack(states)
         state_values = self.critic.predict(np.asarray(states))[:,0]
-        advantages = discounted_rewards - np.reshape(state_values, len(state_values))
+        advantages = discounted_rewards - np.reshape(state_values, len(state_values))  # Warum reshape
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         # Networks optimization
         # self.a_opt([states, actions, advantages])
@@ -123,6 +122,7 @@ class A2C:
                 cumul_reward += r
                 #print("Kumulierter Reward: " + str(cumul_reward) + ", Reward: " + str(r))
                 time += 1
+
             # Train using discounted rewards ie. compute updates
             self.train_models(states, actions, rewards, done)
 

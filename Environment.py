@@ -154,7 +154,7 @@ class Environment:
             reward += 30.0
             self.done = True
 
-        reward -= (self.steps - self.steps_left) / self.steps
+        #reward -= (self.steps - self.steps_left) / self.steps
         # if self.steps_left <= 0:
         #    reward += -1.0
 
