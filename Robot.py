@@ -34,14 +34,14 @@ class Robot:
 
         self.time_steps = timeframes #4
         # Robot Hardware Params
-        self.width = 50  # cm
-        self.length = 50  # cm
+        self.width = 0.5  # m
+        self.length = 0.5  # m
         self.radius = self.width / 2
 
-        self.maxLinearVelocity = 1000  # cm/s entspricht 10m/s
+        self.maxLinearVelocity = 10  # 10m/s
         self.minLinearVelocity = 0  # m/s
-        self.maxLinearAcceleration = 500  # cm/s^2 entspricht 5m/s^2
-        self.minLinearAcceleration = -500  # cm/s^2 entspricht 5m/s^2
+        self.maxLinearAcceleration = 5  # 5m/s^2
+        self.minLinearAcceleration = -5  # 5m/s^2
         self.maxAngularVelocity = 1  # rad/s
         self.minAngularVelocity = -1  # rad/s
         self.maxAngularAcceleration = 0.5  # rad/s^2
@@ -182,7 +182,7 @@ class Robot:
         directionVector = self.directionVectorFromAngle(direction)
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
-        frame = [posX, posY, directionVector[0],directionVector[1], linVel, angVel, goalX, goalY, goalDist]
+        frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist]
         self.push_frame(frame)
 
     def compute_next_velocity(self, dt, linVel, angVel, tarLinVel, tarAngVel):

@@ -107,8 +107,6 @@ class Environment:
         reward = delta_dist / 10
         #print("Delta Dist: " + str(delta_dist))
 
-
-
         if delta_dist > 0.0:
             reward += reward  # * 0.01
         if delta_dist == 0.0:
@@ -164,7 +162,6 @@ class Environment:
         #print("Reward: " + str(reward))
         self.plotterWindow.plot(reward, self.simulation.simTime)
         # time.sleep(0.02)
-
 
         return next_state, reward/10, self.is_done()
 

@@ -6,8 +6,8 @@ import math
 class RobotRepresentation:
     def __init__(self, x, y, direction, width, height, scaleFactor):
         self.scale = scaleFactor
-        self.width = width / self.scale
-        self.height = height / self.scale
+        self.width = width * self.scale
+        self.height = height * self.scale
 
         self.lineColor = Qt.green
         self.thickness = 2
@@ -16,8 +16,8 @@ class RobotRepresentation:
         self.brushStyle = Qt.SolidPattern
         self.radius = self.width / 2
 
-        self.posX = x / self.scale
-        self.posY = y / self.scale
+        self.posX = x * self.scale
+        self.posY = y * self.scale
         self.direction = direction
 
     def paint(self, painter):
@@ -34,6 +34,6 @@ class RobotRepresentation:
                          middley + self.radius * math.sin(self.direction))
 
     def update(self, x, y, direction):
-        self.posX = x / self.scale
-        self.posY = y / self.scale
+        self.posX = x * self.scale
+        self.posY = y * self.scale
         self.direction = direction

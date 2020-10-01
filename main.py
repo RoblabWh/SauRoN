@@ -22,10 +22,10 @@ lr = 0.0001
 num_episodes = 2000
 steps = 1500
 
-arenaWidth = 3000  # cm entspricht 30m
-arenaLength = 2000  # cm entspricht 20m
+arenaWidth = 22   # m
+arenaLength = 10  # m
 
-scaleFactor = 1.8
+scaleFactor = 80
 
 if __name__ == '__main__':
     args = None
@@ -77,4 +77,6 @@ if __name__ == '__main__':
         model = DQN(act_dim, env_dim, args)
 
     model.train(env, args)
+
+
 

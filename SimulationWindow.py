@@ -33,8 +33,8 @@ class SimulationWindow(QMainWindow):
 
         self.app = application
         self.setWindowTitle("Simulation")
-        self.width = int(args.arena_width/args.scale_factor)
-        self.height = int(args.arena_length/args.scale_factor)
+        self.width = int(args.arena_width*args.scale_factor)
+        self.height = int(args.arena_length*args.scale_factor)
         self.setGeometry(200, 100, self.width, self.height)
         self.setFixedWidth(self.width)
         self.setFixedHeight(self.height)

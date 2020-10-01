@@ -27,9 +27,9 @@ class Simulation:
 
         # Erstelle Stationen und Roboter
         #self.pickUp = Station(800.0, 900.0, 100, 100, 0, self.scaleFactor)
-        self.pickUp = Station(random.randrange(100, 2900), random.randrange(100, 1900.0), 100, 100, 0, self.scaleFactor)
-        self.delivery = Station(100, 100, 50, 50, 1, self.scaleFactor)
-        self.robot = Robot.Robot((1500.0, 1800.0), 3*math.pi/2, self.pickUp, args, timeframes)
+        self.pickUp = Station(random.randrange(1, 21), random.randrange(1, 9.0), 1, 1, 0, self.scaleFactor)
+        self.delivery = Station(1, 1, 0.5, 0.5, 1, self.scaleFactor)
+        self.robot = Robot.Robot((10.5, 8.0), 3*math.pi/2, self.pickUp, args, timeframes)
         # self.robot2 = Robot.Robot((700.0, 500.0), 3*math.pi/2, self.pickUp, args, timeframes
 
 
@@ -96,12 +96,12 @@ class Simulation:
 
         # nicht rechts oder links aus dem Fenster gehen
         if (self.robot.getPosX() + self.robot.width) > self.arenaWidth \
-                or (self.robot.getPosX()) < 0: #self.simulationWindow.width ersetzt durch 3000
+                or (self.robot.getPosX()) < 0:
             outOfArea = True
 
         # nicht oben oder unten aus dem Fenster gehen
         if (self.robot.getPosY() + self.robot.length) > self.arenaLength or \
-                (self.robot.getPosY()) < 0: #  self.simulationWindow.height ersetzt durch 2000
+                (self.robot.getPosY()) < 0:
             outOfArea = True
 
         # Wenn der Roboter mit der PickUpStation kollidiert und sie als Ziel hat wird ein neues Ziel generiert

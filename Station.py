@@ -25,7 +25,7 @@ class Station:
     def paint(self, painter):
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
         painter.setBrush(QBrush(self.fillColor, self.brushStyle))
-        painter.drawRect(self.posX / self.scaleFactor, self.posY / self.scaleFactor, self.width / self.scaleFactor, self.length / self.scaleFactor)
+        painter.drawRect(self.posX * self.scaleFactor, self.posY * self.scaleFactor, self.width * self.scaleFactor, self.length * self.scaleFactor)
 
     def getPosX(self):
         return self.posX
