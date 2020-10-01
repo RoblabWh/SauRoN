@@ -128,17 +128,12 @@ class A2C:
             # Train using discounted rewards ie. compute updates
             liste = np.append([liste], [[states], [actions], [rewards], [done]])
 
-            # [states, actions, rewards, done, states, actions, rewards, done ...]
-            #     Episode 1                           Episode 2
 
             if counter == 10:   # train after 10 Episodes
                 for i in range(0, liste.size, 4):
                     self.train_models(liste[i+0], liste[i+1], liste[i+2], liste[i+3])
-                    print("Training")
-                    #print(liste[i+0], liste[i+1], liste[i+2], liste[i+3])
 
                 liste = np.array([], dtype=object)
-                #print("Liste: " + str(liste))
                 counter = 0
 
             counter += 1

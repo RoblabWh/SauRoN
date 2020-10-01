@@ -18,6 +18,7 @@ class Simulation:
         :param timeframes: int -
             the amount of frames saved as a history by the robots to train the neural net
         """
+        self.args = args
         # Skalierungsparameter für Visualisierung
         self.scaleFactor = args.scale_factor
 
@@ -127,7 +128,8 @@ class Simulation:
         # TODO in Schleife bei mehreren Robotern
         self.robot.update(self.simTimestep, tarLinVel, tarAngVel, goal)
         #TODO eigene Schleife bei mehreren Robotern (erst alle update dann in neuer Schleife das Sonar)
-        self.robot.sonarReading();
+        if self.args.mode == 'sonar':
+            self.robot.sonarReading()
 
         if self.simulationWindow != 0:
             for i, robot in enumerate(self.robots):

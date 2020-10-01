@@ -7,6 +7,7 @@ from old.PlotterWindow import PlotterWindow
 
 class Environment:
     def __init__(self, app, steps, args, timeframes):
+        self.args = args
         self.steps = steps
         self.steps_left = steps
         self.simulation = Simulation.Simulation(app, args, timeframes)
@@ -17,8 +18,10 @@ class Environment:
         self.plotterWindow = PlotterWindow(app)
 
     def get_observation(self):
-        # return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
-        return np.asarray(self.simulation.robot.stateSonar)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
+        if self.args.mode == 'global':
+            return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
+        elif self.args.mode == 'sonar':
+            return np.asarray(self.simulation.robot.stateSonar)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
 
     @staticmethod
     def get_actions():

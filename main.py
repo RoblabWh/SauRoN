@@ -26,6 +26,7 @@ arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 80
+angleStepsSonar = 4
 
 if __name__ == '__main__':
     args = None
@@ -51,9 +52,18 @@ if __name__ == '__main__':
 
     parser.add_argument('--scale_factor', type=int, default=scaleFactor, help='Scale Factor for visualisation')
 
+    parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  # Global oder Sonar einstellbar
+    parser.add_argument('--angle_steps', type=int, default=angleStepsSonar, help='Angle Steps for sonar training')
+
     args = parser.parse_args(args)
 
-    env_dim = (4, 93) #Timeframes, Robotstates
+    if args.mode == 'sonar':
+        states = int((360 / angleStepsSonar) + 3)
+        env_dim = (4, states)  # Timeframes, Robotstates
+
+    elif args.mode == 'global':
+        env_dim = (4, 9)
+
 
     app = QApplication(sys.argv)
     env = Environment.Environment(app, args.steps, args, env_dim[0])

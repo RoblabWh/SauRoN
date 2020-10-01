@@ -55,6 +55,7 @@ class Robot:
         self.directionnom = [-1, 1]#2 * math.pi]
 
         self.manuell = args.manually
+        self.args = args
 
         self.station = station
         self.walls = walls
@@ -100,8 +101,9 @@ class Robot:
         for _ in range(self.time_steps):
             self.push_frame(frame)
 
-        for _ in range(self.time_steps):
-            self.sonarReading()
+        if self.args.mode == 'sonar':
+            for _ in range(self.time_steps):
+                self.sonarReading()
 
 
     def denormdata(self, data, limits):
@@ -188,7 +190,7 @@ class Robot:
             linVel = self.linTast
             angVel = self.angTast
 
-        goalDist=math.sqrt((posX-goalX)**2+(posY-goalY)**2)
+        goalDist = math.sqrt((posX-goalX)**2+(posY-goalY)**2)
 
         direction = (self.getDirectionAngle() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
         posX += math.cos(direction) * linVel * dt
@@ -203,7 +205,7 @@ class Robot:
     def sonarReading(self):
 
         colliders = self.walls + self.station.borders
-        self.lookAround(4, colliders, []);
+        self.lookAround(self.args.angle_steps, colliders, [])
 
         frame_sonar = []
 
@@ -229,8 +231,6 @@ class Robot:
             distancesNorm.append(self.distances[i] / maxDist)
 
         frame_sonar = frame_sonar + distancesNorm
-
-
 
         if len(self.stateSonar) >= self.time_steps:
             self.stateSonar.pop(0)
@@ -371,7 +371,7 @@ class Robot:
             elif angY < 0:
                 direction = direction + 2 * math.pi
 
-        direction = (direction+ (2*math.pi))%(2*math.pi)
+        direction = (direction + (2*math.pi)) % (2*math.pi)
 
         return direction
 
@@ -416,11 +416,9 @@ class Robot:
                 if intersect is not None:
                     intersections.append(intersect)
 
-
-
             if len(intersections) > 1:
 
-                shortest = 0;
+                shortest = 0
                 for i in range(1, len(intersections)):
                     if intersections[i][0] < intersections[shortest][0]:
                         shortest = i

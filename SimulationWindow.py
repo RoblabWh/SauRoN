@@ -4,7 +4,7 @@ import RobotRepresentation
 from Station import Station
 
 
-def initRobots(robots, scaleFactor):
+def initRobots(robots, scaleFactor, mode):
 
     robotRepresentations = []
     for robot in robots:
@@ -13,7 +13,8 @@ def initRobots(robots, scaleFactor):
                                                              robot.getDirectionAngle(),
                                                              robot.width,
                                                              robot.length,
-                                                             scaleFactor)
+                                                             scaleFactor,
+                                                             mode)
         robotRepresentations.append(robot_draw)
     return robotRepresentations
 
@@ -39,7 +40,7 @@ class SimulationWindow(QMainWindow):
         self.setFixedWidth(self.width)
         self.setFixedHeight(self.height)
 
-        self.robotRepresentations = initRobots(robots, args.scale_factor)
+        self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode)
         self.stations = stations#initStations(stations, args.scale_factor)
 
         self.painter = QPainter(self)

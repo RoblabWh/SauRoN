@@ -4,7 +4,8 @@ import math
 
 
 class RobotRepresentation:
-    def __init__(self, x, y, direction, width, height, scaleFactor):
+    def __init__(self, x, y, direction, width, height, scaleFactor, mode):
+        self.mode = mode
         self.scale = scaleFactor
         self.width = width * self.scale
         self.height = height * self.scale
@@ -22,14 +23,15 @@ class RobotRepresentation:
         self.radarHits = []
 
     def paint(self, painter):
-        painter.setPen(QPen(Qt.darkMagenta, 1.5, Qt.DotLine))
-        painter.setBrush(QBrush(Qt.darkMagenta, self.brushStyle))
-        for i in range(0, len(self.radarHits)):
-            painter.drawLine(self.posX,
-                             self.posY,
-                             self.radarHits[i][0] * self.scale,
-                             self.radarHits[i][1] * self.scale)
-            painter.drawEllipse(self.radarHits[i][0] * self.scale - 3, self.radarHits[i][1] * self.scale - 3, 6, 6)
+        if self.mode == 'sonar':
+            painter.setPen(QPen(Qt.darkMagenta, 1.5, Qt.DotLine))
+            painter.setBrush(QBrush(Qt.darkMagenta, self.brushStyle))
+            for i in range(0, len(self.radarHits)):
+                painter.drawLine(self.posX,
+                                 self.posY,
+                                 self.radarHits[i][0] * self.scale,
+                                 self.radarHits[i][1] * self.scale)
+                painter.drawEllipse(self.radarHits[i][0] * self.scale - 3, self.radarHits[i][1] * self.scale - 3, 6, 6)
 
 
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
