@@ -406,15 +406,18 @@ class Robot:
 
             for line in lines:
 
-                # nl = line.getN()
-                # rayV = ray.getVector()
-                # skalarProd = nl[0] * rayV[0] + nl[1] * rayV[1]
-                #
-                # if skalarProd < 0:
-                intersect = ray.cast(line)
+                lineN = line.getN()
+                rayV = ray.getVector()
+                skalarProd = lineN[0] * rayV[0] + lineN[1] * rayV[1]
 
-                if intersect is not None:
-                    intersections.append(intersect)
+                if skalarProd < 0:
+                    intersect = ray.cast(line)
+
+                    if intersect is not None:
+                        # print("Hat  Treffer bei",angD, " mit Abstand :", intersect[0],"  l:", lineN, "  r:", rayV)
+                        intersections.append(intersect)
+                # else:
+                #     print("Kein Treffer", skalarProd)
 
             if len(intersections) > 1:
 
@@ -445,8 +448,8 @@ class Ray:
         self.dir = [math.cos(angle), math.sin(angle)]
 
     def getVector(self):
-        x = self.dir[0] - self.pos[0]
-        y = self.dir[1] - self.pos[1]
+        x = (self.dir[0])
+        y = (self.dir[1])
         return (x,y)
 
     def cast(self, line):
