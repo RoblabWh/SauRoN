@@ -19,21 +19,35 @@ class RobotRepresentation:
         self.posX = x * self.scale
         self.posY = y * self.scale
         self.direction = direction
+        self.radarHits = []
 
     def paint(self, painter):
+        painter.setPen(QPen(Qt.darkMagenta, 1.5, Qt.DotLine))
+        painter.setBrush(QBrush(Qt.darkMagenta, self.brushStyle))
+        for i in range(0, len(self.radarHits)):
+            painter.drawLine(self.posX,
+                             self.posY,
+                             self.radarHits[i][0] * self.scale,
+                             self.radarHits[i][1] * self.scale)
+            painter.drawEllipse(self.radarHits[i][0] * self.scale - 3, self.radarHits[i][1] * self.scale - 3, 6, 6)
+
+
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
         painter.setBrush(QBrush(self.fillColor, self.brushStyle))
-        painter.drawEllipse(self.posX, self.posY, self.width, self.height)
+        painter.drawEllipse(self.posX-self.radius, self.posY-self.radius, self.width, self.height)
 
         middlex = self.posX + self.radius
         middley = self.posY + self.radius
 
-        painter.drawLine(middlex,
-                         middley,
-                         middlex + self.radius * math.cos(self.direction),
-                         middley + self.radius * math.sin(self.direction))
+        painter.drawLine(self.posX,
+                         self.posY,
+                         self.posX + self.radius * math.cos(self.direction),
+                         self.posY + self.radius * math.sin(self.direction))
 
-    def update(self, x, y, direction):
+
+    def update(self, x, y, direction, radarHits):
         self.posX = x * self.scale
         self.posY = y * self.scale
         self.direction = direction
+        self.radarHits = radarHits
+

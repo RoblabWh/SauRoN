@@ -7,7 +7,7 @@ from pynput.keyboard import Key, Listener
 
 class Robot:
 
-    def __init__(self, position, startDirection, station, args, timeframes):
+    def __init__(self, position, startDirection, station, args, timeframes, walls):
         """
         :param position: tuple (float,float) -
             defines the robots starting position
@@ -30,6 +30,10 @@ class Robot:
         self.goalX, self.goalY = station.getPosX(), station.getPosY()
         self.state = []
         self.state_raw = []
+        self.stateSonar = []
+
+        self.distances = []
+        self.radarHits = []
         # [posX, posY, directionX, directionY, linearVelocity, angularVelocity, goalX, goalY, targetLinearVelocity, targetAngularVelocity]
 
         self.time_steps = timeframes #4
@@ -53,6 +57,7 @@ class Robot:
         self.manuell = args.manually
 
         self.station = station
+        self.walls = walls
 
         if self.manuell:
             self.listener = Listener(on_press=self.on_press, on_release=self.on_release)
@@ -87,8 +92,17 @@ class Robot:
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
         frame = [posX, posY, directionX, directionY, linVel, angVel, goalX, goalY, goalDist]
 
+        self.stateSonar = []
+
+        self.distances = []
+        self.radarHits = []
+
         for _ in range(self.time_steps):
             self.push_frame(frame)
+
+        for _ in range(self.time_steps):
+            self.sonarReading()
+
 
     def denormdata(self, data, limits):
         """
@@ -184,6 +198,46 @@ class Robot:
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
         frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist]
         self.push_frame(frame)
+
+
+    def sonarReading(self):
+
+        colliders = self.walls + self.station.borders
+        self.lookAround(4, colliders, []);
+
+        frame_sonar = []
+
+        distance = math.sqrt(
+            (self.getPosX() - (self.station.posX + (self.station.width / 2))) ** 2 +
+            (self.getPosY() - (self.station.posY + (self.station.length/2))) ** 2)
+        maxDist = math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[0] ** 2)
+
+        frame_sonar.append((distance / maxDist))
+
+        robot_orientation = self.getDirectionAngle()
+        orientation_goal_new = math.atan2(
+            (self.station.posY + (self.station.length/2)) - (self.getPosY()),
+            (self.station.posX + (self.station.width / 2)) - (self.getPosX()))
+        anglDeviation = math.fabs(robot_orientation - orientation_goal_new)
+        anglDeviationV=self.directionVectorFromAngle(anglDeviation)
+
+        frame_sonar.append(anglDeviationV[0])
+        frame_sonar.append(anglDeviationV[1])
+
+        distancesNorm = []
+        for i in range(len(self.distances)):
+            distancesNorm.append(self.distances[i] / maxDist)
+
+        frame_sonar = frame_sonar + distancesNorm
+
+
+
+        if len(self.stateSonar) >= self.time_steps:
+            self.stateSonar.pop(0)
+            self.stateSonar.append(frame_sonar)
+        else:
+            self.stateSonar.append(frame_sonar)
+
 
     def compute_next_velocity(self, dt, linVel, angVel, tarLinVel, tarAngVel):
         """
@@ -337,5 +391,97 @@ class Robot:
     def on_release(self, key):
         self.linTast = 0
         self.angTast = 0
+
+    def lookAround(self, alpha, lines, roboterList = []):
+
+        radarHits = []
+        distances = []
+        dir = self.getDirectionAngle()
+        posX = self.getPosX()
+        posY = self.getPosY()
+        for angD in range(0, 360, alpha):
+            ang = (dir + (angD * (math.pi/180))) % (2*math.pi)
+            ray = Ray(posX, posY, ang)
+            intersections = []
+
+            for line in lines:
+
+                # nl = line.getN()
+                # rayV = ray.getVector()
+                # skalarProd = nl[0] * rayV[0] + nl[1] * rayV[1]
+                #
+                # if skalarProd < 0:
+                intersect = ray.cast(line)
+
+                if intersect is not None:
+                    intersections.append(intersect)
+
+
+
+            if len(intersections) > 1:
+
+                shortest = 0;
+                for i in range(1, len(intersections)):
+                    if intersections[i][0] < intersections[shortest][0]:
+                        shortest = i
+                radarHits.append(intersections[shortest][1])
+                distances.append(intersections[shortest][0])
+
+            elif len(intersections) == 1:
+                radarHits.append(intersections[0][1])
+                distances.append(intersections[0][0])
+            else:
+                radarHits.append([posX, posY])
+                distances.append(0)
+
+        self.radarHits = radarHits
+        self.distances = distances
+
+
+
+
+
+class Ray:
+    def __init__(self, x, y, angle):
+        self.pos = [x, y]
+        self.dir = [math.cos(angle), math.sin(angle)]
+
+    def getVector(self):
+        x = self.dir[0] - self.pos[0]
+        y = self.dir[1] - self.pos[1]
+        return (x,y)
+
+    def cast(self, line):
+        # start point
+        x1 = line.a[0]
+        y1 = line.a[1]
+        # end point
+        x2 = line.b[0]
+        y2 = line.b[1]
+
+        # position of the ray
+        x3 = self.pos[0]
+        y3 = self.pos[1]
+        x4 = self.pos[0] + self.dir[0]
+        y4 = self.pos[1] + self.dir[1]
+
+        # denominator
+        den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+        # numerator
+        num = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)
+        if den == 0:
+            return None
+
+        # formulars
+        t = num / den
+        u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den
+
+        if t > 0 and t < 1 and u > 0:
+            # Px, Py
+            x = x1 + t * (x2 - x1)
+            y = y1 + t * (y2 - y1)
+            pot = [x, y]
+            # return pot
+            return [u,pot]
 
 

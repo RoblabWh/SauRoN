@@ -1,5 +1,6 @@
 from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtCore import Qt
+from Borders import CollidorLine
 
 
 class Station:
@@ -21,6 +22,11 @@ class Station:
         self.thickness = 2
         self.lineStyle = Qt.SolidLine
         self.brushStyle = Qt.SolidPattern
+
+        self.borders = [CollidorLine(posX+width, posY, posX, posY),
+                        CollidorLine(posX, posY, posX, posY+length),
+                        CollidorLine(posX, posY+length, posX+width, posY+length),
+                        CollidorLine(posX+width, posY+length, posX+width, posY)]
 
     def paint(self, painter):
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))

@@ -5,6 +5,7 @@ import SimulationWindow
 import math, random
 import time
 from old.PlotterWindow import PlotterWindow
+from Borders import CollidorLine
 
 class Simulation:
 
@@ -24,12 +25,18 @@ class Simulation:
         self.arenaWidth = args.arena_width
         self.arenaLength = args.arena_length
 
+        self.walls = []
+        self.walls.append(CollidorLine(0,0,self.arenaWidth, 0))
+        self.walls.append(CollidorLine(self.arenaWidth, 0, self.arenaWidth, self.arenaLength))
+        self.walls.append(CollidorLine(self.arenaWidth, self.arenaLength, 0, self.arenaLength))
+        self.walls.append(CollidorLine(0,self.arenaLength, 0, 0))
+
 
         # Erstelle Stationen und Roboter
         #self.pickUp = Station(800.0, 900.0, 100, 100, 0, self.scaleFactor)
         self.pickUp = Station(random.randrange(1, 21), random.randrange(1, 9.0), 1, 1, 0, self.scaleFactor)
         self.delivery = Station(1, 1, 0.5, 0.5, 1, self.scaleFactor)
-        self.robot = Robot.Robot((10.5, 8.0), 3*math.pi/2, self.pickUp, args, timeframes)
+        self.robot = Robot.Robot((10.5, 8.0), 3*math.pi/2, self.pickUp, args, timeframes, self.walls)
         # self.robot2 = Robot.Robot((700.0, 500.0), 3*math.pi/2, self.pickUp, args, timeframes
 
 
@@ -117,7 +124,10 @@ class Simulation:
             if self.robot.collideWithStation(self.delivery):
                 reachedDelivery = True
 
+        # TODO in Schleife bei mehreren Robotern
         self.robot.update(self.simTimestep, tarLinVel, tarAngVel, goal)
+        #TODO eigene Schleife bei mehreren Robotern (erst alle update dann in neuer Schleife das Sonar)
+        self.robot.sonarReading();
 
         if self.simulationWindow != 0:
             for i, robot in enumerate(self.robots):

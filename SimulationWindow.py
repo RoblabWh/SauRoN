@@ -54,6 +54,6 @@ class SimulationWindow(QMainWindow):
         self.painter.end()
 
     def updateRobot(self, robot, num):
-        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle())
+        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits)
         self.repaint()
         self.app.processEvents()

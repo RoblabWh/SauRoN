@@ -17,7 +17,8 @@ class Environment:
         self.plotterWindow = PlotterWindow(app)
 
     def get_observation(self):
-        return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
+        # return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
+        return np.asarray(self.simulation.robot.stateSonar)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
 
     @staticmethod
     def get_actions():
@@ -82,8 +83,8 @@ class Environment:
         robot_pose_current_y = self.simulation.getRobot().getPosY() + radius
 
         robot_orientation = self.simulation.getRobot().getDirectionAngle()
-        orientation_goal_new = math.atan2((goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_current_y + radius),
-                                          (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_current_x + radius))
+        orientation_goal_new = math.atan2((goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_current_y),
+                                          (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_current_x))
         if orientation_goal_new < 0:
             orientation_goal_new += (2 * math.pi)
 
