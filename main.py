@@ -25,7 +25,7 @@ steps = 1500
 arenaWidth = 22   # m
 arenaLength = 10  # m
 
-scaleFactor = 96
+scaleFactor = 80
 angleStepsSonar = 4
 
 if __name__ == '__main__':
