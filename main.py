@@ -52,8 +52,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--scale_factor', type=int, default=scaleFactor, help='Scale Factor for visualisation')
 
-    parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  # Global oder Sonar einstellbar
+    parser.add_argument('--mode', type=str, default='global', choices=['global', 'sonar'], help='Training Mode')  # Global oder Sonar einstellbar
     parser.add_argument('--angle_steps', type=int, default=angleStepsSonar, help='Angle Steps for sonar training')
+
+    parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
 
     args = parser.parse_args(args)
 
@@ -86,7 +88,12 @@ if __name__ == '__main__':
     elif args.alg == 'dqn':
         model = DQN(act_dim, env_dim, args)
 
-    model.train(env, args)
+    if args.training:
+        model.train(env, args)
+
+    elif not args.training:
+        model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
+        model.execute(env, args)
 
 
 

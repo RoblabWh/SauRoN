@@ -34,8 +34,8 @@ class Simulation:
 
 
         # Erstelle Stationen und Roboter
-        #self.pickUp = Station(800.0, 900.0, 100, 100, 0, self.scaleFactor)
-        self.pickUp = Station(random.randrange(1, 21), random.randrange(1, 9.0), 1, 1, 0, self.scaleFactor)
+        self.pickUp = Station(6, 7.5, 1, 1, 0, self.scaleFactor)
+        #self.pickUp = Station(random.randrange(1, 21), random.randrange(1, 9.0), 1, 1, 0, self.scaleFactor)
         self.delivery = Station(1, 1, 0.5, 0.5, 1, self.scaleFactor)
         self.robot = Robot.Robot((10.5, 8.0), 3*math.pi/2, self.pickUp, args, timeframes, self.walls)
         # self.robot2 = Robot.Robot((700.0, 500.0), 3*math.pi/2, self.pickUp, args, timeframes

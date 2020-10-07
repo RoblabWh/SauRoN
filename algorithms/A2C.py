@@ -31,6 +31,7 @@ class A2C:
         # self.actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=self.lr))
         # self.critic.compile(loss='mse', optimizer=RMSprop(lr=self.lr))
         self.av_meter = AverageMeter()
+        self.args = args
 
         # self.a_opt = self.actor.optimizer()
         # self.c_opt = self.critic.optimizer()
@@ -141,6 +142,7 @@ class A2C:
             # TODO
 
             if e % args.save_intervall == 0:
+                print('Saving')
                 self.save_weights(args.path)
 
             # Update Average Rewards
@@ -154,9 +156,18 @@ class A2C:
 
     def save_weights(self, path):
         path += 'A2C'
-        self.actor.save_weights(path + '_actor.h5')
-        self.critic.save_weights(path + '_critic.h5')
+        self.actor.save_weights(path + '_actor_' + self.args.mode + '.h5')
+        self.critic.save_weights(path + '_critic_' + self.args.mode + '.h5')
 
     def load_weights(self, path_actor, path_critic):
         self.critic.load_weights(path_critic)
         self.actor.load_weights(path_actor)
+
+    def execute(self, env, args):
+        state = env.get_observation()
+        state = np.expand_dims(state, axis=0)
+
+        while not env.is_done():
+            new_state, r, done = env.step(np.argmax(self.actor.predict(state).ravel()))
+            #print(np.argmax(self.actor.predict(state).ravel()), self.actor.predict(state).ravel(), self.actor.predict(state))
+            state = new_state
