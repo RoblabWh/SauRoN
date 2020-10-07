@@ -1,10 +1,10 @@
 from PyQt5.QtGui import QPainter
-from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel
 import RobotRepresentation
 from Station import Station
 
 
-def initRobots(robots, scaleFactor, mode):
+def initRobots(robots, scaleFactor, mode, sonarShowing, simShowing):
 
     robotRepresentations = []
     for robot in robots:
@@ -40,10 +40,56 @@ class SimulationWindow(QMainWindow):
         self.setFixedWidth(self.width)
         self.setFixedHeight(self.height)
 
-        self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode)
+        self.sonarShowing = True
+        self.simShowing = True
+
+        self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode, self.sonarShowing, self.simShowing)
         self.stations = stations#initStations(stations, args.scale_factor)
 
         self.painter = QPainter(self)
+
+        self.initUI()
+
+    def initUI(self):
+        self.btSonar = QPushButton(self)
+        self.btSonar.clicked.connect(self.clickedSonar)
+        self.btSonar.move(0, 0)
+
+        self.btSimulation = QPushButton(self)
+        self.btSimulation.clicked.connect(self.clickedSimulation)
+        self.btSimulation.move(120, 0)
+
+        self.updateButtons()
+
+    def clickedSonar(self):
+        if self.sonarShowing:
+            self.sonarShowing = False
+        elif not self.sonarShowing:
+            self.sonarShowing = True
+        self.updateButtons()
+
+    def clickedSimulation(self):
+        if self.simShowing:
+            self.simShowing = False
+        elif not self.simShowing:
+            self.simShowing = True
+        self.updateButtons()
+
+
+    def updateButtons(self):
+        if self.sonarShowing:
+            self.btSonar.setText("Sonar ausblenden")
+        elif not self.sonarShowing:
+            self.btSonar.setText("Sonar einblenden")
+
+        if self.simShowing:
+            self.btSimulation.setText("Visualisierung pausieren")
+        elif not self.simShowing:
+            self.btSimulation.setText("Visualisierung fortsetzen")
+
+        self.btSimulation.adjustSize()
+        self.btSonar.adjustSize()
+
 
     def paintEvent(self, event):
 
@@ -51,10 +97,11 @@ class SimulationWindow(QMainWindow):
         for station in self.stations:
             station.paint(self.painter)
         for robot in self.robotRepresentations:
-            robot.paint(self.painter)
+            robot.paint(self.painter, self.sonarShowing)
         self.painter.end()
 
     def updateRobot(self, robot, num):
-        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits)
-        self.repaint()
+        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing)
+        if self.simShowing:
+            self.repaint()
         self.app.processEvents()

@@ -24,23 +24,20 @@ class RobotRepresentation:
         self.direction = direction
         self.radarHits = []
 
-        self.showSonar = True
-        self.showSimulation = True
+    def paint(self, painter, sonarShowing):
 
-    def paint(self, painter):
-
-        if keyboard.is_pressed('p'):    # show sonar
-            self.showSonar = True
-        if keyboard.is_pressed('o'):    # don't show sonar
-            self.showSonar = False
-
-        if keyboard.is_pressed('z'):
-            self.showSimulation = True
-        if keyboard.is_pressed('t'):
-            self.showSimulation = False
+        # if keyboard.is_pressed('p'):    # show sonar
+        #     self.showSonar = True
+        # if keyboard.is_pressed('o'):    # don't show sonar
+        #     self.showSonar = False
+        #
+        # if keyboard.is_pressed('z'):
+        #     self.showSimulation = True
+        # if keyboard.is_pressed('t'):
+        #     self.showSimulation = False
 
         if self.mode == 'sonar':
-            if self.showSonar:
+            if sonarShowing:
                 painter.setPen(QPen(Qt.darkMagenta, 1.5, Qt.DotLine))
                 painter.setBrush(QBrush(Qt.darkMagenta, self.brushStyle))
                 for i in range(0, len(self.radarHits)):
@@ -64,13 +61,11 @@ class RobotRepresentation:
                          self.posY + self.radius * math.sin(self.direction))
 
 
-    def update(self, x, y, direction, radarHits):
-        if self.showSimulation:
+    def update(self, x, y, direction, radarHits, simShowing):
+        if simShowing:
             self.posX = x * self.scale
             self.posY = y * self.scale
             self.direction = direction
             self.radarHits = radarHits
 
-        if not self.showSimulation:
-            print("Stopped Visualisation of Simulation ")
 
