@@ -4,7 +4,7 @@ import RobotRepresentation
 from Station import Station
 
 
-def initRobots(robots, scaleFactor, mode, sonarShowing, simShowing):
+def initRobots(robots, scaleFactor, mode):
 
     robotRepresentations = []
     for robot in robots:
@@ -42,8 +42,10 @@ class SimulationWindow(QMainWindow):
 
         self.sonarShowing = True
         self.simShowing = True
+        self.mode = args.mode
 
-        self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode, self.sonarShowing, self.simShowing)
+
+        self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode)
         self.stations = stations#initStations(stations, args.scale_factor)
 
         self.painter = QPainter(self)
@@ -51,13 +53,16 @@ class SimulationWindow(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.btSonar = QPushButton(self)
-        self.btSonar.clicked.connect(self.clickedSonar)
-        self.btSonar.move(0, 0)
-
         self.btSimulation = QPushButton(self)
         self.btSimulation.clicked.connect(self.clickedSimulation)
-        self.btSimulation.move(120, 0)
+        self.btSimulation.move(0, 0)
+        self.btSimulation.setFixedWidth(150)
+
+        if self.mode == 'sonar':
+            self.btSonar = QPushButton(self)
+            self.btSonar.clicked.connect(self.clickedSonar)
+            self.btSonar.move(160, 0)
+            self.btSonar.setFixedWidth(120)
 
         self.updateButtons()
 
@@ -77,18 +82,21 @@ class SimulationWindow(QMainWindow):
 
 
     def updateButtons(self):
-        if self.sonarShowing:
-            self.btSonar.setText("Sonar ausblenden")
-        elif not self.sonarShowing:
-            self.btSonar.setText("Sonar einblenden")
 
         if self.simShowing:
             self.btSimulation.setText("Visualisierung pausieren")
         elif not self.simShowing:
             self.btSimulation.setText("Visualisierung fortsetzen")
 
-        self.btSimulation.adjustSize()
-        self.btSonar.adjustSize()
+        #self.btSimulation.adjustSize()
+
+        if self.mode == 'sonar':
+            if self.sonarShowing:
+                self.btSonar.setText("Sonar ausblenden")
+            elif not self.sonarShowing:
+                self.btSonar.setText("Sonar einblenden")
+            #self.btSonar.adjustSize()
+
 
 
     def paintEvent(self, event):
