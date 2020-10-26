@@ -96,6 +96,7 @@ class A2C:
         liste = np.array([], dtype=object)
         # Main Loop
         tqdm_e = tqdm(range(args.nb_episodes), desc='Score', leave=True, unit=" episodes")
+        waitForN = 10
         for e in tqdm_e:
 
             # Reset episode
@@ -103,9 +104,12 @@ class A2C:
             env.reset()
             old_state = env.get_observation()
             old_state = np.expand_dims(old_state, axis=0)
+            #TODO Liste davon für jeden Roboter
             actions, states, rewards = [], [], []
 
             while not env.is_done():
+
+                #TODO pro Roboter
 
                 # Actor picks an action (following the policy)
                 a = self.policy_action(old_state)
@@ -130,7 +134,7 @@ class A2C:
             liste = np.append([liste], [[states], [actions], [rewards], [done]])
 
 
-            if counter == 10:   # train after 10 Episodes
+            if counter == waitForN:   # train after 9 Episodes
                 for i in range(0, liste.size, 4):
                     self.train_models(liste[i+0], liste[i+1], liste[i+2], liste[i+3])
 

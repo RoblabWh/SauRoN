@@ -2,7 +2,6 @@ from PyQt5.QtGui import QPainter, QBrush, QPen
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5 import QtWidgets
 import math
-import keyboard
 
 
 class RobotRepresentation:

@@ -25,7 +25,8 @@ class Robot:
         """
         self.startposX, self.startposY = position
         self.startDirectionX = math.cos((startDirection))
-        self.startDirectionY = math.sin((startDirection))
+        self.startDirectionY =  math.sin((startDirection))
+
         print(self.startDirectionX, self.startDirectionY, startDirection)
         self.goalX, self.goalY = station.getPosX(), station.getPosY()
         self.state = []
@@ -75,11 +76,11 @@ class Robot:
         In addition the state gets cleared.
         This method is typically called at the beginning of a training epoch.
         """
-        posX = self.startposX # random.randrange(100, self.XYnorm[0]-100)#self.startposX
-        posY = self.startposY # random.randrange(100, self.XYnorm[1]-100)#self.startposY
-        randDirection = random.uniform(0, 2*math.pi)
-        directionX = self.startDirectionX #self.directionVectorFromAngle(randDirection)[0]#self.startDirectionX
-        directionY = self.startDirectionY #self.directionVectorFromAngle(randDirection)[1]#self.startDirectionY
+        posX = self.startposX
+        posY = self.startposY
+        # randDirection = random.uniform(0, 2*math.pi)
+        directionX = self.startDirectionX
+        directionY = self.startDirectionY
         linVel = 0
         angVel = 0
         tarLinVel = 0
@@ -203,7 +204,8 @@ class Robot:
 
 
     def sonarReading(self):
-
+        #TODO bei mehreren Stationen nicht die eigene als hindernis, nur andere
+        #TODO Kollision mit Robotern /Geraden- Kreis Kollision
         colliders = self.walls + self.station.borders
         self.lookAround(self.args.angle_steps, colliders, [])
 
@@ -380,11 +382,11 @@ class Robot:
         if key.char == 'w':
             self.linTast = 0.5
         if key.char == 'a':
-            self.angTast = -0.02
+            self.angTast = -0.08
         if key.char == 's':
             self.linTast = 0
         if key.char == 'd':
-            self.angTast = 0.02
+            self.angTast = 0.08
         if key.char == 'c':
             self.angTast = 0
 

@@ -32,6 +32,7 @@ class Simulation:
         self.walls.append(CollidorLine(self.arenaWidth, self.arenaLength, 0, self.arenaLength))
         self.walls.append(CollidorLine(0,self.arenaLength, 0, 0))
 
+        #TODO mehrere Robots mit eigenen Pickup stationen erstellen
 
         # Erstelle Stationen und Roboter
         self.pickUp = Station(6, 7.5, 1, 1, 0, self.scaleFactor)
@@ -93,10 +94,12 @@ class Simulation:
         """
         # self.plotterWindow.plot(self.robot.getLinearVelocity(), self.simTime)
         # self.plotterWindow.plot(self.robot.getAngularVelocity(), self.simTime)
-        # time.sleep(0.001)
+        # time.sleep(0.1)
         self.simTime += self.simTimestep
-        #TODO hier Schleife für jeden Agenten
+        #TODO Parameter ist Liste an Actions für jeden Roboter
 
+
+        #TODO Abbruchkriterien jedes Roboters prüfen (außer er hat bereits abgebrochen)
         outOfArea = False
         reachedPickUp = False
         reachedDelivery = False
@@ -125,7 +128,7 @@ class Simulation:
             if self.robot.collideWithStation(self.delivery):
                 reachedDelivery = True
 
-        # TODO in Schleife bei mehreren Robotern
+        # TODO in Schleife bei mehreren Robotern (außer bei denen die bereits done sind)
         self.robot.update(self.simTimestep, tarLinVel, tarAngVel, goal)
         #TODO eigene Schleife bei mehreren Robotern (erst alle update dann in neuer Schleife das Sonar)
         if self.args.mode == 'sonar':
@@ -134,4 +137,5 @@ class Simulation:
         if self.simulationWindow != 0:
             for i, robot in enumerate(self.robots):
                 self.simulationWindow.updateRobot(robot, i)
+        #TODO das als Liste pro roboter zurückgeben
         return outOfArea, reachedPickUp, reachedDelivery
