@@ -17,12 +17,12 @@ class Environment:
 
         self.plotterWindow = PlotterWindow(app)
 
-    def get_observation(self):
+    def get_observation(self, i):
         #TODO den richtigen Roboter aus der Liste wählen mit parameter i --> getRobot(i)
         if self.args.mode == 'global':
-            return np.asarray(self.simulation.robot.state)  # Pos, Geschwindigkeit, Zielposition
+            return np.asarray(self.simulation.robots[i].state)  # Pos, Geschwindigkeit, Zielposition
         elif self.args.mode == 'sonar':
-            return np.asarray(self.simulation.robot.stateSonar)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
+            return np.asarray(self.simulation.robots[i].stateSonar)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
 
     @staticmethod
     def get_actions():
@@ -30,6 +30,8 @@ class Environment:
 
    # @staticmethod
     def get_velocity(self, action):
+        if(action == None):
+            return (None, None)
         actualLinVel = self.simulation.robot.getLinearVelocity()
         actualAngVel = self.simulation.robot.getAngularVelocity()
 
@@ -59,75 +61,87 @@ class Environment:
         return tarLinVel, tarAngVel
 
     def is_done(self):
-        return self.steps_left <= 0 or self.done
+        robotsDone = True
+        for robot in self.simulation.robots:
+            if robot.isActive():
+                robotsDone = False
+                break
+        return self.steps_left <= 0 or robotsDone
 
-    def step(self, action):
-    #TODO Param Liste von actions für alle Roboter (bei done Robotern = null)
+    def step(self, actions):
+        #TODO Param Liste von actions für alle Roboter (bei done Robotern = None)
 
         self.steps_left -= 1
 
-        #TODO Liste von tarVel erzeugen und bei update übergeben
-        tarLinVel, tarAngVel = self.get_velocity(action)
-        outOfArea, reachedPickup, reachedDelivery = self.simulation.update(tarLinVel, tarAngVel)
-        #TODO obere Rückgabe als liste durchiterieren um für jeden noch aktiven Roboter den reward zu berechnen
-
-        #TODO Schleife aller roboter (getRobot braucht dann eventuell i als Parameter)
         ######## Update der Simulation #######
-        radius = self.simulation.getRobot().radius
-        goal_pose_old_x = self.simulation.robot.getGoalX()
-        goal_pose_old_y = self.simulation.robot.getGoalY()
-        robot_pose_old_x = self.simulation.getRobot().getPosX()
-        robot_pose_old_y = self.simulation.getRobot().getPosY()
-        robot_orientation_old = self.simulation.getRobot().getDirectionAngle()
+        #TODO Liste von tarVel erzeugen und bei update übergeben
+        robotsTarVels = []
+        for action in actions:
+            tarLinVel, tarAngVel = self.get_velocity(action)
+            robotsTarVels.append((tarLinVel, tarAngVel))
+
+        robotsTermination = self.simulation.update(robotsTarVels)
+        robotsDataCurrentFrame = []
+        for i, termination in enumerate(robotsTermination):
+            if termination != (None, None):
+                robotsDataCurrentFrame.append(self.extractRobotData(i, robotsTermination[i]))
+            else:
+                robotsDataCurrentFrame.append((None, None, None))
+
+        return robotsDataCurrentFrame
+
+
+
+    def extractRobotData(self, i, terminantions):
+
+        robot = self.simulation.robots[i]
+        outOfArea, reachedPickup = terminantions
+
+        ############ State Robot i ############
+        next_state = self.get_observation(i)  # TODO state von Robot i bekommen
+        next_state = np.expand_dims(next_state, axis=0)
+
+
+        ############ Euklidsche Distanz und Orientierung ##############
+
+        radius = robot.radius
+        goal_pose_old_x = robot.getGoalX()
+        goal_pose_old_y = robot.getGoalY()
+        robot_pose_old_x = robot.getPosX()
+        robot_pose_old_y = robot.getPosY()
+        robot_orientation_old = robot.getDirectionAngle()
+        #TODO Goal des Robots nutzen
         orientation_goal_old = math.atan2(
             (goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_old_y),
             (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_old_x))
         if orientation_goal_old < 0:
             orientation_goal_old += (2 * math.pi)
 
-        #######################################
-
-        next_state = self.get_observation()#TODO state von Robot i bekommen
-        next_state = np.expand_dims(next_state, axis=0)
-
-
-        ############ Euklidsche Distanz und Orientierung ##############
-
         # einzeln Abstand berechnen
-        robot_pose_current_x = self.simulation.getRobot().getPosX()
-        robot_pose_current_y = self.simulation.getRobot().getPosY()
-
-        robot_orientation_new = self.simulation.getRobot().getDirectionAngle()
-        orientation_goal_new = math.atan2((goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_current_y),
-                                          (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_current_x))
+        robot_pose_current_x = robot.getPosX()
+        robot_pose_current_y = robot.getPosY()
+        robot_orientation_new = robot.getDirectionAngle()
+        orientation_goal_new = math.atan2(
+            (goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_current_y),
+            (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_current_x))
         if orientation_goal_new < 0:
             orientation_goal_new += (2 * math.pi)
-
+        # TODO Goal des Robots nutzen
         distance_old = math.sqrt((robot_pose_old_x - (goal_pose_old_x + (self.simulation.getGoalWidth() / 2))) ** 2 +
                                  (robot_pose_old_y - (goal_pose_old_y + (self.simulation.getGoalLength() / 2))) ** 2)
-
-        distance_new = math.sqrt((robot_pose_current_x - (goal_pose_old_x + (self.simulation.getGoalWidth() / 2))) ** 2 +
-                                  (robot_pose_current_y - (goal_pose_old_y + (self.simulation.getGoalLength() / 2))) ** 2)
-
+        distance_new = math.sqrt(
+            (robot_pose_current_x - (goal_pose_old_x + (self.simulation.getGoalWidth() / 2))) ** 2 +
+            (robot_pose_current_y - (goal_pose_old_y + (self.simulation.getGoalLength() / 2))) ** 2)
         delta_dist = distance_old - distance_new
 
-
-
         ########### REWARD CALCULATION ################
-        # reward = self.createReward01(delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup, reachedDelivery)
-        reward = self.createReward02(delta_dist, robot_orientation_old,orientation_goal_old, robot_orientation_new, orientation_goal_new, outOfArea, reachedPickup, reachedDelivery)
+        reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
+        # reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
+        #                              orientation_goal_new, outOfArea, reachedPickup)
+        return (next_state, reward / 10, not robot.isActive())
 
 
-
-        ################
-        #print("Reward: " + str(reward))
-        # self.plotterWindow.plot(reward, self.simulation.simTime)
-        # time.sleep(0.02)
-
-        #TODO Liste aller Roboter mit einem Tupel dieser Variablen übergeben (next_state, reward/10, self.is_done())
-        return next_state, reward/10, self.is_done()
-
-    def createReward01(self, delta_dist, robot_orientation, orientation_goal_new, outOfArea, reachedPickup, reachedDelivery):
+    def createReward01(self, robot, delta_dist, robot_orientation, orientation_goal_new, outOfArea, reachedPickup):
         reward = delta_dist / 10
         # print("Delta Dist: " + str(delta_dist))
 
@@ -159,21 +173,19 @@ class Environment:
         #     reward = -1
         # if distance_old == distance_new:
         #     reward += -1
-        if self.simulation.getRobot().isInCircleOfGoal(500):
+        if robot.isInCircleOfGoal(500):
             reward += 0.01
-        if self.simulation.getRobot().isInCircleOfGoal(200):
+        if robot.isInCircleOfGoal(200):
             reward += 0.02
-        if self.simulation.getRobot().isInCircleOfGoal(100):
+        if robot.isInCircleOfGoal(100):
             reward += 0.03
         if outOfArea:
             reward += -30.0
-            self.done = True
+
         if reachedPickup:
             reward += 30.0
-            self.done = True
-        if reachedDelivery:
-            reward += 30.0
-            self.done = True
+
+
 
         # reward -= (self.steps - self.steps_left) / self.steps
         # if self.steps_left <= 0:
@@ -183,7 +195,7 @@ class Environment:
         return reward
 
 
-    def createReward02(self, delta_dist, robot_orientation_old,orientation_goal_old, robot_orientation_new, orientation_goal_new, outOfArea, reachedPickup, reachedDelivery):
+    def createReward02(self, delta_dist, robot_orientation_old,orientation_goal_old, robot_orientation_new, orientation_goal_new, outOfArea, reachedPickup):
 
         reward = delta_dist /2
 
@@ -212,16 +224,21 @@ class Environment:
 
         if outOfArea:
             reward += -3.0
-            self.done = True
+
         if reachedPickup:
             reward += 3.0
-            self.done = True
+
 
         return reward
 
 
     def reset(self):
-        self.simulation.getRobot().reset()
+
+        for robot in self.simulation.robots:
+            robot.reset()
+        for robot in self.simulation.robots:
+            robot.resetSonar(self.simulation.robots)
+
         self.steps_left = self.steps
         self.total_reward = 0.0
         self.done = False

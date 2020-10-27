@@ -71,12 +71,15 @@ class A2C:
             discounted_r[t] = cumul_r
         return discounted_r
 
-    def train_models(self, states, actions, rewards, done):
+    def train_models(self, states, actions, rewards):
         """ Update actor and critic networks from experience
         """
         # Compute discounted rewards and Advantage (TD. Error)
         discounted_rewards = self.discount(rewards)
-        states = np.vstack(states)
+        # print(states.shape)
+        # states = np.vstack(states)
+        # print(states.shape)
+
         state_values = self.critic.predict(np.asarray(states))[:,0]
         advantages = discounted_rewards - np.reshape(state_values, len(state_values))  # Warum reshape
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
@@ -102,48 +105,91 @@ class A2C:
             # Reset episode
             time, cumul_reward, done = 0, 0, False
             env.reset()
-            old_state = env.get_observation()
-            old_state = np.expand_dims(old_state, axis=0)
-            #TODO Liste davon für jeden Roboter
-            actions, states, rewards = [], [], []
+
+
+            #TODO irgendwo anders her bekommen (zentral)
+            countRobots = 4
+
+
+            robotsData = []
+            robotsOldState = []
+
+
+            for i in range(countRobots):
+                old_state = env.get_observation(i)
+                robotsOldState.append(np.expand_dims(old_state, axis=0))
+
+
+                actions, states, rewards, done = [], [], [], []
+                robotsData.append((actions, states, rewards, done))
+            # Robot 0 actions --> robotsData[0][0]
+            # Robot 0 states  --> robotsData[0][1]
+            # Robot 0 rewards --> robotsData[0][2]
+            # Robot 1 actions --> robotsData[1][0]
+            # ...
+
 
             while not env.is_done():
 
-                #TODO pro Roboter
 
+                robotsActions = []
                 # Actor picks an action (following the policy)
-                a = self.policy_action(old_state)
+                for i in range(0,len(robotsData)):
+                    if not True in robotsData[i][3]:
+                        a = self.policy_action(robotsOldState[i])
+                    else:
+                        a = None
+                    robotsActions.append(a)
+                    action_onehot = np.zeros([self.act_dim])
+                    action_onehot[a] = 1
+
+                    if a != None:
+                        robotsData[i][0].append(action_onehot)
+
+
                 # Retrieve new state, reward, and whether the state is terminal
-                new_state, r, done = env.step(a)
+                # new_state, r, done = env.step(robotsActions)
+
+                robotsDataCurrentFrame = env.step(robotsActions)
+
                 #print("reward " + str(r))
                 # Memorize (s, a, r) for training
-                action_onehot = np.zeros([self.act_dim])
-                action_onehot[a] = 1
-                actions.append(action_onehot)
 
-                rewards.append(r)
-                states.append(old_state)
-                # Update current state
-                old_state = new_state
-                cumul_reward += r
+                for i, dataCurrentFrame in enumerate(robotsDataCurrentFrame):
+
+                    if not True in robotsData[i][3]:
+                        new_state = dataCurrentFrame[0]
+                        r = dataCurrentFrame[1]
+                        done = dataCurrentFrame[2]
+                        robotsData[i][1].append(old_state)
+                        robotsData[i][2].append(r)
+                        robotsData[i][3].append(done)
+                        # Update current state
+                        robotsOldState[i] = new_state
+                        print(r)
+                        cumul_reward += r
                 #print("Kumulierter Reward: " + str(cumul_reward) + ", Reward: " + str(r))
                 time += 1
 
 
             # Train using discounted rewards ie. compute updates
-            liste = np.append([liste], [[states], [actions], [rewards], [done]])
-
-
-            if counter == waitForN:   # train after 9 Episodes
-                for i in range(0, liste.size, 4):
-                    self.train_models(liste[i+0], liste[i+1], liste[i+2], liste[i+3])
-
-                liste = np.array([], dtype=object)
-                counter = 0
-
-            counter += 1
+            # liste = np.append([liste], [[states], [actions], [rewards], [done]])
+            #
+            #
+            # if counter == waitForN:   # train after 9 Episodes
+            #     for i in range(0, liste.size, 4):
+            #         self.train_models(liste[i+0], liste[i+1], liste[i+2], liste[i+3])
+            #
+            #     liste = np.array([], dtype=object)
+            #     counter = 0
+            #
+            # counter += 1
             # Gather stats every episode for plotting
-            # TODO
+
+            for singleRobotData in robotsData:
+                # print(singleRobotData[1], singleRobotData[0], singleRobotData[2])
+                self.train_models(np.asarray(singleRobotData[1]), singleRobotData[0], singleRobotData[2])
+
 
             if e % args.save_intervall == 0:
                 print('Saving')

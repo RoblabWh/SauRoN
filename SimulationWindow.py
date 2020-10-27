@@ -15,6 +15,7 @@ def initRobots(robots, scaleFactor, mode):
                                                              robot.length,
                                                              scaleFactor,
                                                              mode)
+
         robotRepresentations.append(robot_draw)
     return robotRepresentations
 

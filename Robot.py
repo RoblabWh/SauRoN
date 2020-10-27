@@ -7,7 +7,7 @@ from pynput.keyboard import Key, Listener
 
 class Robot:
 
-    def __init__(self, position, startDirection, station, args, timeframes, walls):
+    def __init__(self, position, startDirection, station, args, timeframes, walls, allStations):
         """
         :param position: tuple (float,float) -
             defines the robots starting position
@@ -60,6 +60,10 @@ class Robot:
 
         self.station = station
         self.walls = walls
+        self.collidorStationsWalls = []
+        for pickUp in allStations:
+            if not station is pickUp:
+                self.collidorStationsWalls = self.collidorStationsWalls + pickUp.borders
 
         if self.manuell:
             self.listener = Listener(on_press=self.on_press, on_release=self.on_release)
@@ -67,7 +71,6 @@ class Robot:
             self.linTast = 0
             self.angTast = 0
 
-        self.reset()
 
     def reset(self):
         """
@@ -76,6 +79,7 @@ class Robot:
         In addition the state gets cleared.
         This method is typically called at the beginning of a training epoch.
         """
+        self.active = True
         posX = self.startposX
         posY = self.startposY
         # randDirection = random.uniform(0, 2*math.pi)
@@ -94,17 +98,18 @@ class Robot:
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
         frame = [posX, posY, directionX, directionY, linVel, angVel, goalX, goalY, goalDist]
 
+        for _ in range(self.time_steps):
+            self.push_frame(frame)
+
         self.stateSonar = []
 
         self.distances = []
         self.radarHits = []
 
-        for _ in range(self.time_steps):
-            self.push_frame(frame)
-
+    def resetSonar(self, robots):
         if self.args.mode == 'sonar':
             for _ in range(self.time_steps):
-                self.sonarReading()
+                self.sonarReading(robots)
 
 
     def denormdata(self, data, limits):
@@ -167,7 +172,7 @@ class Robot:
             self.state.append(frame_norm)
             self.state_raw.append(frame)
 
-    def update(self, dt, tarLinVel, tarAngVel, goal):
+    def update(self, dt, tarLinVel, tarAngVel):
         """
         updates the robots position, direction and velocities.
         In addition to that a new frame is created
@@ -178,11 +183,9 @@ class Robot:
             target linear velocity
         :param tarAngVel: int/ float -
             target angular velocity
-        :param goal: tuple -
-            position of the current goal
         """
         posX, posY = self.getPosX(), self.getPosY()
-        goalX, goalY = goal
+        goalX, goalY = self.goalX, self.goalY
 
         if not self.manuell:
             linVel, angVel = self.compute_next_velocity(dt, self.getLinearVelocity(), self.getAngularVelocity(),
@@ -203,11 +206,17 @@ class Robot:
         self.push_frame(frame)
 
 
-    def sonarReading(self):
+    def sonarReading(self, robots):
         #TODO bei mehreren Stationen nicht die eigene als hindernis, nur andere
         #TODO Kollision mit Robotern /Geraden- Kreis Kollision
-        colliders = self.walls + self.station.borders
-        self.lookAround(self.args.angle_steps, colliders, [])
+        colliders = self.walls + self.collidorStationsWalls
+
+        robotsPos = []
+        for robotA in robots:
+            if robotA is not  self:
+                robotsPos.append((robotA.getPosX(), robotA.getPosY(), robotA.getRadius()))
+
+        self.lookAround(self.args.angle_steps, colliders, robotsPos)
 
         frame_sonar = []
 
@@ -289,16 +298,18 @@ class Robot:
         angY = math.sin(direction)
         return(angX,angY)
 
-    def collideWithStation(self, station):
+    def collideWithTargetStation(self):
         """
         :param station: Station.station -
             Target station object of the robot
         :return: Boolean
         """
+        station = self.station
         if self.getPosX() <= station.getPosX() + station.getWidth() and \
                 self.getPosX() + self.width >= station.getPosX() and \
                 self.getPosY() + self.length >= station.getPosY() and \
                 self.getPosY() <= station.getPosY() + station.getLength():
+            self.radarHits=[]
             return True
         return False
 
@@ -349,6 +360,15 @@ class Robot:
 
     def getVelocity(self):
         return self.getLinearVelocity(), self.getAngularVelocity()
+
+    def getRadius(self):
+        return self.width/2
+
+    def isActive(self):
+        return self.active
+
+    def deactivate(self):
+        self.active = False
 
     def getDirectionAngle(self):
         angX = self.getDirectionX()
@@ -437,6 +457,30 @@ class Robot:
                 radarHits.append([posX, posY])
                 distances.append(0)
 
+            for circle in roboterList:
+                intersectCircle = ray.castOnCircle((circle[0], circle[1]), circle[2], (posX, posY), radarHits[
+                    len(radarHits)-1])
+                # print(intersectCircle)
+                circleDists = []
+                for i in range(0, len(intersectCircle)):
+                    circleDists.append( math.sqrt((posX-intersectCircle[i][0])**2 + (posY-intersectCircle[i][1])**2))
+
+                shortestIndex = -1
+                shortestDist = distances[len(distances)-1]
+                for i in range(0, len(circleDists)):
+                    if shortestDist > circleDists[i]:
+                        shortestDist = circleDists[i]
+                        shortestIndex = i
+
+                if shortestIndex is not -1:
+                    radarHits.pop(len(radarHits)-1)
+                    distances.pop(len(distances)-1)
+                    radarHits.append(intersectCircle[shortestIndex])
+                    distances.append(shortestDist)
+
+
+
+
         self.radarHits = radarHits
         self.distances = distances
 
@@ -486,5 +530,45 @@ class Ray:
             pot = [x, y]
             # return pot
             return [u,pot]
+
+
+    def castOnCircle(self, circle_center, circle_radius, pt1, pt2, full_line=False, tangent_tol=1e-9):
+        """ Find the points at which a circle intersects a line-segment.  This can happen at 0, 1, or 2 points.
+
+        :param circle_center: The (x, y) location of the circle center
+        :param circle_radius: The radius of the circle
+        :param pt1: The (x, y) location of the first point of the segment
+        :param pt2: The (x, y) location of the second point of the segment
+        :param full_line: True to find intersections along full line - not just in the segment.  False will just return intersections within the segment.
+        :param tangent_tol: Numerical tolerance at which we decide the intersections are close enough to consider it a tangent
+        :return Sequence[Tuple[float, float]]: A list of length 0, 1, or 2, where each element is a point at which the circle intercepts a line segment.
+
+        Note: We follow: http://mathworld.wolfram.com/Circle-LineIntersection.html
+        """
+
+        (p1x, p1y), (p2x, p2y), (cx, cy) = pt1, pt2, circle_center
+        (x1, y1), (x2, y2) = (p1x - cx, p1y - cy), (p2x - cx, p2y - cy)
+        dx, dy = (x2 - x1), (y2 - y1)
+        dr = (dx ** 2 + dy ** 2)**.5
+        big_d = x1 * y2 - x2 * y1
+        discriminant = circle_radius ** 2 * dr ** 2 - big_d ** 2
+
+        if discriminant < 0:  # No intersection between circle and line
+            return []
+        else:  # There may be 0, 1, or 2 intersections with the segment
+            if dr != 0:
+                intersections = [
+                    (cx + (big_d * dy + sign * (-1 if dy < 0 else 1) * dx * discriminant**.5) / dr ** 2,
+                     cy + (-big_d * dx + sign * abs(dy) * discriminant**.5) / dr ** 2)
+                    for sign in ((1, -1) if dy < 0 else (-1, 1))]  # This makes sure the order along the segment is correct
+                if not full_line:  # If only considering the segment, filter out intersections that do not fall within the segment
+                    fraction_along_segment = [(xi - p1x) / dx if abs(dx) > abs(dy) else (yi - p1y) / dy for xi, yi in intersections]
+                    intersections = [pt for pt, frac in zip(intersections, fraction_along_segment) if 0 <= frac <= 1]
+                if len(intersections) == 2 and abs(discriminant) <= tangent_tol:  # If line is tangent to circle, return just one point (as both intersections have same location)
+                    return [intersections[0]]
+                else:
+                    return intersections
+            else:
+                return []
 
 

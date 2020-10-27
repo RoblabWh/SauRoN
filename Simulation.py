@@ -35,17 +35,25 @@ class Simulation:
         #TODO mehrere Robots mit eigenen Pickup stationen erstellen
 
         # Erstelle Stationen und Roboter
-        self.pickUp = Station(6, 7.5, 1, 1, 0, self.scaleFactor)
+        self.pickUp = Station(5, 1.2, 0.75, 0.75, 0, self.scaleFactor)
+        self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 0, self.scaleFactor)
+        self.pickUp3 = Station(9, 1.1, 0.75, 0.75, 0, self.scaleFactor)
+        self.pickUp4 = Station(13, 1.3, 0.75, 0.75, 0, self.scaleFactor)
+        self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
+
+
         #self.pickUp = Station(random.randrange(1, 21), random.randrange(1, 9.0), 1, 1, 0, self.scaleFactor)
-        self.delivery = Station(1, 1, 0.5, 0.5, 1, self.scaleFactor)
-        self.robot = Robot.Robot((10.5, 8.0), 3*math.pi/2, self.pickUp, args, timeframes, self.walls)
-        # self.robot2 = Robot.Robot((700.0, 500.0), 3*math.pi/2, self.pickUp, args, timeframes
+        self.robot = Robot.Robot((10.5, 8.8), 3.2*math.pi/2, self.pickUp3, args, timeframes, self.walls, self.stations)
+        self.robot2 = Robot.Robot((4, 8.6), 2.6*math.pi/2, self.pickUp, args, timeframes, self.walls, self.stations)
+        self.robot3 = Robot.Robot((1.2, 8.9), 3.6*math.pi/2, self.pickUp4, args, timeframes, self.walls, self.stations)
+        self.robot4 = Robot.Robot((12, 8.9), 3.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
 
+        self.robots = [self.robot, self.robot2, self.robot3, self.robot4]
 
-
-        # Erstelle Liste aller Stationen und Roboter (Für Multiroboter Multistation Support!) TODO
-        self.robots = [self.robot]
-        self.stations = [self.pickUp, self.delivery]
+        for robot in self.robots:
+            robot.reset()
+        for robot in self.robots:
+            robot.resetSonar(self.robots)
 
         self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args)
         self.simulationWindow.show()
@@ -67,22 +75,14 @@ class Simulation:
         return self.delivery
 
     def getGoalWidth(self):
-        goalWidth = 0
-        if self.robot.hasGoal(self.pickUp):
-            goalWidth = self.pickUp.getWidth()
-        if self.robot.hasGoal(self.delivery):
-            goalWidth = self.delivery.getWidth()
+        goalWidth = self.pickUp.getWidth()
         return goalWidth
 
     def getGoalLength(self):
-        goalLength = 0
-        if self.robot.hasGoal(self.pickUp):
-            goalLength = self.pickUp.getLength()
-        if self.robot.hasGoal(self.delivery):
-            goalLength = self.delivery.getLength()
+        goalLength = self.pickUp.getLength()
         return goalLength
 
-    def update(self, tarLinVel, tarAngVel):
+    def update(self, robotsTarVels):
         """
         updates the robots and checks the exit conditions of the current epoch
         :param tarLinVel: int/ float -
@@ -96,46 +96,69 @@ class Simulation:
         # self.plotterWindow.plot(self.robot.getAngularVelocity(), self.simTime)
         # time.sleep(0.1)
         self.simTime += self.simTimestep
-        #TODO Parameter ist Liste an Actions für jeden Roboter
 
 
-        #TODO Abbruchkriterien jedes Roboters prüfen (außer er hat bereits abgebrochen)
-        outOfArea = False
-        reachedPickUp = False
-        reachedDelivery = False
+        #TODO beachten bei Initialisieren der Roboter allen eigenes Goal geben (und Liste der anderen Stationen als Collider + Wände)
+        for i, robot in enumerate(self.robots):
+            if robot.isActive() == True:
+                tarLinVel, tarAngVel = robotsTarVels[i]
+                self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
 
-
-        # nicht rechts oder links aus dem Fenster gehen
-        if (self.robot.getPosX() + self.robot.width) > self.arenaWidth \
-                or (self.robot.getPosX()) < 0:
-            outOfArea = True
-
-        # nicht oben oder unten aus dem Fenster gehen
-        if (self.robot.getPosY() + self.robot.length) > self.arenaLength or \
-                (self.robot.getPosY()) < 0:
-            outOfArea = True
-
-        # Wenn der Roboter mit der PickUpStation kollidiert und sie als Ziel hat wird ein neues Ziel generiert
-        # und reachedPickUp auf True gesetzt, ansonsten bleibt das alte Ziel
-        if self.robot.hasGoal(self.pickUp):
-            if self.robot.collideWithStation(self.pickUp):
-                reachedPickUp = True
-                goal = (self.delivery.getPosX(), self.delivery.getPosY())
-            else:
-                goal = (self.pickUp.getPosX(), self.pickUp.getPosY())
-        else:
-            goal = (self.delivery.getPosX(), self.delivery.getPosY())
-            if self.robot.collideWithStation(self.delivery):
-                reachedDelivery = True
-
-        # TODO in Schleife bei mehreren Robotern (außer bei denen die bereits done sind)
-        self.robot.update(self.simTimestep, tarLinVel, tarAngVel, goal)
-        #TODO eigene Schleife bei mehreren Robotern (erst alle update dann in neuer Schleife das Sonar)
         if self.args.mode == 'sonar':
-            self.robot.sonarReading()
+            for i, robot in enumerate(self.robots):
+                if robotsTarVels[i] != (None, None):
+                    robot.sonarReading(self.robots) #TODO hier Liste der Pos anderer Roboter übergeben/ aller RoboterPos und eigenen Index?
 
         if self.simulationWindow != 0:
             for i, robot in enumerate(self.robots):
                 self.simulationWindow.updateRobot(robot, i)
-        #TODO das als Liste pro roboter zurückgeben
-        return outOfArea, reachedPickUp, reachedDelivery
+
+
+        #TODO Abbruchkriterien jedes Roboters prüfen (außer er hat bereits abgebrochen)
+        # Kollidieren die Roboter?
+        # Jeder Kollision mit Wänden prüfen (auch mit anderen Stationen, die und Wände dem Roboter übergeben)
+        # Jeder eigenes(!!!) Ziel erreicht prüfen
+
+        robotsTerminations = []
+        for robot in self.robots:
+            if robot.isActive():
+                collision = False
+                reachedPickUp = False
+
+
+                # # nicht rechts oder links aus dem Fenster gehen
+                # if (robot.getPosX() + robot.width) > self.arenaWidth \
+                #         or (robot.getPosX()) < 0:
+                #     collision = True
+                #
+                # # nicht oben oder unten aus dem Fenster gehen
+                # if (robot.getPosY() + robot.length) > self.arenaLength or \
+                #         (robot.getPosY()) < 0:
+                #     collision = True
+
+                # for dist in robot.distances:
+                #     if dist<robot.getRadius()+0.05:
+                #         collision = True
+                if any(d <= robot.getRadius()+0.05 for d in robot.distances):
+                    collision = True
+
+                # Wenn der Roboter mit der PickUpStation kollidiert und sie als Ziel hat wird ein neues Ziel generiert
+                # und reachedPickUp auf True gesetzt, ansonsten bleibt das alte Ziel
+                #if robot.hasGoal(self.pickUp):
+                if robot.collideWithTargetStation():
+                    reachedPickUp = True
+                #     goal = (self.delivery.getPosX(), self.delivery.getPosY())
+                # else:
+                #     goal = (self.pickUp.getPosX(), self.pickUp.getPosY())
+                # else:
+                #     goal = (self.delivery.getPosX(), self.delivery.getPosY())
+                #     if robot.collideWithStation(self.delivery):
+                #         reachedDelivery = True
+
+                if collision or reachedPickUp:
+                    robot.deactivate()
+                robotsTerminations.append((collision, reachedPickUp))
+            else:
+                robotsTerminations.append((None, None))
+        return robotsTerminations
+
