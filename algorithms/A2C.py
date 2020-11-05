@@ -47,7 +47,8 @@ class A2C:
 
     def buildActor(self, network):
         x = Dense(64, activation='relu')(network.output) #128
-        out = Dense(self.act_dim, activation='softmax')(x)
+        out = Dense(self.act_dim, activation='tanh')(x)
+        #TODO hier muss eine Ausgabelayer mit 2 Werten je zwischen -1 und 1 entstehen
         return Model(network.input, out)
 
     def buildCritic(self, network):
@@ -55,11 +56,18 @@ class A2C:
         out = Dense(1, activation='linear')(x)
         return Model(network.input, out)
 
-    def policy_action(self, s):
+    def policy_action(self, s, successrate):
         """ Use the actor to predict the next action to take, using the policy
         """
         #print(self.actor.predict(s).ravel())
-        return np.random.choice(np.arange(self.act_dim), 1, p=self.actor.predict(s).ravel())[0]
+        std = ((1-successrate)**2)*0.8
+        prediction = self.actor.predict(s).ravel()
+        # print("prediction: " + str(prediction))
+        prediction[0] = np.random.normal(prediction[0], std)
+        prediction[1] = np.random.normal(prediction[1], std)
+        # print("prediction: " + str(prediction) + "standardabweichung: " + str(std) + "  - clipped: " + str(np.clip(prediction, -1, 1)))
+        return np.clip(prediction, -1, 1)
+        #return np.random.choice(np.arange(self.act_dim), 1, p=self.actor.predict(s).ravel())[0]
 
     def discount(self, r):
         """ Compute the gamma-discounted rewards over an episode
@@ -100,6 +108,7 @@ class A2C:
         # Main Loop
         tqdm_e = tqdm(range(args.nb_episodes), desc='Score', leave=True, unit=" episodes")
         waitForN = 10
+        rechedTargetList = [False] * 100
         for e in tqdm_e:
 
             # Reset episode
@@ -136,15 +145,16 @@ class A2C:
                 # Actor picks an action (following the policy)
                 for i in range(0,len(robotsData)):
                     if not True in robotsData[i][3]:
-                        a = self.policy_action(robotsOldState[i])
+                        a = self.policy_action(robotsOldState[i], sum(rechedTargetList)/100)
+                        # print(a)
                     else:
-                        a = None
+                        a = [None, None]
                     robotsActions.append(a)
-                    action_onehot = np.zeros([self.act_dim])
-                    action_onehot[a] = 1
+                    # action_onehot = np.zeros([self.act_dim])
+                    # action_onehot[a] = 1
 
-                    if a != None:
-                        robotsData[i][0].append(action_onehot)
+                    if not None in a:
+                        robotsData[i][0].append(a)#action_onehot) #TODO Tupel mit 2 werten von je -1 bis 1
 
 
                 # Retrieve new state, reward, and whether the state is terminal
@@ -164,9 +174,13 @@ class A2C:
                         robotsData[i][1].append(old_state)
                         robotsData[i][2].append(r)
                         robotsData[i][3].append(done)
+                        if(done):
+                            rechedPickup = dataCurrentFrame[3]
+                            rechedTargetList.pop(0)
+                            rechedTargetList.append(rechedPickup)
                         # Update current state
                         robotsOldState[i] = new_state
-                        print(r)
+                        #print(r)
                         cumul_reward += r
                 #print("Kumulierter Reward: " + str(cumul_reward) + ", Reward: " + str(r))
                 time += 1
@@ -199,7 +213,7 @@ class A2C:
             self.av_meter.update(cumul_reward)
 
             # Display score
-            tqdm_e.set_description("Reward Episode: " + str(cumul_reward) + " -- Average Reward: " + str(self.av_meter.avg))
+            tqdm_e.set_description("Reward Episode: " + str(cumul_reward) + " -- Average Reward: " + str(self.av_meter.avg) + " Average Reached Target (last 100): " + str(sum(rechedTargetList)/100))
             tqdm_e.refresh()
 
         return results

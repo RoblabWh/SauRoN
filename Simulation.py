@@ -35,10 +35,10 @@ class Simulation:
         #TODO mehrere Robots mit eigenen Pickup stationen erstellen
 
         # Erstelle Stationen und Roboter
-        self.pickUp = Station(5, 1.2, 0.75, 0.75, 0, self.scaleFactor)
-        self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 0, self.scaleFactor)
+        self.pickUp = Station(5, 1.2, 0.75, 0.75, 1, self.scaleFactor)
+        self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 3, self.scaleFactor)
         self.pickUp3 = Station(9, 1.1, 0.75, 0.75, 0, self.scaleFactor)
-        self.pickUp4 = Station(13, 1.3, 0.75, 0.75, 0, self.scaleFactor)
+        self.pickUp4 = Station(13, 1.3, 0.75, 0.75, 2, self.scaleFactor)
         self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
 
 
@@ -98,7 +98,6 @@ class Simulation:
         self.simTime += self.simTimestep
 
 
-        #TODO beachten bei Initialisieren der Roboter allen eigenes Goal geben (und Liste der anderen Stationen als Collider + Wände)
         for i, robot in enumerate(self.robots):
             if robot.isActive() == True:
                 tarLinVel, tarAngVel = robotsTarVels[i]
@@ -107,17 +106,13 @@ class Simulation:
         if self.args.mode == 'sonar':
             for i, robot in enumerate(self.robots):
                 if robotsTarVels[i] != (None, None):
-                    robot.sonarReading(self.robots) #TODO hier Liste der Pos anderer Roboter übergeben/ aller RoboterPos und eigenen Index?
+                    robot.sonarReading(self.robots)
 
         if self.simulationWindow != 0:
             for i, robot in enumerate(self.robots):
                 self.simulationWindow.updateRobot(robot, i)
 
 
-        #TODO Abbruchkriterien jedes Roboters prüfen (außer er hat bereits abgebrochen)
-        # Kollidieren die Roboter?
-        # Jeder Kollision mit Wänden prüfen (auch mit anderen Stationen, die und Wände dem Roboter übergeben)
-        # Jeder eigenes(!!!) Ziel erreicht prüfen
 
         robotsTerminations = []
         for robot in self.robots:

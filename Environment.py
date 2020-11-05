@@ -26,7 +26,7 @@ class Environment:
 
     @staticmethod
     def get_actions():
-        return [0, 1, 2, 3, 4]  # Links, Rechts, Oben, Unten
+        return 2#[0, 1, 2, 3]  # Links, Rechts, Oben, Unten
 
    # @staticmethod
     def get_velocity(self, action):
@@ -35,8 +35,8 @@ class Environment:
         actualLinVel = self.simulation.robot.getLinearVelocity()
         actualAngVel = self.simulation.robot.getAngularVelocity()
 
-        tarLinVel = actualLinVel
-        tarAngVel = actualAngVel
+        tarLinVel = 0 #actualLinVel
+        tarAngVel = 0 #actualAngVel
 
         # Links drehen mit vorheriger Linear Velocity
         if action == 0:
@@ -47,15 +47,15 @@ class Environment:
             tarAngVel = self.simulation.robot.maxAngularVelocity
 
         # Geradeaus fahren mit vorheriger Linear Velocity
-        if action == 2:
-            tarAngVel = 0
+        # if action == 2:
+        #     tarAngVel = 0
 
         # Beschleunigen auf maximale Linear Velocity, drehen mit vorheriger Angular Velocity
-        if action == 3:
+        if action == 2:
             tarLinVel = self.simulation.robot.maxLinearVelocity
 
         # stehen bleiben, Angular Velocity wie vorher
-        if action == 4:
+        if action == 3:
             tarLinVel = self.simulation.robot.minLinearVelocity
 
         return tarLinVel, tarAngVel
@@ -69,15 +69,13 @@ class Environment:
         return self.steps_left <= 0 or robotsDone
 
     def step(self, actions):
-        #TODO Param Liste von actions für alle Roboter (bei done Robotern = None)
 
         self.steps_left -= 1
 
         ######## Update der Simulation #######
-        #TODO Liste von tarVel erzeugen und bei update übergeben
         robotsTarVels = []
         for action in actions:
-            tarLinVel, tarAngVel = self.get_velocity(action)
+            tarLinVel, tarAngVel = action #self.get_velocity(action)
             robotsTarVels.append((tarLinVel, tarAngVel))
 
         robotsTermination = self.simulation.update(robotsTarVels)
@@ -135,10 +133,10 @@ class Environment:
         delta_dist = distance_old - distance_new
 
         ########### REWARD CALCULATION ################
-        reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
-        # reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-        #                              orientation_goal_new, outOfArea, reachedPickup)
-        return (next_state, reward / 10, not robot.isActive())
+        # reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
+        reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
+                                     orientation_goal_new, outOfArea, reachedPickup)
+        return (next_state, reward / 10, not robot.isActive(),reachedPickup)
 
 
     def createReward01(self, robot, delta_dist, robot_orientation, orientation_goal_new, outOfArea, reachedPickup):
@@ -195,7 +193,7 @@ class Environment:
         return reward
 
 
-    def createReward02(self, delta_dist, robot_orientation_old,orientation_goal_old, robot_orientation_new, orientation_goal_new, outOfArea, reachedPickup):
+    def createReward02(self, robot, delta_dist, robot_orientation_old,orientation_goal_old, robot_orientation_new, orientation_goal_new, outOfArea, reachedPickup):
 
         reward = delta_dist /2
 

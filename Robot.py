@@ -44,13 +44,13 @@ class Robot:
         self.radius = self.width / 2
 
         self.maxLinearVelocity = 10  # 10m/s
-        self.minLinearVelocity = 0  # m/s
+        self.minLinearVelocity = -10  # m/s
         self.maxLinearAcceleration = 5  # 5m/s^2
         self.minLinearAcceleration = -5  # 5m/s^2
-        self.maxAngularVelocity = 1  # rad/s
-        self.minAngularVelocity = -1  # rad/s
-        self.maxAngularAcceleration = 0.5  # rad/s^2
-        self.minAngularAcceleration = -0.5 # rad/s^2
+        self.maxAngularVelocity = 2  # rad/s
+        self.minAngularVelocity = -2  # rad/s
+        self.maxAngularAcceleration = 0.8  # rad/s^2
+        self.minAngularAcceleration = -0.8 # rad/s^2
 
         self.XYnorm = [args.arena_width, args.arena_length]
         self.directionnom = [-1, 1]#2 * math.pi]
@@ -188,7 +188,7 @@ class Robot:
         goalX, goalY = self.goalX, self.goalY
 
         if not self.manuell:
-            linVel, angVel = self.compute_next_velocity(dt, self.getLinearVelocity(), self.getAngularVelocity(),
+            linVel, angVel = self.compute_next_velocity_continuous(dt, self.getLinearVelocity(), self.getAngularVelocity(),
                                                         tarLinVel, tarAngVel)
         else:
             linVel = self.linTast
@@ -293,6 +293,52 @@ class Robot:
 
         return linVel, angVel
 
+    def compute_next_velocity_continuous(self, dt, linVel, angVel, tarLinVel, tarAngVel):
+        """
+        :param dt: float -
+            passed (simulated) time since last call
+        :param linVel: float -
+            current linear velocity
+        :param angVel: float -
+            current angular velocity
+        :param tarLinVel: float/ int -
+            target linear velocity
+        :param tarAngVel: float/ int -
+            target angular velocity
+
+        :return: tuple
+            (float - linear velocity, float - angular velocity)
+        """
+        tarAngVel = tarAngVel * self.maxAngularVelocity
+        tarLinVel = tarLinVel * self.maxLinearVelocity
+
+
+        # beschleunigen
+        if linVel < tarLinVel:
+            linVel += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
+            if linVel > self.maxLinearVelocity:
+                linVel = self.maxLinearVelocity
+
+        # bremsen
+        elif linVel > tarLinVel:
+            linVel += self.minLinearAcceleration * dt
+            if linVel < self.minLinearVelocity:
+                linVel = self.minLinearVelocity
+
+        # nach links drehen
+        if angVel < tarAngVel:
+            angVel += self.maxAngularAcceleration * dt
+            if angVel > self.maxAngularVelocity:
+                angVel = self.maxAngularVelocity
+
+        # nach rechts drehen
+        elif angVel > tarAngVel:
+            angVel += self.minAngularAcceleration * dt
+            if angVel < self.minAngularVelocity:
+                angVel = self.minAngularVelocity
+
+        return linVel, angVel
+
     def directionVectorFromAngle(self, direction):
         angX = math.cos(direction)
         angY = math.sin(direction)
@@ -305,11 +351,19 @@ class Robot:
         :return: Boolean
         """
         station = self.station
-        if self.getPosX() <= station.getPosX() + station.getWidth() and \
-                self.getPosX() + self.width >= station.getPosX() and \
-                self.getPosY() + self.length >= station.getPosY() and \
-                self.getPosY() <= station.getPosY() + station.getLength():
-            self.radarHits=[]
+
+        # if self.getPosX() > station.getPosX() and self.getPosX() < station.getPosX()+station.getWidth():
+        #     if self.getPosY()+self.radius > station.getPosY() and self.getPosY()-self.radius < station.getPosY()+station.getLength():
+        #         return True
+        # elif self.getPosY() > station.getPosY() and self.getPosY() < station.getPosY()+station.getLength():
+        #     if self.getPosX()+self.radius > station.getPosX() and self.getPosX()-self.radius < station.getPosX()+station.getWidth():
+        #         return True
+
+        if self.getPosX()-self.radius <= station.getPosX() + station.getWidth() and \
+                self.getPosX()+self.radius + self.width >= station.getPosX() and \
+                self.getPosY() + self.radius >= station.getPosY() and \
+                self.getPosY() - self.radius <= station.getPosY() + station.getLength():
+            #self.radarHits=[]
             return True
         return False
 

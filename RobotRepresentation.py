@@ -5,13 +5,12 @@ import math
 
 
 class RobotRepresentation:
-    def __init__(self, x, y, direction, width, height, scaleFactor, mode):
+    def __init__(self, x, y, direction, width, height, scaleFactor, mode, colorIndex):
         self.mode = mode
         self.scale = scaleFactor
         self.width = width * self.scale
         self.height = height * self.scale
 
-        self.lineColor = Qt.green
         self.thickness = 2
         self.lineStyle = Qt.SolidLine
         self.fillColor = Qt.white
@@ -22,6 +21,15 @@ class RobotRepresentation:
         self.posY = y * self.scale
         self.direction = direction
         self.radarHits = []
+        self.isActive = True
+
+        self.lineColor = Qt.blue
+        if colorIndex == 1:
+            self.lineColor = Qt.red
+        if colorIndex == 2:
+            self.lineColor = Qt.yellow
+        if colorIndex == 3:
+            self.lineColor = Qt.green
 
     def paint(self, painter, sonarShowing):
 
@@ -35,7 +43,7 @@ class RobotRepresentation:
         # if keyboard.is_pressed('t'):
         #     self.showSimulation = False
 
-        if self.mode == 'sonar':
+        if self.mode == 'sonar' and self.isActive:
             if sonarShowing:
                 painter.setPen(QPen(Qt.darkMagenta, 1.5, Qt.DotLine))
                 painter.setBrush(QBrush(Qt.darkMagenta, self.brushStyle))
@@ -60,11 +68,12 @@ class RobotRepresentation:
                          self.posY + self.radius * math.sin(self.direction))
 
 
-    def update(self, x, y, direction, radarHits, simShowing):
+    def update(self, x, y, direction, radarHits, simShowing, isActive):
         if simShowing:
             self.posX = x * self.scale
             self.posY = y * self.scale
             self.direction = direction
             self.radarHits = radarHits
+            self.isActive = isActive
 
 

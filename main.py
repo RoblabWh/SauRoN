@@ -26,7 +26,7 @@ arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 80
-angleStepsSonar = 4
+angleStepsSonar = 2
 
 if __name__ == '__main__':
     args = None
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     env = Environment.Environment(app, args.steps, args, env_dim[0])
 
 
-    act_dim = np.asarray(env.get_actions()).shape[0]
+    act_dim = np.asarray(env.get_actions()) #TODO bei kontinuierlchem 2 actions
 
     if args.path == "":
         args.path = os.path.join(os.getcwd(), "models", "")

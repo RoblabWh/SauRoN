@@ -7,14 +7,15 @@ from Station import Station
 def initRobots(robots, scaleFactor, mode):
 
     robotRepresentations = []
-    for robot in robots:
+    for i, robot in enumerate(robots):
         robot_draw = RobotRepresentation.RobotRepresentation(robot.getPosX(),
                                                              robot.getPosY(),
                                                              robot.getDirectionAngle(),
                                                              robot.width,
                                                              robot.length,
                                                              scaleFactor,
-                                                             mode)
+                                                             mode,
+                                                             i)
 
         robotRepresentations.append(robot_draw)
     return robotRepresentations
@@ -110,7 +111,7 @@ class SimulationWindow(QMainWindow):
         self.painter.end()
 
     def updateRobot(self, robot, num):
-        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing)
+        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing, robot.isActive())
         if self.simShowing:
             self.repaint()
         self.app.processEvents()
