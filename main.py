@@ -19,7 +19,7 @@ memory_size = 10000
 
 gamma = 0.999
 lr = 0.0001
-num_episodes = 3500
+num_episodes = 5000
 steps = 1500
 
 arenaWidth = 22   # m

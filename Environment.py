@@ -15,7 +15,6 @@ class Environment:
         self.done = False
         self.shape = np.asarray([0]).shape
 
-        self.plotterWindow = PlotterWindow(app)
 
     def get_observation(self, i):
         #TODO den richtigen Roboter aus der Liste wählen mit parameter i --> getRobot(i)
@@ -105,9 +104,9 @@ class Environment:
         radius = robot.radius
         goal_pose_old_x = robot.getGoalX()
         goal_pose_old_y = robot.getGoalY()
-        robot_pose_old_x = robot.getPosX()
-        robot_pose_old_y = robot.getPosY()
-        robot_orientation_old = robot.getDirectionAngle()
+        robot_pose_old_x = robot.getLastPosX()
+        robot_pose_old_y = robot.getLastPosY()
+        robot_orientation_old = robot.getDirectionAngle(last=True)
         #TODO Goal des Robots nutzen
         orientation_goal_old = math.atan2(
             (goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_old_y),
@@ -133,9 +132,9 @@ class Environment:
         delta_dist = distance_old - distance_new
 
         ########### REWARD CALCULATION ################
-        # reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
-        reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-                                     orientation_goal_new, outOfArea, reachedPickup)
+        reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
+        # reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
+        #                              orientation_goal_new, outOfArea, reachedPickup)
         return (next_state, reward / 10, not robot.isActive(),reachedPickup)
 
 
@@ -151,9 +150,11 @@ class Environment:
             reward += reward  # * 0.5 # * 0.001
 
         anglDeviation = math.fabs(robot_orientation - orientation_goal_new)
-        reward += (anglDeviation * -1 + 0.35) * 2
+        reward += (anglDeviation * -1 + math.pi/3) * 2
         if anglDeviation < 0.2 and delta_dist > 0:
             reward = reward * 2
+
+        # print("angDev: ", anglDeviation, "  Reward-Anteil: ",  (anglDeviation * -1 + 0.35) * 2)
 
         # if math.fabs(robot_orientation - orientation_goal_new) < 0.001:  # 0.05 0.3
         #     #if(distance_old - distance_new) > 0:
@@ -212,8 +213,10 @@ class Environment:
         else:
             reward -= ((anglDeviation_new)) / math.pi /4
 
+        if(anglDeviation_new < 1):
+            reward += ((math.pi - anglDeviation_new)) /math.pi /4
 
-
+        reward = reward/2
 
         # print(reward, anglDeviation_new * 180/math.pi, (math.pi-anglDeviation_new)/math.pi /4)
         # reward+= ((anglDeviation_old - anglDeviation_new)/math.pi)/8

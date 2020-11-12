@@ -36,19 +36,20 @@ class Simulation:
 
         # Erstelle Stationen und Roboter
         self.pickUp = Station(5, 1.2, 0.75, 0.75, 1, self.scaleFactor)
-        self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 3, self.scaleFactor)
+        # self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 3, self.scaleFactor)
         self.pickUp3 = Station(9, 1.1, 0.75, 0.75, 0, self.scaleFactor)
-        self.pickUp4 = Station(13, 1.3, 0.75, 0.75, 2, self.scaleFactor)
-        self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
+        # self.pickUp4 = Station(13, 1.3, 0.75, 0.75, 2, self.scaleFactor)
+        # self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
+        self.stations = [self.pickUp, self.pickUp3]
 
 
-        #self.pickUp = Station(random.randrange(1, 21), random.randrange(1, 9.0), 1, 1, 0, self.scaleFactor)
         self.robot = Robot.Robot((10.5, 8.8), 3.2*math.pi/2, self.pickUp3, args, timeframes, self.walls, self.stations)
         self.robot2 = Robot.Robot((4, 8.6), 2.6*math.pi/2, self.pickUp, args, timeframes, self.walls, self.stations)
-        self.robot3 = Robot.Robot((1.2, 8.9), 3.6*math.pi/2, self.pickUp4, args, timeframes, self.walls, self.stations)
-        self.robot4 = Robot.Robot((12, 8.9), 3.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
+        # self.robot3 = Robot.Robot((1.1, 8.9), 3.6*math.pi/2, self.pickUp4, args, timeframes, self.walls, self.stations)
+        # self.robot4 = Robot.Robot((13.1, 3.9), 3.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
 
-        self.robots = [self.robot, self.robot2, self.robot3, self.robot4]
+        # self.robots = [self.robot, self.robot2, self.robot3, self.robot4]
+        self.robots = [self.robot, self.robot2]
 
         for robot in self.robots:
             robot.reset()

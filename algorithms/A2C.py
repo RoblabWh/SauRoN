@@ -59,13 +59,10 @@ class A2C:
     def policy_action(self, s, successrate):
         """ Use the actor to predict the next action to take, using the policy
         """
-        #print(self.actor.predict(s).ravel())
-        std = ((1-successrate)**2)*0.8
+        std = ((1-successrate)**2)*0.6
         prediction = self.actor.predict(s).ravel()
-        # print("prediction: " + str(prediction))
         prediction[0] = np.random.normal(prediction[0], std)
         prediction[1] = np.random.normal(prediction[1], std)
-        # print("prediction: " + str(prediction) + "standardabweichung: " + str(std) + "  - clipped: " + str(np.clip(prediction, -1, 1)))
         return np.clip(prediction, -1, 1)
         #return np.random.choice(np.arange(self.act_dim), 1, p=self.actor.predict(s).ravel())[0]
 
@@ -79,24 +76,45 @@ class A2C:
             discounted_r[t] = cumul_r
         return discounted_r
 
-    def train_models(self, states, actions, rewards):
+    def train_models(self, robotsData):#, states, actions, rewards): 1 0 2
         """ Update actor and critic networks from experience
         """
         # Compute discounted rewards and Advantage (TD. Error)
-        discounted_rewards = self.discount(rewards)
-        # print(states.shape)
-        # states = np.vstack(states)
-        # print(states.shape)
 
-        state_values = self.critic.predict(np.asarray(states))[:,0]
-        advantages = discounted_rewards - np.reshape(state_values, len(state_values))  # Warum reshape
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-        # Networks optimization
-        # self.a_opt([states, actions, advantages])
-        # self.c_opt([states, discounted_rewards])
-        actions = np.vstack(actions)
-        self.actor.fit(states, actions, sample_weight=advantages, epochs=1, verbose=0)
-        self.critic.fit(states, discounted_rewards, epochs=1, verbose=0)
+        discounted_rewards = np.array([])
+        state_values = np.array([])
+        advantages = np.array([])
+        actionsConcatenated = np.array([])
+        statesConcatenated = np.array([])
+        for data in robotsData:
+            actions, states, rewards, dones = data
+            if(statesConcatenated.size == 0):
+                statesConcatenated = np.array(states)
+            else:
+                statesConcatenated = np.concatenate((statesConcatenated, np.array(states)))
+
+            discounted_rewardsTmp = self.discount(rewards)
+            discounted_rewards = np.concatenate((discounted_rewards, discounted_rewardsTmp))
+            # print(states.shape)
+            # states = np.vstack(states)
+            # print(states.shape)
+
+            state_valuesTmp = self.critic.predict(np.asarray(states))[:,0]
+            state_values = np.concatenate((state_values, state_valuesTmp))
+            advantagesTmp = discounted_rewardsTmp - np.reshape(state_valuesTmp, len(state_valuesTmp))  # Warum reshape
+            advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)
+            advantages = np.concatenate((advantages, advantagesTmp))
+            # Networks optimization
+            # self.a_opt([states, actions, advantages])
+            # self.c_opt([states, discounted_rewards])
+            if(actionsConcatenated.size == 0):
+                actionsConcatenated =  np.vstack(actions)
+            else:
+                actionsConcatenated = np.concatenate((actionsConcatenated, np.vstack(actions)))
+            # print("discounted_rewards", discounted_rewards.shape, "state_values", state_values.shape, "advantages",
+            #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
+        self.actor.fit(statesConcatenated, actionsConcatenated, sample_weight=advantages, epochs=1, verbose=0)
+        self.critic.fit(statesConcatenated, discounted_rewards, epochs=1, verbose=0)
 
     def train(self, env, args):
         """ Main A2C Training Algorithm
@@ -109,6 +127,8 @@ class A2C:
         tqdm_e = tqdm(range(args.nb_episodes), desc='Score', leave=True, unit=" episodes")
         waitForN = 10
         rechedTargetList = [False] * 100
+        countRobots = 2
+
         for e in tqdm_e:
 
             # Reset episode
@@ -117,7 +137,6 @@ class A2C:
 
 
             #TODO irgendwo anders her bekommen (zentral)
-            countRobots = 4
 
 
             robotsData = []
@@ -200,10 +219,10 @@ class A2C:
             # counter += 1
             # Gather stats every episode for plotting
 
-            for singleRobotData in robotsData:
-                # print(singleRobotData[1], singleRobotData[0], singleRobotData[2])
-                self.train_models(np.asarray(singleRobotData[1]), singleRobotData[0], singleRobotData[2])
-
+            # for singleRobotData in robotsData:
+            #     # print(singleRobotData[1], singleRobotData[0], singleRobotData[2])
+            #     self.train_models(np.asarray(singleRobotData[1]), singleRobotData[0], singleRobotData[2])
+            self.train_models(robotsData)
 
             if e % args.save_intervall == 0:
                 print('Saving')

@@ -47,10 +47,10 @@ class Robot:
         self.minLinearVelocity = -10  # m/s
         self.maxLinearAcceleration = 5  # 5m/s^2
         self.minLinearAcceleration = -5  # 5m/s^2
-        self.maxAngularVelocity = 2  # rad/s
-        self.minAngularVelocity = -2  # rad/s
-        self.maxAngularAcceleration = 0.8  # rad/s^2
-        self.minAngularAcceleration = -0.8 # rad/s^2
+        self.maxAngularVelocity = 1.5  # rad/s
+        self.minAngularVelocity = -1.5  # rad/s
+        self.maxAngularAcceleration = 0.7  # rad/s^2
+        self.minAngularAcceleration = -0.7 # rad/s^2
 
         self.XYnorm = [args.arena_width, args.arena_length]
         self.directionnom = [-1, 1]#2 * math.pi]
@@ -394,11 +394,23 @@ class Robot:
     def getPosY(self):
         return self.state_raw[self.time_steps - 1][1]
 
+    def getLastPosX(self):
+        return self.state_raw[self.time_steps - 2][0]
+
+    def getLastPosY(self):
+        return self.state_raw[self.time_steps - 2][1]
+
     def getDirectionX(self):
         return self.state_raw[self.time_steps - 1][2]
 
     def getDirectionY(self):
         return self.state_raw[self.time_steps - 1][3]
+
+    def getLastDirectionX(self):
+        return self.state_raw[self.time_steps - 2][2]
+
+    def getLastDirectionY(self):
+        return self.state_raw[self.time_steps - 2][3]
 
     def getLinearVelocity(self):
         return self.state_raw[self.time_steps - 1][4]
@@ -424,9 +436,14 @@ class Robot:
     def deactivate(self):
         self.active = False
 
-    def getDirectionAngle(self):
-        angX = self.getDirectionX()
-        angY = self.getDirectionY()
+    def getDirectionAngle(self, last=False):
+        if not last:
+            angX = self.getDirectionX()
+            angY = self.getDirectionY()
+        else:
+            angX = self.getLastDirectionX()
+            angY = self.getLastDirectionY()
+
 
         direction = 0
         if angX == 0:

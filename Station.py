@@ -19,6 +19,10 @@ class Station:
             self.color = Qt.yellow
         if color == 3:
             self.color = Qt.green
+        if color == 4:
+            self.color = Qt.darkBlue
+        if color == 5:
+            self.color = Qt.gray
 
 
         self.lineColor = self.color  # Qt.red Qt.blue

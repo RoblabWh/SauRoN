@@ -30,6 +30,10 @@ class RobotRepresentation:
             self.lineColor = Qt.yellow
         if colorIndex == 3:
             self.lineColor = Qt.green
+        if colorIndex == 4:
+            self.lineColor = Qt.darkBlue
+        if colorIndex == 5:
+            self.lineColor = Qt.gray
 
     def paint(self, painter, sonarShowing):
 
