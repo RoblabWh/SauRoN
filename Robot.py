@@ -32,7 +32,7 @@ class Robot:
         self.state = []
         self.state_raw = []
         self.stateSonar = []
-
+        self.netOutput = (0,0)
         self.distances = []
         self.radarHits = []
         # [posX, posY, directionX, directionY, linearVelocity, angularVelocity, goalX, goalY, targetLinearVelocity, targetAngularVelocity]
@@ -43,14 +43,14 @@ class Robot:
         self.length = 0.5  # m
         self.radius = self.width / 2
 
-        self.maxLinearVelocity = 10  # 10m/s
-        self.minLinearVelocity = -10  # m/s
-        self.maxLinearAcceleration = 5  # 5m/s^2
-        self.minLinearAcceleration = -5  # 5m/s^2
-        self.maxAngularVelocity = 1.5  # rad/s
-        self.minAngularVelocity = -1.5  # rad/s
-        self.maxAngularAcceleration = 0.7  # rad/s^2
-        self.minAngularAcceleration = -0.7 # rad/s^2
+        self.maxLinearVelocity = 0.7  # 10m/s
+        self.minLinearVelocity = -0.7  # m/s
+        self.maxLinearAcceleration = 1.667  # 5m/s^2
+        self.minLinearAcceleration = -1.667  # 5m/s^2
+        self.maxAngularVelocity = 1 * math.pi  # rad/s
+        self.minAngularVelocity = -1 * math.pi  # rad/s
+        self.maxAngularAcceleration = 0.5  # rad/s^2
+        self.minAngularAcceleration = -0.5 # rad/s^2
 
         self.XYnorm = [args.arena_width, args.arena_length]
         self.directionnom = [-1, 1]#2 * math.pi]
@@ -105,6 +105,7 @@ class Robot:
 
         self.distances = []
         self.radarHits = []
+        self.netOutput = (0, 0)
 
     def resetSonar(self, robots):
         if self.args.mode == 'sonar':
@@ -139,8 +140,8 @@ class Robot:
         posY = frame[1] / self.XYnorm[1]
         directionX = (frame[2] - self.directionnom[0]) / (self.directionnom[1] - self.directionnom[0])
         directionY = (frame[3] - self.directionnom[0]) / (self.directionnom[1] - self.directionnom[0])
-        linVel = (frame[4] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
-        angVel = (frame[5] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
+        linVel = frame[4]/ self.maxLinearVelocity #(frame[4] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
+        angVel = frame[5]/self.maxAngularVelocity #(frame[5] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
         goalX = frame[6] / self.XYnorm[0]
         goalY = frame[7] / self.XYnorm[1]
         dist = frame[8] / math.sqrt(self.XYnorm[0]**2+self.XYnorm[0]**2)
@@ -218,14 +219,14 @@ class Robot:
 
         self.lookAround(self.args.angle_steps, colliders, robotsPos)
 
-        frame_sonar = []
+        # frame_sonar = []
 
         distance = math.sqrt(
             (self.getPosX() - (self.station.posX + (self.station.width / 2))) ** 2 +
             (self.getPosY() - (self.station.posY + (self.station.length/2))) ** 2)
         maxDist = math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[0] ** 2)
 
-        frame_sonar.append((distance / maxDist))
+        # frame_sonar.append((distance / maxDist))
 
         robot_orientation = self.getDirectionAngle()
         orientation_goal_new = math.atan2(
@@ -234,14 +235,18 @@ class Robot:
         anglDeviation = math.fabs(robot_orientation - orientation_goal_new)
         anglDeviationV=self.directionVectorFromAngle(anglDeviation)
 
-        frame_sonar.append(anglDeviationV[0])
-        frame_sonar.append(anglDeviationV[1])
+        orientation = [anglDeviationV[0], anglDeviationV[1]]
+
+        # frame_sonar.append(self.netOutput[0])
+        # frame_sonar.append(self.netOutput[1])
+        # frame_sonar.append(self.getLinearVelocityNorm())
+        # frame_sonar.append(self.getAngularVelocityNorm())
 
         distancesNorm = []
         for i in range(len(self.distances)):
             distancesNorm.append(self.distances[i] / maxDist)
 
-        frame_sonar = frame_sonar + distancesNorm
+        frame_sonar = [distancesNorm, orientation, [(distance / maxDist)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]]
 
         if len(self.stateSonar) >= self.time_steps:
             self.stateSonar.pop(0)
@@ -309,8 +314,11 @@ class Robot:
         :return: tuple
             (float - linear velocity, float - angular velocity)
         """
+        self.netOutput = (tarAngVel, tarLinVel)
+
         tarAngVel = tarAngVel * self.maxAngularVelocity
         tarLinVel = tarLinVel * self.maxLinearVelocity
+
 
 
         # beschleunigen
@@ -337,6 +345,7 @@ class Robot:
             if angVel < self.minAngularVelocity:
                 angVel = self.minAngularVelocity
 
+        # return tarLinVel, tarAngVel
         return linVel, angVel
 
     def directionVectorFromAngle(self, direction):
@@ -417,6 +426,12 @@ class Robot:
 
     def getAngularVelocity(self):
         return self.state_raw[self.time_steps - 1][5]
+
+    def getLinearVelocityNorm(self):
+        return self.state[self.time_steps - 1][4]
+
+    def getAngularVelocityNorm(self):
+        return self.state[self.time_steps - 1][5]
 
     def getGoalX(self):
         return self.state_raw[self.time_steps - 1][6]

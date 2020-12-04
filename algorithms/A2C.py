@@ -1,4 +1,5 @@
 import numpy as np
+import keras as k
 
 from tqdm import tqdm
 from keras.models import Model
@@ -15,6 +16,7 @@ class A2C:
     def __init__(self, act_dim, env_dim, args):
         """ Initialization
         """
+        print(k.__version__)
         # Environment and A2C parameters
         self.act_dim = act_dim
         self.env_dim = env_dim
@@ -41,25 +43,25 @@ class A2C:
         """
         inp = Input(self.env_dim)
         x = Flatten()(inp)
-        x = Dense(128, activation='relu')(x) #64
+        x = Dense(512, activation='relu')(x) #64
         x = Dense(256, activation='relu')(x) #128
         return Model(inp, x)
 
     def buildActor(self, network):
-        x = Dense(64, activation='relu')(network.output) #128
+        x = Dense(128, activation='relu')(network.output) #128
         out = Dense(self.act_dim, activation='tanh')(x)
         #TODO hier muss eine Ausgabelayer mit 2 Werten je zwischen -1 und 1 entstehen
         return Model(network.input, out)
 
     def buildCritic(self, network):
-        x = Dense(64, activation='relu')(network.output) #128
+        x = Dense(128, activation='relu')(network.output) #128
         out = Dense(1, activation='linear')(x)
         return Model(network.input, out)
 
     def policy_action(self, s, successrate):
         """ Use the actor to predict the next action to take, using the policy
         """
-        std = ((1-successrate)**2)*0.6
+        std = ((1-successrate)**2)*0.55
         prediction = self.actor.predict(s).ravel()
         prediction[0] = np.random.normal(prediction[0], std)
         prediction[1] = np.random.normal(prediction[1], std)
@@ -142,8 +144,8 @@ class A2C:
             robotsData = []
             robotsOldState = []
 
-
             for i in range(countRobots):
+
                 old_state = env.get_observation(i)
                 robotsOldState.append(np.expand_dims(old_state, axis=0))
 
@@ -155,6 +157,8 @@ class A2C:
             # Robot 0 rewards --> robotsData[0][2]
             # Robot 1 actions --> robotsData[1][0]
             # ...
+            print(robotsData, robotsData[0],
+                  robotsData[0][0])
 
 
             while not env.is_done():
@@ -190,16 +194,15 @@ class A2C:
                         new_state = dataCurrentFrame[0]
                         r = dataCurrentFrame[1]
                         done = dataCurrentFrame[2]
-                        robotsData[i][1].append(old_state)
+                        robotsData[i][1].append(robotsOldState[i][0])
                         robotsData[i][2].append(r)
                         robotsData[i][3].append(done)
                         if(done):
-                            rechedPickup = dataCurrentFrame[3]
+                            reachedPickup = dataCurrentFrame[3]
                             rechedTargetList.pop(0)
-                            rechedTargetList.append(rechedPickup)
+                            rechedTargetList.append(reachedPickup)
                         # Update current state
                         robotsOldState[i] = new_state
-                        #print(r)
                         cumul_reward += r
                 #print("Kumulierter Reward: " + str(cumul_reward) + ", Reward: " + str(r))
                 time += 1

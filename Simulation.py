@@ -35,9 +35,9 @@ class Simulation:
         #TODO mehrere Robots mit eigenen Pickup stationen erstellen
 
         # Erstelle Stationen und Roboter
-        self.pickUp = Station(5, 1.2, 0.75, 0.75, 1, self.scaleFactor)
+        self.pickUp = Station(5, 1.2, 0.75, 0.75, 0, self.scaleFactor)
         # self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 3, self.scaleFactor)
-        self.pickUp3 = Station(9, 1.1, 0.75, 0.75, 0, self.scaleFactor)
+        self.pickUp3 = Station(9, 1.1, 0.75, 0.75, 1, self.scaleFactor)
         # self.pickUp4 = Station(13, 1.3, 0.75, 0.75, 2, self.scaleFactor)
         # self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
         self.stations = [self.pickUp, self.pickUp3]
@@ -49,7 +49,7 @@ class Simulation:
         # self.robot4 = Robot.Robot((13.1, 3.9), 3.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
 
         # self.robots = [self.robot, self.robot2, self.robot3, self.robot4]
-        self.robots = [self.robot, self.robot2]
+        self.robots = [self.robot2, self.robot]
 
         for robot in self.robots:
             robot.reset()
@@ -83,7 +83,7 @@ class Simulation:
         goalLength = self.pickUp.getLength()
         return goalLength
 
-    def update(self, robotsTarVels):
+    def update(self, robotsTarVels, stepsLeft):
         """
         updates the robots and checks the exit conditions of the current epoch
         :param tarLinVel: int/ float -
@@ -97,7 +97,6 @@ class Simulation:
         # self.plotterWindow.plot(self.robot.getAngularVelocity(), self.simTime)
         # time.sleep(0.1)
         self.simTime += self.simTimestep
-
 
         for i, robot in enumerate(self.robots):
             if robot.isActive() == True:
@@ -120,6 +119,10 @@ class Simulation:
             if robot.isActive():
                 collision = False
                 reachedPickUp = False
+                runOutOfTime = False
+
+                if stepsLeft <= 0:
+                    runOutOfTime = True
 
 
                 # # nicht rechts oder links aus dem Fenster gehen
@@ -151,10 +154,10 @@ class Simulation:
                 #     if robot.collideWithStation(self.delivery):
                 #         reachedDelivery = True
 
-                if collision or reachedPickUp:
+                if collision or reachedPickUp or runOutOfTime:
                     robot.deactivate()
-                robotsTerminations.append((collision, reachedPickUp))
+                robotsTerminations.append((collision, reachedPickUp, runOutOfTime))
             else:
-                robotsTerminations.append((None, None))
+                robotsTerminations.append((None, None, None))
         return robotsTerminations
 

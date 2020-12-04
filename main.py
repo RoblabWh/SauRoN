@@ -5,8 +5,9 @@ from PyQt5.QtWidgets import QApplication
 
 import Environment
 import sys
-from algorithms.DQN import DQN
+#from algorithms.DQN import DQN
 from algorithms.A2C import A2C
+from algorithms.A2C_Cont import A2C_C
 from utils import str2bool
 
 # HYPERPARAMETERS
@@ -26,7 +27,7 @@ arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 80
-angleStepsSonar = 2
+angleStepsSonar = 4
 
 if __name__ == '__main__':
     args = None
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     args = parser.parse_args(args)
 
     if args.mode == 'sonar':
-        states = int((360 / angleStepsSonar) + 3)
+        states = int((360 / angleStepsSonar) + 7)
         env_dim = (4, states)  # Timeframes, Robotstates
 
     elif args.mode == 'global':
@@ -83,9 +84,11 @@ if __name__ == '__main__':
         args.steps = 1000000
 
     if args.alg == 'a2c':
-        model = A2C(act_dim, env_dim, args)
+        model = A2C_C(act_dim, env_dim, args)
+        # model = A2C(act_dim, env_dim, args)
     elif args.alg == 'dqn':
-        model = DQN(act_dim, env_dim, args)
+        print("hallo Max, ich der Computer bin dumm!")
+        #model = DQN(act_dim, env_dim, args)
 
     if args.training:
         model.train(env, args)

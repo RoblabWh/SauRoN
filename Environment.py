@@ -77,10 +77,10 @@ class Environment:
             tarLinVel, tarAngVel = action #self.get_velocity(action)
             robotsTarVels.append((tarLinVel, tarAngVel))
 
-        robotsTermination = self.simulation.update(robotsTarVels)
+        robotsTermination = self.simulation.update(robotsTarVels, self.steps_left)
         robotsDataCurrentFrame = []
         for i, termination in enumerate(robotsTermination):
-            if termination != (None, None):
+            if termination != (None, None, None):
                 robotsDataCurrentFrame.append(self.extractRobotData(i, robotsTermination[i]))
             else:
                 robotsDataCurrentFrame.append((None, None, None))
@@ -92,7 +92,7 @@ class Environment:
     def extractRobotData(self, i, terminantions):
 
         robot = self.simulation.robots[i]
-        outOfArea, reachedPickup = terminantions
+        outOfArea, reachedPickup, runOutOfTime = terminantions
 
         ############ State Robot i ############
         next_state = self.get_observation(i)  # TODO state von Robot i bekommen
