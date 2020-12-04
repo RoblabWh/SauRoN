@@ -27,13 +27,13 @@ class A2C_C:
         self.gamma = args.gamma
         self.lr = args.learningrate
 
-        self._input_laser = Input(shape=(90, 4,), dtype='float32', name='input_laser')
+        self._input_laser = Input(shape=(4, 90), dtype='float32', name='input_laser')
         # Orientation input
-        self._input_orientation = Input(shape=(2, 4,), dtype='float32', name='input_orientation')
+        self._input_orientation = Input(shape=(4, 2,), dtype='float32', name='input_orientation')
         # Distance input
-        self._input_distance = Input(shape=(1, 4,), dtype='float32', name='input_distance')
+        self._input_distance = Input(shape=(4, 1,), dtype='float32', name='input_distance')
         # Velocity input
-        self._input_velocity = Input(shape=(2, 4,), dtype='float32', name='input_velocity')
+        self._input_velocity = Input(shape=(4, 2,), dtype='float32', name='input_velocity')
 
         # Create actor and critic networks
         self.buildNetWithOpti()
@@ -154,7 +154,7 @@ class A2C_C:
 
 
 
-    def train(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, rewards, actions, advantage):
+    def train_net(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, rewards, actions, advantage):
         loss, pg_loss, value_loss, entropy = self._train([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, rewards, actions, advantage])
 
         return loss, pg_loss, value_loss, entropy
@@ -172,12 +172,14 @@ class A2C_C:
         # std = ((1-successrate)**2)*0.55
 
 
-        laser = np.array([np.array([s[i][0]]) for i in range(0, len(s))])
-        orientation = np.array([np.array([s[i][1]]) for i in range(0, len(s))])
-        distance = np.array([np.array([s[i][2]]) for i in range(0, len(s))])
-        velocity = np.array([np.array([s[i][3]]) for i in range(0, len(s))])
-        print(laser.shape, orientation.shape, distance.shape, velocity.shape)
-        return self.predict(laser,orientation, distance,velocity)
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))])
+        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))])
+        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
+        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
+        # print(laser.shape, orientation.shape, distance.shape, velocity.shape)
+        v =  self.predict(np.array([laser]) ,np.array([orientation]) , np.array([distance]), np.array([velocity])) #Liste mit [actions, value]
+        # print(v)
+        return self.predict(np.array([laser]) ,np.array([orientation]) , np.array([distance]), np.array([velocity])) #Liste mit [actions, value]
 
 
         #
@@ -210,48 +212,61 @@ class A2C_C:
         state_values = np.array([])
         advantages = np.array([])
         actionsConcatenated = np.array([])
-        statesConcatenated = np.array([])
         statesConcatenatedL = np.array([])
         statesConcatenatedO = np.array([])
         statesConcatenatedD = np.array([])
         statesConcatenatedV = np.array([])
 
         for data in robotsData:
-            actions, states, rewards, dones = data
+            actions, states, rewards, dones, evaluations = data
 
             if (actionsConcatenated.size == 0):
                 actionsConcatenated = np.vstack(actions)
             else:
                 actionsConcatenated = np.concatenate((actionsConcatenated, np.vstack(actions)))
 
-            if(statesConcatenated.size == 0):
-                statesConcatenated = np.array(states)
-                statesConcatenatedL = np.array(states)
-                statesConcatenatedO = np.array(states)
-                statesConcatenatedD = np.array(states)
-                statesConcatenatedV = np.array(states)
+            lasers = []
+            orientations = []
+            distances = []
+            velocities = []
+
+            for s in states:
+                laser = np.array([np.array(s[i][0]) for i in range(0, len(s))])
+                orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))])
+                distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
+                velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
+                lasers.append(laser)
+                orientations.append(orientation)
+                distances.append(distance)
+                velocities.append(velocity)
+
+            if(statesConcatenatedL.size == 0):
+                statesConcatenatedL = np.array(lasers)
+                statesConcatenatedO = np.array(orientations)
+                statesConcatenatedD = np.array(distances)
+                statesConcatenatedV = np.array(velocities)
+                state_values = np.array(evaluations)
             else:
-                statesConcatenated = np.concatenate((statesConcatenated, np.array(states)))
-                statesConcatenatedL = np.concatenate((statesConcatenatedL, np.array(states[:][0])))
-                statesConcatenatedO = np.concatenate((statesConcatenatedO, np.array(states[:][1])))
-                statesConcatenatedD = np.concatenate((statesConcatenatedD, np.array(states[:][2])))
-                statesConcatenatedV = np.concatenate((statesConcatenatedV, np.array(states[:][3])))
+                statesConcatenatedL = np.concatenate((statesConcatenatedL, np.array(lasers)))
+                statesConcatenatedO = np.concatenate((statesConcatenatedO, np.array(orientations)))
+                statesConcatenatedD = np.concatenate((statesConcatenatedD, np.array(distances)))
+                statesConcatenatedV = np.concatenate((statesConcatenatedV, np.array(velocities)))
+                state_values = np.concatenate((state_values, evaluations))
 
             discounted_rewardsTmp = self.discount(rewards)
             discounted_rewards = np.concatenate((discounted_rewards, discounted_rewardsTmp))
 
 
-            state_valuesTmp = self.critic.predict(np.asarray(states))[:,0]
-            state_values = np.concatenate((state_values, state_valuesTmp))
 
-            advantagesTmp = discounted_rewardsTmp - np.reshape(state_valuesTmp, len(state_valuesTmp))  # Warum reshape
+            advantagesTmp = discounted_rewardsTmp - np.reshape(evaluations, len(evaluations))  # Warum reshape
             advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)
             advantages = np.concatenate((advantages, advantagesTmp))
 
 
             # print("discounted_rewards", discounted_rewards.shape, "state_values", state_values.shape, "advantages",
             #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
-        self.train(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV,discounted_rewards, actionsConcatenated,advantages)
+            # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
+        self.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV,discounted_rewards, actionsConcatenated,advantages)
 
 
 
@@ -290,8 +305,8 @@ class A2C_C:
                 robotsOldState.append(np.expand_dims(old_state, axis=0))
 
 
-                actions, states, rewards, done = [], [], [], []
-                robotsData.append((actions, states, rewards, done))
+                actions, states, rewards, done, evaluation = [], [], [], [], []
+                robotsData.append((actions, states, rewards, done, evaluation))
             # Robot 0 actions --> robotsData[0][0]
             # Robot 0 states  --> robotsData[0][1]
             # Robot 0 rewards --> robotsData[0][2]
@@ -307,8 +322,10 @@ class A2C_C:
                 for i in range(0,len(robotsData)):
                     if not True in robotsData[i][3]:
                         # a = self.predict(robotsOldState[i][0:90][:], )
-                        a = self.policy_action(robotsOldState[i][0], (rechedTargetList).count(True)/100)
-                        # print(a)
+                        aTmp = self.policy_action(robotsOldState[i][0], (rechedTargetList).count(True)/100)
+                        a = np.ndarray.tolist(aTmp[0])[0]
+                        c = np.ndarray.tolist(aTmp[1])[0]
+                        # print(a,c)
                     else:
                         a = [None, None]
                     robotsActions.append(a)
@@ -317,7 +334,7 @@ class A2C_C:
 
                     if not None in a:
                         robotsData[i][0].append(a)#action_onehot) #TODO Tupel mit 2 werten von je -1 bis 1
-
+                        robotsData[i][4].append(c)
 
                 # Retrieve new state, reward, and whether the state is terminal
                 # new_state, r, done = env.step(robotsActions)
@@ -381,8 +398,7 @@ class A2C_C:
 
     def save_weights(self, path):
         path += 'A2C'
-        self.actor.save_weights(path + '_actor_' + self.args.mode + '.h5')
-        self.critic.save_weights(path + '_critic_' + self.args.mode + '.h5')
+        self._model.save_weights(path + '_actor_Critic_' + self.args.mode + '.h5')
 
     def load_weights(self, path_actor, path_critic):
         self.critic.load_weights(path_critic)
