@@ -26,8 +26,9 @@ class A2C_C:
         self.env_dim = env_dim
         self.gamma = args.gamma
         self.lr = args.learningrate
+        self.rays = int(360/args.angle_steps)
 
-        self._input_laser = Input(shape=(4, 90), dtype='float32', name='input_laser')
+        self._input_laser = Input(shape=(4, self.rays), dtype='float32', name='input_laser')
         # Orientation input
         self._input_orientation = Input(shape=(4, 2,), dtype='float32', name='input_orientation')
         # Distance input
@@ -177,9 +178,7 @@ class A2C_C:
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
         # print(laser.shape, orientation.shape, distance.shape, velocity.shape)
-        v =  self.predict(np.array([laser]) ,np.array([orientation]) , np.array([distance]), np.array([velocity])) #Liste mit [actions, value]
-        # print(v)
-        return self.predict(np.array([laser]) ,np.array([orientation]) , np.array([distance]), np.array([velocity])) #Liste mit [actions, value]
+        return self.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])) #Liste mit [actions, value]
 
 
         #
@@ -400,22 +399,28 @@ class A2C_C:
         path += 'A2C'
         self._model.save_weights(path + '_actor_Critic_' + self.args.mode + '.h5')
 
-    def load_weights(self, path_actor, path_critic):
-        self.critic.load_weights(path_critic)
-        self.actor.load_weights(path_actor)
+    def load_weights(self, path):
+        self._model.load_weights(path)
+
+   # def load_weights(self, path_actor, path_critic):
+   #     self.critic.load_weights(path_critic)
+   #     self.actor.load_weights(path_actor)
 
     def execute(self, env, args):
         state = env.get_observation()
         state = np.expand_dims(state, axis=0)
 
         while not env.is_done():
-            new_state, r, done = env.step(np.argmax(self.actor.predict(state).ravel()))
+            new_state, r, done = env.step(np.argmax(self._model.predict(state).ravel())) # TODO wie policy action predict durch sample
             #print(np.argmax(self.actor.predict(state).ravel()), self.actor.predict(state).ravel(), self.actor.predict(state))
             state = new_state
+
+
 
 from keras.layers import Layer, Dense, Input, concatenate, InputSpec
 from keras.models import Model
 import keras as K
+
 class ContinuousLayer(Layer):
     def __init__(self, **kwargs):
         self._mu = Dense(units=2, activation='tanh', name='mu', kernel_initializer=K.initializers.Orthogonal(gain=1), use_bias=True, bias_initializer='zero')
@@ -435,7 +440,7 @@ class ContinuousLayer(Layer):
 
     def call(self, x, **kwargs):
         tmp = self._mu(x)
-        return concatenate([tmp, tmp * 0.0 + self._var], axis=-1)# I hate keras for this shit
+        return concatenate([tmp, tmp * 0.0 + self._var], axis=-1)
 
     def compute_output_shape(self, input_shape):
         assert input_shape and len(input_shape) >= 2

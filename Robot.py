@@ -25,9 +25,9 @@ class Robot:
         """
         self.startposX, self.startposY = position
         self.startDirectionX = math.cos((startDirection))
-        self.startDirectionY =  math.sin((startDirection))
+        self.startDirectionY = math.sin((startDirection))
 
-        print(self.startDirectionX, self.startDirectionY, startDirection)
+        # print(self.startDirectionX, self.startDirectionY, startDirection)
         self.goalX, self.goalY = station.getPosX(), station.getPosY()
         self.state = []
         self.state_raw = []

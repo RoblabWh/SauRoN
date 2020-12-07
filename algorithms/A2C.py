@@ -28,7 +28,7 @@ class A2C:
         self.critic = self.buildCritic(self.shared)
 
         # Compile Models
-        self.actor.compile(loss='categorical_crossentropy', optimizer=Adam(lr=self.lr))
+        self.actor.compile(loss='categorical_crossentropy', optimizer=Adam(lr=self.lr))   # custom loss referenzieren
         self.critic.compile(loss='mse', optimizer=Adam(lr=self.lr))
         # self.actor.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=self.lr))
         # self.critic.compile(loss='mse', optimizer=RMSprop(lr=self.lr))

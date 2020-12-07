@@ -132,9 +132,9 @@ class Environment:
         delta_dist = distance_old - distance_new
 
         ########### REWARD CALCULATION ################
-        reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
-        # reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-        #                              orientation_goal_new, outOfArea, reachedPickup)
+        #reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
+        reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
+                                      orientation_goal_new, outOfArea, reachedPickup)
         return (next_state, reward / 10, not robot.isActive(),reachedPickup)
 
 
@@ -209,12 +209,12 @@ class Environment:
             anglDeviation_new = anglDeviation_new - subtractor
 
         if anglDeviation_new < anglDeviation_old:
-            reward += ((math.pi - anglDeviation_new)) /math.pi /4
+            reward += ((math.pi - anglDeviation_new)) /math.pi /6
         else:
-            reward -= ((anglDeviation_new)) / math.pi /4
+            reward -= ((anglDeviation_new)) / math.pi /6
 
         if(anglDeviation_new < 1):
-            reward += ((math.pi - anglDeviation_new)) /math.pi /4
+            reward += ((math.pi - anglDeviation_new)) /math.pi /6
 
         reward = reward/2
 

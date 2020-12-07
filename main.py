@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QApplication
 
 import Environment
 import sys
-#from algorithms.DQN import DQN
+from algorithms.DQN import DQN
 from algorithms.A2C import A2C
 from algorithms.A2C_Cont import A2C_C
 from utils import str2bool
@@ -27,7 +27,7 @@ arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 80
-angleStepsSonar = 4
+angleStepsSonar = 2
 
 if __name__ == '__main__':
     args = None
@@ -87,13 +87,13 @@ if __name__ == '__main__':
         model = A2C_C(act_dim, env_dim, args)
         # model = A2C(act_dim, env_dim, args)
     elif args.alg == 'dqn':
-        print("hallo Max, ich der Computer bin dumm!")
-        #model = DQN(act_dim, env_dim, args)
+        model = DQN(act_dim, env_dim, args)
 
     if args.training:
         model.train(env, args)
     elif not args.training:
-        model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
+        #model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
+        model.load_weights('models\A2C_actor_Critic_' + args.mode + '.h5')
         model.execute(env, args)
 
 
