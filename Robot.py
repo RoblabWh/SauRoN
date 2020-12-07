@@ -35,6 +35,7 @@ class Robot:
         self.netOutput = (0,0)
         self.distances = []
         self.radarHits = []
+        self.angularDeviation = 0
         # [posX, posY, directionX, directionY, linearVelocity, angularVelocity, goalX, goalY, targetLinearVelocity, targetAngularVelocity]
 
         self.time_steps = timeframes #4
@@ -45,8 +46,8 @@ class Robot:
 
         self.maxLinearVelocity = 0.7  # 10m/s
         self.minLinearVelocity = -0.7  # m/s
-        self.maxLinearAcceleration = 1.667  # 5m/s^2
-        self.minLinearAcceleration = -1.667  # 5m/s^2
+        self.maxLinearAcceleration = 1.5  # 5m/s^2
+        self.minLinearAcceleration = -1.5  # 5m/s^2
         self.maxAngularVelocity = 1 * math.pi  # rad/s
         self.minAngularVelocity = -1 * math.pi  # rad/s
         self.maxAngularAcceleration = 0.5  # rad/s^2
@@ -220,22 +221,32 @@ class Robot:
         self.lookAround(self.args.angle_steps, colliders, robotsPos)
 
         # frame_sonar = []
-
-        distance = math.sqrt(
-            (self.getPosX() - (self.station.posX + (self.station.width / 2))) ** 2 +
-            (self.getPosY() - (self.station.posY + (self.station.length/2))) ** 2)
+        target = (self.station.posX + (self.station.width / 2), self.station.posY + (self.station.length/2))
+        distance = math.sqrt((self.getPosX() - target[0]) ** 2 + (self.getPosY() - target[1]) ** 2)
         maxDist = math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[0] ** 2)
 
         # frame_sonar.append((distance / maxDist))
 
-        robot_orientation = self.getDirectionAngle()
-        orientation_goal_new = math.atan2(
-            (self.station.posY + (self.station.length/2)) - (self.getPosY()),
-            (self.station.posX + (self.station.width / 2)) - (self.getPosX()))
-        anglDeviation = math.fabs(robot_orientation - orientation_goal_new)
-        anglDeviationV=self.directionVectorFromAngle(anglDeviation)
+        #robot_orientation = self.getDirectionAngle()
+        oriRobotV = (self.getDirectionX(), self.getDirectionY())
+        oriTargetV = ((self.getPosX() - target[0]),(self.getPosY() - target[1]))
+        skalarProd = oriRobotV[0]*oriTargetV[0]+oriRobotV[1]*oriTargetV[1]
+        oriTargetVLength = distance
+        oriRobotVLength = 1
+
+        angularDeviation = math.acos(skalarProd/(oriTargetVLength*oriRobotVLength))
+
+        c = (self.getPosX()+oriRobotV[0], self.getPosY()+oriRobotV[1])
+        angularDeviation = angularDeviation - math.pi
+        if ((target[0] - self.getPosX()) * (c[1] - self.getPosY()) - (target[1] - self.getPosY()) * (c[0] - self.getPosX())) < 0:
+            angularDeviation = angularDeviation*-1
+
+        self.angularDeviation = angularDeviation
+
+        anglDeviationV=self.directionVectorFromAngle(angularDeviation)
 
         orientation = [anglDeviationV[0], anglDeviationV[1]]
+        self.debugAngle = orientation
 
         # frame_sonar.append(self.netOutput[0])
         # frame_sonar.append(self.netOutput[1])
@@ -368,12 +379,24 @@ class Robot:
         #     if self.getPosX()+self.radius > station.getPosX() and self.getPosX()-self.radius < station.getPosX()+station.getWidth():
         #         return True
 
-        if self.getPosX()-self.radius <= station.getPosX() + station.getWidth() and \
-                self.getPosX()+self.radius + self.width >= station.getPosX() and \
-                self.getPosY() + self.radius >= station.getPosY() and \
-                self.getPosY() - self.radius <= station.getPosY() + station.getLength():
-            #self.radarHits=[]
-            return True
+        #Check if close to target
+        if self.getPosX()+self.radius > station.getPosX():
+            if self.getPosX()-self.radius < station.getPosX()+station.getWidth():
+                if self.getPosY() + self.radius > station.getPosY():
+                    if self.getPosY() - self.radius < station.getPosY() + station.getLength():
+                        #check for corners
+                        return True
+        #                 if self.getPosX() < station.getPosX():
+        #                     if self.getPosY() <
+        #
+        #
+        #
+        # if self.getPosX()-self.radius <= station.getPosX() + station.getWidth() and \
+        #         self.getPosX()+self.radius + self.width >= station.getPosX() and \
+        #         self.getPosY() + self.radius >= station.getPosY() and \
+        #         self.getPosY() - self.radius <= station.getPosY() + station.getLength():
+        #     #self.radarHits=[]
+        #     return True
         return False
 
     def isInCircleOfGoal(self, r):
@@ -549,10 +572,10 @@ class Robot:
                 # print(intersectCircle)
                 circleDists = []
                 for i in range(0, len(intersectCircle)):
-                    circleDists.append( math.sqrt((posX-intersectCircle[i][0])**2 + (posY-intersectCircle[i][1])**2))
+                    circleDists.append( (posX-intersectCircle[i][0])**2 + (posY-intersectCircle[i][1])**2)
 
                 shortestIndex = -1
-                shortestDist = distances[len(distances)-1]
+                shortestDist = distances[len(distances)-1] **2
                 for i in range(0, len(circleDists)):
                     if shortestDist > circleDists[i]:
                         shortestDist = circleDists[i]
@@ -562,7 +585,7 @@ class Robot:
                     radarHits.pop(len(radarHits)-1)
                     distances.pop(len(distances)-1)
                     radarHits.append(intersectCircle[shortestIndex])
-                    distances.append(shortestDist)
+                    distances.append(math.sqrt(shortestDist))
 
 
 

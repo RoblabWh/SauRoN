@@ -77,9 +77,9 @@ class A2C_C:
         # fully_connect = concatenate([x_laser, x_orientation, x_distance, x_velocity])
         # fully_connect = Dense(units=384, activation='relu', name='shared' + '_dense_fully_connect')(fully_connect)
 
-        x_laser = Conv1D(filters=12, kernel_size=6, strides=3, padding='same', activation='relu',
+        x_laser = Conv1D(filters=12, kernel_size=5, strides=3, padding='same', activation='relu',
                          name='shared' + '_conv1d_laser_1')(self._input_laser)
-        x_laser = Conv1D(filters=24, kernel_size=5, strides=2, padding='same', activation='relu',
+        x_laser = Conv1D(filters=24, kernel_size=3, strides=2, padding='same', activation='relu',
                          name='shared' + '_conv1d_laser_2')(x_laser)
         x_laser = Flatten()(x_laser)
 
@@ -283,7 +283,7 @@ class A2C_C:
         tqdm_e = tqdm(range(args.nb_episodes), desc='Score', leave=True, unit=" episodes")
         waitForN = 10
         rechedTargetList = [False] * 100
-        countRobots = 2
+        countRobots = 1
 
         for e in tqdm_e:
 
@@ -321,6 +321,7 @@ class A2C_C:
                 for i in range(0,len(robotsData)):
                     if not True in robotsData[i][3]:
                         # a = self.predict(robotsOldState[i][0:90][:], )
+                        #TODO vielleicht Zeit nehmen von policy action
                         aTmp = self.policy_action(robotsOldState[i][0], (rechedTargetList).count(True)/100)
                         a = np.ndarray.tolist(aTmp[0])[0]
                         c = np.ndarray.tolist(aTmp[1])[0]
@@ -337,7 +338,7 @@ class A2C_C:
 
                 # Retrieve new state, reward, and whether the state is terminal
                 # new_state, r, done = env.step(robotsActions)
-
+                #TODO time hier und danach nehmen und dann die Differenz angucken, einmal für step und einmal für den Rest
                 robotsDataCurrentFrame = env.step(robotsActions)
 
                 #print("reward " + str(r))

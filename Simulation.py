@@ -49,7 +49,7 @@ class Simulation:
         # self.robot4 = Robot.Robot((13.1, 3.9), 3.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
 
         # self.robots = [self.robot, self.robot2, self.robot3, self.robot4]
-        self.robots = [self.robot2, self.robot]
+        self.robots = [self.robot2]#, self.robot]
 
         for robot in self.robots:
             robot.reset()

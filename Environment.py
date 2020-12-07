@@ -132,14 +132,16 @@ class Environment:
         delta_dist = distance_old - distance_new
 
         ########### REWARD CALCULATION ################
-        #reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
-        reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-                                      orientation_goal_new, outOfArea, reachedPickup)
+        # reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
+        # reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
+        #                              orientation_goal_new, outOfArea, reachedPickup)
+        reward = self.createReward03(robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
+                                     orientation_goal_new, outOfArea, reachedPickup)
         return (next_state, reward / 10, not robot.isActive(),reachedPickup)
 
 
     def createReward01(self, robot, delta_dist, robot_orientation, orientation_goal_new, outOfArea, reachedPickup):
-        reward = delta_dist / 10
+        reward = delta_dist / 5
         # print("Delta Dist: " + str(delta_dist))
 
         if delta_dist > 0.0:
@@ -173,16 +175,16 @@ class Environment:
         # if distance_old == distance_new:
         #     reward += -1
         if robot.isInCircleOfGoal(500):
-            reward += 0.01
+            reward += 0.001
         if robot.isInCircleOfGoal(200):
-            reward += 0.02
+            reward += 0.002
         if robot.isInCircleOfGoal(100):
-            reward += 0.03
+            reward += 0.003
         if outOfArea:
-            reward += -30.0
+            reward += -2.0
 
         if reachedPickup:
-            reward += 30.0
+            reward += 2.0
 
 
 
@@ -196,7 +198,7 @@ class Environment:
 
     def createReward02(self, robot, delta_dist, robot_orientation_old,orientation_goal_old, robot_orientation_new, orientation_goal_new, outOfArea, reachedPickup):
 
-        reward = delta_dist /2
+        reward = delta_dist
 
         anglDeviation_old = math.fabs(robot_orientation_old - orientation_goal_old)
         if anglDeviation_old > math.pi:
@@ -232,6 +234,26 @@ class Environment:
 
         return reward
 
+    def createReward03(self, robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
+                       orientation_goal_new, outOfArea, reachedPickup):
+        reward = 0
+        deltaDist = delta_dist #bei max Vel von 0.7 und einem 0.1 Timestep ist die max Dist 0.07m --> 7cm
+        angularDeviation = (abs(robot.angularDeviation / math.pi) *-1) + 0.5
+
+
+        reward = deltaDist + (angularDeviation/25)
+
+        if outOfArea:
+            reward += -1.0
+
+        if reachedPickup:
+            reward += 1.0
+
+
+        # print('Orient. Diff: ', angularDeviation, '   deltaDist: ', deltaDist, '   reward: ', reward)
+
+
+        return reward
 
     def reset(self):
 
