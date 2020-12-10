@@ -111,7 +111,7 @@ class Robot:
     def resetSonar(self, robots):
         if self.args.mode == 'sonar':
             for _ in range(self.time_steps):
-                self.sonarReading(robots)
+                self.sonarReading(robots, 1,1)
 
 
     def denormdata(self, data, limits):
@@ -208,7 +208,7 @@ class Robot:
         self.push_frame(frame)
 
 
-    def sonarReading(self, robots):
+    def sonarReading(self, robots, stepsLeft, steps):
         #TODO bei mehreren Stationen nicht die eigene als hindernis, nur andere
         #TODO Kollision mit Robotern /Geraden- Kreis Kollision
         colliders = self.walls + self.collidorStationsWalls
@@ -257,7 +257,10 @@ class Robot:
         for i in range(len(self.distances)):
             distancesNorm.append(self.distances[i] / maxDist)
 
-        frame_sonar = [distancesNorm, orientation, [(distance / maxDist)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]]
+        currentTimestep = (steps - stepsLeft)/steps
+
+
+        frame_sonar = [distancesNorm, orientation, [(distance / maxDist)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateSonar) >= self.time_steps:
             self.stateSonar.pop(0)
@@ -523,22 +526,24 @@ class Robot:
         self.linTast = 0
         self.angTast = 0
 
-    def lookAround(self, alpha, lines, roboterList = []):
+    def lookAround(self, alpha, collisionLines, roboterList = []):#TODO cas 7.8s und lookAraound 22.768a --> Optimierungsbedarf
 
+        piFactor = (math.pi/180)
+        twoPi = 2*math.pi
         radarHits = []
         distances = []
         dir = self.getDirectionAngle()
         posX = self.getPosX()
         posY = self.getPosY()
         for angD in range(0, 360, alpha):
-            ang = (dir + (angD * (math.pi/180))) % (2*math.pi)
+            ang = (dir + (angD * piFactor)) % twoPi
             ray = Ray(posX, posY, ang)
+            rayV = ray.getVector()
             intersections = []
 
-            for line in lines:
+            for line in collisionLines:
 
                 lineN = line.getN()
-                rayV = ray.getVector()
                 skalarProd = lineN[0] * rayV[0] + lineN[1] * rayV[1]
 
                 if skalarProd < 0:
@@ -549,17 +554,17 @@ class Robot:
                         intersections.append(intersect)
                 # else:
                 #     print("Kein Treffer", skalarProd)
-
-            if len(intersections) > 1:
+            nmbOfIntersections = len(intersections)
+            if  nmbOfIntersections > 1:
 
                 shortest = 0
-                for i in range(1, len(intersections)):
+                for i in range(1, nmbOfIntersections):
                     if intersections[i][0] < intersections[shortest][0]:
                         shortest = i
                 radarHits.append(intersections[shortest][1])
                 distances.append(intersections[shortest][0])
 
-            elif len(intersections) == 1:
+            elif nmbOfIntersections == 1:
                 radarHits.append(intersections[0][1])
                 distances.append(intersections[0][0])
             else:

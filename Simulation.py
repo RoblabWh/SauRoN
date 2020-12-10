@@ -21,6 +21,7 @@ class Simulation:
         self.args = args
         # Skalierungsparameter für Visualisierung
         self.scaleFactor = args.scale_factor
+        self.steps = args.steps
 
         # Parameter width & length über args
         self.arenaWidth = args.arena_width
@@ -36,20 +37,20 @@ class Simulation:
 
         # Erstelle Stationen und Roboter
         self.pickUp = Station(5, 1.2, 0.75, 0.75, 0, self.scaleFactor)
-        # self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 3, self.scaleFactor)
+        self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 3, self.scaleFactor)
         self.pickUp3 = Station(9, 1.1, 0.75, 0.75, 1, self.scaleFactor)
-        # self.pickUp4 = Station(13, 1.3, 0.75, 0.75, 2, self.scaleFactor)
-        # self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
-        self.stations = [self.pickUp, self.pickUp3]
+        self.pickUp4 = Station(13, 1.3, 0.75, 0.75, 2, self.scaleFactor)
+        self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
+        # self.stations = [self.pickUp, self.pickUp3]#, self.pickUp4]
 
 
         self.robot = Robot.Robot((10.5, 8.8), 3.2*math.pi/2, self.pickUp3, args, timeframes, self.walls, self.stations)
         self.robot2 = Robot.Robot((4, 8.6), 2.6*math.pi/2, self.pickUp, args, timeframes, self.walls, self.stations)
-        # self.robot3 = Robot.Robot((1.1, 8.9), 3.6*math.pi/2, self.pickUp4, args, timeframes, self.walls, self.stations)
-        # self.robot4 = Robot.Robot((13.1, 3.9), 3.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
+        self.robot3 = Robot.Robot((1.1, 8.9), 3.6*math.pi/2, self.pickUp4, args, timeframes, self.walls, self.stations)
+        self.robot4 = Robot.Robot((13.1, 3.9), 3.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
 
-        # self.robots = [self.robot, self.robot2, self.robot3, self.robot4]
-        self.robots = [self.robot2]#, self.robot]
+        self.robots = [self.robot2, self.robot, self.robot3, self.robot4]
+        # self.robots = [self.robot2]#, self.robot]#, self.robot3]
 
         for robot in self.robots:
             robot.reset()
@@ -98,7 +99,7 @@ class Simulation:
         # time.sleep(0.1)
         self.simTime += self.simTimestep
 
-        for i, robot in enumerate(self.robots):
+        for i, robot in enumerate(self.robots): #TODO überall die action Liste iterieren nicht die robeoter
             if robot.isActive() == True:
                 tarLinVel, tarAngVel = robotsTarVels[i]
                 self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
@@ -106,7 +107,7 @@ class Simulation:
         if self.args.mode == 'sonar':
             for i, robot in enumerate(self.robots):
                 if robotsTarVels[i] != (None, None):
-                    robot.sonarReading(self.robots)
+                    robot.sonarReading(self.robots, stepsLeft, self.steps)
 
         if self.simulationWindow != 0:
             for i, robot in enumerate(self.robots):

@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training parameters')
     parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=False, help='Moving robot manually with wasd')
     parser.add_argument('--nb_episodes', type=int, default=num_episodes, help='Number of training episodes')
-    parser.add_argument('--save_intervall', type=int, default=200, help='Save Intervall')
+    parser.add_argument('--save_intervall', type=int, default=50, help='Save Intervall')
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
     parser.add_argument('--alg', type=str, default='a2c', choices=['a2c', 'dqn'], help='Reinforcement Learning Algorithm')
     parser.add_argument('-lr', '--learningrate', type=float, default=lr, help='Learning Rate')
@@ -54,6 +54,7 @@ if __name__ == '__main__':
     parser.add_argument('--scale_factor', type=int, default=scaleFactor, help='Scale Factor for visualisation')
 
     parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  # Global oder Sonar einstellbar
+    parser.add_argument('--time_penalty', type=str2bool, default='True', help='Reward function with time step penalty')
     parser.add_argument('--angle_steps', type=int, default=angleStepsSonar, help='Angle Steps for sonar training')
 
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
@@ -93,7 +94,10 @@ if __name__ == '__main__':
         model.train(env, args)
     elif not args.training:
         #model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
-        model.load_weights('models\A2C_actor_Critic_' + args.mode + '.h5')
+        additionalTerm = '_071220'
+        # additionalTerm = '_081220MultiRobTrain'
+        # additionalTerm = ''
+        model.load_weights('models\A2C_actor_Critic_' + args.mode + additionalTerm + '.h5')
         model.execute(env, args)
 
 

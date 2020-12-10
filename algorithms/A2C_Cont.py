@@ -27,6 +27,7 @@ class A2C_C:
         self.gamma = args.gamma
         self.lr = args.learningrate
         self.rays = int(360/args.angle_steps)
+        self.timePenalty = args.time_penalty
 
         self._input_laser = Input(shape=(4, self.rays), dtype='float32', name='input_laser')
         # Orientation input
@@ -35,6 +36,8 @@ class A2C_C:
         self._input_distance = Input(shape=(4, 1,), dtype='float32', name='input_distance')
         # Velocity input
         self._input_velocity = Input(shape=(4, 2,), dtype='float32', name='input_velocity')
+        # Passed Time input
+        self._input_timestep = Input(shape=(4, 1,), dtype='float32', name='input_Timestep')
 
         # Create actor and critic networks
         self.buildNetWithOpti()
@@ -94,7 +97,14 @@ class A2C_C:
         # Velocity input
         x_velocity = Flatten()(self._input_velocity)
 
-        concated0 = concatenate([x_orientation, x_distance, x_velocity])
+        # (passed) Timestep input
+        x_timestep = Flatten()(self._input_timestep)
+
+        if self.timePenalty:
+            concated0 = concatenate([x_orientation, x_distance, x_velocity, x_timestep])
+        else:
+            concated0 = concatenate([x_orientation, x_distance, x_velocity])
+
         concated = Dense(units=64, activation='relu', name='shared' + '_dense_concated')(concated0)
 
         # Fully connect
@@ -123,24 +133,40 @@ class A2C_C:
 
         loss = pg_loss + value_loss - entropy
 
-        self._model = Model(
-            inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
-            outputs=[self._mu, self._var, self._value])
+        if self.timePenalty:
+            self._model = Model(
+                inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity, self._input_timestep],
+                outputs=[self._mu, self._var, self._value])
+        else:
+            self._model = Model(
+                inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
+                outputs=[self._mu, self._var, self._value])
 
         # Optimizer
         self._optimizer = Adam(lr=self.lr, epsilon=1e-5, clipnorm=1.0)
 
         updates = self._optimizer.get_updates(self._model.trainable_weights, [], loss)
-        self._train = function(
-            [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity, self._REWARD,
-             self._ACTION, self._ADVANTAGE], [loss, pg_loss, value_loss, entropy], updates)
+        if self.timePenalty:
+            self._train = function(
+                [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity, self._input_timestep, self._REWARD,
+                 self._ACTION, self._ADVANTAGE], [loss, pg_loss, value_loss, entropy], updates)
 
-        self._predict = function(
-            [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
-            [self._selected_action, self._value])
-        self._sample = function(
-            [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity], [self._mu])
-        self._model.summary()
+            self._predict = function(
+                [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity, self._input_timestep],
+                [self._selected_action, self._value])
+            self._sample = function(
+                [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity, self._input_timestep], [self._mu])
+        else:
+            self._train = function(
+                [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity,
+                 self._REWARD, self._ACTION, self._ADVANTAGE], [loss, pg_loss, value_loss, entropy], updates)
+
+            self._predict = function(
+                [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
+                [self._selected_action, self._value])
+            self._sample = function(
+                [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity], [self._mu])
+        # self._model.summary()
 
     def select_action_continuous_clip(self, mu, var):
         return clip(mu + exp(var) * random_normal(shape(mu)), -1.0, 1.0)
@@ -155,19 +181,19 @@ class A2C_C:
 
 
 
-    def train_net(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, rewards, actions, advantage):
-        loss, pg_loss, value_loss, entropy = self._train([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, rewards, actions, advantage])
+    def train_net(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, obs_timestep, rewards, actions, advantage):
+        loss, pg_loss, value_loss, entropy = self._train([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, obs_timestep, rewards, actions, advantage])
 
         return loss, pg_loss, value_loss, entropy
 
-    def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity): #!!!!!!!!!!!!!!!die neue policy_action
+    def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, obs_timestep): #!!!!!!!!!!!!!!!die neue policy_action
         #samples, values, neglogs, mu, var = self._predict([obs_laser, obs_orientation_to_goal, obs_distance_to_goal])
-        action, values = self._predict([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity])
+        action, values = self._predict([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, obs_timestep])
 
         return action, values
 
 
-    def policy_action(self, s, successrate):
+    def policy_action(self, s, successrate):#TODO obs_timestep mit übergeben
         """ Use the actor to predict the next action to take, using the policy
         """
         # std = ((1-successrate)**2)*0.55
@@ -177,20 +203,33 @@ class A2C_C:
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))])
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
+        timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
         # print(laser.shape, orientation.shape, distance.shape, velocity.shape)
-        return self.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])) #Liste mit [actions, value]
+        if(self.timePenalty):
+            return self.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]), np.array([timesteps])) #Liste mit [actions, value]
+        else:
+            return self.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])) #Liste mit [actions, value]
 
 
-        #
-        # prediction = self.actor.predict(s) #.ravel()
-        # mus = prediction[0].ravel()
-        # sigmas = prediction[1].ravel()
-        #
-        # predictedAction = []
-        # predictedAction.append(np.random.normal(mus[0], np.sqrt(sigmas[0])))
-        # predictedAction.append(np.random.normal(mus[1], np.sqrt(sigmas[1])))
-        # return np.clip(predictedAction, -1, 1)
-        #return np.random.choice(np.arange(self.act_dim), 1, p=self.actor.predict(s).ravel())[0]
+    def policy_action_certain(self, s):#TODO obs_timestep mit übergeben
+        """ Use the actor to predict the next action to take, using the policy
+        """
+        # std = ((1-successrate)**2)*0.55
+
+
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))])
+        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))])
+        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
+        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
+        # timesteps = np.array([np.array(0) for i in range(0, len(s))])
+        timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
+        if(self.timePenalty):
+            mu = self._sample([np.array([laser]),  np.array([orientation]), np.array([distance]), np.array([velocity]), np.array([timesteps])])
+        else:
+            mu = self._sample([np.array([laser]),  np.array([orientation]), np.array([distance]), np.array([velocity])])
+
+        return mu
+
 
     def discount(self, r):
         """ Compute the gamma-discounted rewards over an episode
@@ -215,6 +254,7 @@ class A2C_C:
         statesConcatenatedO = np.array([])
         statesConcatenatedD = np.array([])
         statesConcatenatedV = np.array([])
+        statesConcatenatedT = np.array([])
 
         for data in robotsData:
             actions, states, rewards, dones, evaluations = data
@@ -228,28 +268,33 @@ class A2C_C:
             orientations = []
             distances = []
             velocities = []
+            usedTimeSteps = []
 
             for s in states:
                 laser = np.array([np.array(s[i][0]) for i in range(0, len(s))])
                 orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))])
                 distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
                 velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
+                usedTimeStep = np.array([np.array(s[i][4]) for i in range(0, len(s))])
                 lasers.append(laser)
                 orientations.append(orientation)
                 distances.append(distance)
                 velocities.append(velocity)
+                usedTimeSteps.append(usedTimeStep)
 
             if(statesConcatenatedL.size == 0):
                 statesConcatenatedL = np.array(lasers)
                 statesConcatenatedO = np.array(orientations)
                 statesConcatenatedD = np.array(distances)
                 statesConcatenatedV = np.array(velocities)
+                statesConcatenatedT = np.array(usedTimeSteps)
                 state_values = np.array(evaluations)
             else:
                 statesConcatenatedL = np.concatenate((statesConcatenatedL, np.array(lasers)))
                 statesConcatenatedO = np.concatenate((statesConcatenatedO, np.array(orientations)))
                 statesConcatenatedD = np.concatenate((statesConcatenatedD, np.array(distances)))
                 statesConcatenatedV = np.concatenate((statesConcatenatedV, np.array(velocities)))
+                statesConcatenatedT = np.concatenate((statesConcatenatedT, np.array(usedTimeSteps)))
                 state_values = np.concatenate((state_values, evaluations))
 
             discounted_rewardsTmp = self.discount(rewards)
@@ -265,7 +310,7 @@ class A2C_C:
             # print("discounted_rewards", discounted_rewards.shape, "state_values", state_values.shape, "advantages",
             #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
             # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
-        self.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV,discounted_rewards, actionsConcatenated,advantages)
+        self.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
 
 
 
@@ -277,13 +322,13 @@ class A2C_C:
         """
 
         results = []            # wird nirgendwo gebraucht -> returned leeres Array
-        counter = 1
+
         liste = np.array([], dtype=object)
         # Main Loop
         tqdm_e = tqdm(range(args.nb_episodes), desc='Score', leave=True, unit=" episodes")
         waitForN = 10
         rechedTargetList = [False] * 100
-        countRobots = 1
+        countRobots = 4
 
         for e in tqdm_e:
 
@@ -360,7 +405,7 @@ class A2C_C:
                         # Update current state
                         robotsOldState[i] = new_state
                         cumul_reward += r
-                #print("Kumulierter Reward: " + str(cumul_reward) + ", Reward: " + str(r))
+                # print("Kumulierter Reward: " + str(cumul_reward) + ", Reward: " + str(r))
                 time += 1
 
 
@@ -408,13 +453,48 @@ class A2C_C:
    #     self.actor.load_weights(path_actor)
 
     def execute(self, env, args):
-        state = env.get_observation()
-        state = np.expand_dims(state, axis=0)
+        robotsCount = 4
 
-        while not env.is_done():
-            new_state, r, done = env.step(np.argmax(self._model.predict(state).ravel())) # TODO wie policy action predict durch sample
-            #print(np.argmax(self.actor.predict(state).ravel()), self.actor.predict(state).ravel(), self.actor.predict(state))
-            state = new_state
+        for e in range (0,4):
+
+            env.reset()
+            #TODO nach erstem Mal auf trainiertem env sowas wie environment.randomizeForTesting() einbauen (alternativ hier ein fester Testsatz)
+            # robotsOldState = [env.get_observation(i) for i in range(0, robotsCount)]
+            robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
+            robotsDone = [False for i in range(0, robotsCount)]
+
+            while not env.is_done():
+
+                robotsActions = []
+                # Actor picks an action (following the policy)
+                for i in range(0, robotsCount):
+
+                    if not robotsDone[i]:
+                        aTmp = self.policy_action_certain(robotsOldState[i][0])#, (rechedTargetList).count(True) / 100)
+                        a = np.ndarray.tolist(aTmp[0])[0]
+                    else:
+                        a = [None, None]
+
+                    robotsActions.append(a)
+
+
+                robotsStates = env.step(robotsActions)
+
+                rewards = ''
+                for i, stateData in enumerate(robotsStates):
+                    new_state = stateData[0]
+                    rewards += (str(i)+': '+str(stateData[1]) + '   ')
+                    done = stateData[2]
+
+                    # if (done):
+                    #     reachedPickup = stateData[3]
+                    #     rechedTargetList.pop(0)
+                    #     rechedTargetList.append(reachedPickup)
+
+                    robotsOldState[i] = new_state
+                    if not robotsDone[i]:
+                        robotsDone[i]= done
+                print(rewards)
 
 
 

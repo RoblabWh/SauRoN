@@ -137,7 +137,7 @@ class Environment:
         #                              orientation_goal_new, outOfArea, reachedPickup)
         reward = self.createReward03(robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
                                      orientation_goal_new, outOfArea, reachedPickup)
-        return (next_state, reward / 10, not robot.isActive(),reachedPickup)
+        return (next_state, reward, not robot.isActive(),reachedPickup)
 
 
     def createReward01(self, robot, delta_dist, robot_orientation, orientation_goal_new, outOfArea, reachedPickup):
@@ -241,7 +241,7 @@ class Environment:
         angularDeviation = (abs(robot.angularDeviation / math.pi) *-1) + 0.5
 
 
-        reward = deltaDist + (angularDeviation/25)
+        reward = deltaDist + (angularDeviation/20)
 
         if outOfArea:
             reward += -1.0
@@ -249,11 +249,18 @@ class Environment:
         if reachedPickup:
             reward += 1.0
 
+        timeInfluence = 0.05
+        bonusTime = 200
+
+        timePenalty = 0
+        if(self.steps-self.steps_left > bonusTime):
+            timePenalty = (1/self.steps) * (self.steps+bonusTime - self.steps_left) * timeInfluence
+
 
         # print('Orient. Diff: ', angularDeviation, '   deltaDist: ', deltaDist, '   reward: ', reward)
 
 
-        return reward
+        return (reward-timePenalty)
 
     def reset(self):
 
