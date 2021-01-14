@@ -1,5 +1,5 @@
 import math
-import SimulationWithoutUI
+import Simulation
 import time
 import numpy as np
 from old.PlotterWindow import PlotterWindow
@@ -10,8 +10,7 @@ class Environment:
         self.args = args
         self.steps = steps
         self.steps_left = steps
-        #self.simulation = Simulation.Simulation(app, args, timeframes)
-        self.simulation = SimulationWithoutUI.Simulation(app, args, timeframes)
+        self.simulation = Simulation.Simulation(app, args, timeframes)
         self.total_reward = 0.0
         self.done = False
         self.shape = np.asarray([0]).shape

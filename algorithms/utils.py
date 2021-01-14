@@ -17,6 +17,9 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
+
+import argparse
+
 def str2bool(v):
     if isinstance(v, bool):
        return v

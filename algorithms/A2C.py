@@ -6,7 +6,7 @@ from keras.models import Model
 from keras.layers import Input, Dense, Flatten
 from keras.optimizers import RMSprop, Adam
 
-from utils import AverageMeter
+#from utils import AverageMeter
 
 
 class A2C:
@@ -257,3 +257,36 @@ class A2C:
             new_state, r, done = env.step(np.argmax(self.actor.predict(state).ravel()))
             #print(np.argmax(self.actor.predict(state).ravel()), self.actor.predict(state).ravel(), self.actor.predict(state))
             state = new_state
+
+
+# Bug beim Importieren -> deswegen AverageMeter hierdrin kopiert
+
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
+
+import argparse
+
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')

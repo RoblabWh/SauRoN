@@ -1,10 +1,10 @@
 from PyQt5.QtCore import QTimer
 import Robot
-from Station import Station
-import SimulationWindow
+from StationWithoutUI import Station
+
 import math, random
 import time
-from old.PlotterWindow import PlotterWindow
+
 from Borders import CollidorLine
 
 class Simulation:
@@ -19,10 +19,9 @@ class Simulation:
             the amount of frames saved as a history by the robots to train the neural net
         """
         self.args = args
-        # Skalierungsparameter für Visualisierung
-        self.scaleFactor = args.scale_factor
         self.steps = args.steps
 
+        self.scaleFactor = args.scale_factor    # not used
         # Parameter width & length über args
         self.arenaWidth = args.arena_width
         self.arenaLength = args.arena_length
@@ -57,15 +56,9 @@ class Simulation:
         for robot in self.robots:
             robot.resetSonar(self.robots)
 
-        self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args)
-        self.simulationWindow.show()
-
         self.simTime = 0  # s
         self.simTimestep = 0.1  # s
 
-
-
-        # self.plotterWindow = PlotterWindow(app)
 
     def getRobot(self):
         return self.robot
@@ -94,8 +87,7 @@ class Simulation:
         :return: tuple -
             (Boolean - out of area, Boolean - reached pickup, Boolean - reached Delivery)
         """
-        # self.plotterWindow.plot(self.robot.getLinearVelocity(), self.simTime)
-        # self.plotterWindow.plot(self.robot.getAngularVelocity(), self.simTime)
+
         # time.sleep(0.1)
         self.simTime += self.simTimestep
 
@@ -109,9 +101,6 @@ class Simulation:
                 if robotsTarVels[i] != (None, None):
                     robot.sonarReading(self.robots, stepsLeft, self.steps)
 
-        if self.simulationWindow != 0:
-            for i, robot in enumerate(self.robots):
-                self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
 
 
 

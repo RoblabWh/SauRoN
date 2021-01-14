@@ -4,11 +4,12 @@ import os
 from PyQt5.QtWidgets import QApplication
 
 import Environment
+import EnvironmentWithUI
 import sys
 from algorithms.DQN import DQN
 from algorithms.A2C import A2C
 from algorithms.A2C_Cont import A2C_C
-from utils import str2bool
+from algorithms.utils import str2bool
 
 # HYPERPARAMETERS
 batch_size = 40
@@ -21,7 +22,7 @@ memory_size = 10000
 gamma = 0.999
 lr = 0.0001
 num_episodes = 5000
-steps = 1250
+steps = 1000
 
 arenaWidth = 22   # m
 arenaLength = 10  # m
@@ -54,7 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('--scale_factor', type=int, default=scaleFactor, help='Scale Factor for visualisation')
 
     parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  # Global oder Sonar einstellbar
-    parser.add_argument('--time_penalty', type=str2bool, default='True', help='Reward function with time step penalty')
+    parser.add_argument('--time_penalty', type=str2bool, default='False', help='Reward function with time step penalty')
     parser.add_argument('--angle_steps', type=int, default=angleStepsSonar, help='Angle Steps for sonar training')
 
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
@@ -70,10 +71,17 @@ if __name__ == '__main__':
 
 
     app = QApplication(sys.argv)
-    env = Environment.Environment(app, args.steps, args, env_dim[0])
+    env = EnvironmentWithUI.Environment(app, args.steps, args, env_dim[0], 1)
+    # env2 = Environment.Environment(app, args.steps, args, env_dim[0], 2)
+    # env3 = Environment.Environment(app, args.steps, args, env_dim[0], 3)
+    # env4 = Environment.Environment(app, args.steps, args, env_dim[0], 4)
+
+    envs = [Environment.Environment(app, args.steps, args, env_dim[0], i) for i in range(5)]
+    envs.append(env)
+    #envs = [env, env2, env3, env4, env5, env6, env7, env8]
 
 
-    act_dim = np.asarray(env.get_actions()) #TODO bei kontinuierlchem 2 actions
+    act_dim = np.asarray(envs[0].get_actions()) #TODO bei kontinuierlichem 2 actions
 
     if args.path == "":
         args.path = os.path.join(os.getcwd(), "models", "")
@@ -91,7 +99,7 @@ if __name__ == '__main__':
         model = DQN(act_dim, env_dim, args)
 
     if args.training:
-        model.train(env, args)
+        model.train(envs, args)
     elif not args.training:
         #model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
         additionalTerm = '_071220'
