@@ -1,7 +1,7 @@
-from PyQt5.QtCore import QTimer
+# from PyQt5.QtCore import QTimer
 import Robot
 from Station import Station
-import SimulationWindow
+# import SimulationWindow
 import math, random
 import time
 from old.PlotterWindow import PlotterWindow
@@ -49,16 +49,19 @@ class Simulation:
         self.robot3 = Robot.Robot((1.1, 8.9), 3.6*math.pi/2, self.pickUp4, args, timeframes, self.walls, self.stations)
         self.robot4 = Robot.Robot((13.1, 3.9), 3.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
 
-        self.robots = [self.robot2, self.robot, self.robot3, self.robot4]
-        # self.robots = [self.robot2]#, self.robot]#, self.robot3]
+
+        robots = [self.robot2, self.robot, self.robot3, self.robot4]
+        self.robots = []
+        for i in range(args.nb_robots):
+            self.robots.append(robots[i])
 
         for robot in self.robots:
             robot.reset()
         for robot in self.robots:
             robot.resetSonar(self.robots)
 
-        self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args)
-        self.simulationWindow.show()
+        # self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args)
+        # self.simulationWindow.show()
 
         self.simTime = 0  # s
         self.simTimestep = 0.1  # s
@@ -109,9 +112,9 @@ class Simulation:
                 if robotsTarVels[i] != (None, None):
                     robot.sonarReading(self.robots, stepsLeft, self.steps)
 
-        if self.simulationWindow != 0:
-            for i, robot in enumerate(self.robots):
-                self.simulationWindow.updateRobot(robot, i)
+        # if self.simulationWindow != 0:
+        #     for i, robot in enumerate(self.robots):
+        #         self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
 
 
 

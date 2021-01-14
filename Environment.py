@@ -253,8 +253,9 @@ class Environment:
         bonusTime = 200
 
         timePenalty = 0
-        if(self.steps-self.steps_left > bonusTime):
-            timePenalty = (1/self.steps) * (self.steps+bonusTime - self.steps_left) * timeInfluence
+        if(self.args.time_penalty):
+            if(self.steps-self.steps_left > bonusTime):
+                timePenalty = (1/self.steps) * (self.steps+bonusTime - self.steps_left) * timeInfluence
 
 
         # print('Orient. Diff: ', angularDeviation, '   deltaDist: ', deltaDist, '   reward: ', reward)

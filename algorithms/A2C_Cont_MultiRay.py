@@ -5,6 +5,9 @@ import concurrent.futures
 
 from tqdm import tqdm
 from algorithms.A2C_Network import A2C_Network
+import ray
+
+
 from algorithms.A2C_NetworkCopy import A2C_NetworkCopy
 from keras.models import Model
 from keras.layers import Input, Dense, Flatten, Lambda, Conv1D, concatenate
@@ -17,11 +20,13 @@ from keras import backend as K
 from utils import AverageMeter
 
 
-def trainSingleEnv(weights, args, env):
+@ray.remote
+def trainSingleEnv(network, args, env):
+    import tensorflow as tf
     """ Main A2C Training Algorithm
     """
     #Todo action und env Dimensions nicht manuell setzen
-    network = A2C_NetworkCopy(2, (4,187), args, weights)
+    # network = A2C_NetworkCopy(2, (4,187), args, weights)
     rechedTargetList = [False] * 100
     countRobots = 1  # TODO aus environment bekommen
 
@@ -94,6 +99,7 @@ class A2C_C:
         """ Initialization
         """
         print(k.__version__)
+        ray.init()
         # # Environment and A2C parameters
         self.act_dim = act_dim
         self.env_dim = env_dim
@@ -147,16 +153,14 @@ class A2C_C:
 
         tqdm_e = tqdm(range(args.nb_episodes), desc='Score', leave=True, unit=" episodes")
         for e in tqdm_e:
-            with concurrent.futures.ProcessPoolExecutor() as executor:
-                # networks = [copy.copy(self.network) for _ in range(nbrOfCopies)]
-                weights = [self.network.getWeights() for _ in range(nbrOfCopies)]
-                argsForAll = [args for _ in range(nbrOfCopies)]
-                results = executor.map(trainSingleEnv, weights, argsForAll, envs)
-
-                # TODO Listengebastel muss hier hin
-                for r in results:
-                    print(str(e))
-                #self.trainModelsAllRobots(results)
+            networks = [copy.copy(self.network) for _ in range(nbrOfCopies)]
+            argsForAll = [args for _ in range(nbrOfCopies)]
+            futures = [trainSingleEnv.remote(networks[i], args, envs[i]) for i in range(nbrOfCopies)]
+            results = ray.get(futures)
+            # TODO Listengebastel muss hier hin
+            for r in results:
+                print(str(e))
+            #self.trainModelsAllRobots(results)
 
             # if e % args.save_intervall == 0:
             #     print('Saving')

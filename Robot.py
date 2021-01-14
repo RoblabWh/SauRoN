@@ -253,9 +253,12 @@ class Robot:
         # frame_sonar.append(self.getLinearVelocityNorm())
         # frame_sonar.append(self.getAngularVelocityNorm())
 
+        c = int(len(self.distances)/2)
+        l = len(self.distances)
+
         distancesNorm = []
         for i in range(len(self.distances)):
-            distancesNorm.append(self.distances[i] / maxDist)
+            distancesNorm.append(self.distances[(i+c)%l] / maxDist)
 
         currentTimestep = (steps - stepsLeft)/steps
 

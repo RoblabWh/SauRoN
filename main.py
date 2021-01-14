@@ -8,6 +8,7 @@ import sys
 from algorithms.DQN import DQN
 from algorithms.A2C import A2C
 from algorithms.A2C_Cont import A2C_C
+# from algorithms.A2C_Cont_MultiRay import A2C_C
 from utils import str2bool
 
 # HYPERPARAMETERS
@@ -25,6 +26,7 @@ steps = 1250
 
 arenaWidth = 22   # m
 arenaLength = 10  # m
+num_robots = 1
 
 scaleFactor = 80
 angleStepsSonar = 2
@@ -50,11 +52,12 @@ if __name__ == '__main__':
 
     parser.add_argument('--arena_width', type=int, default=arenaWidth, help='Width of the AI Arena')
     parser.add_argument('--arena_length', type=int, default=arenaLength, help='Length of the AI Arena')
+    parser.add_argument('--nb_robots', type=int, default=num_robots, help='Number of robots in the simulation')
 
     parser.add_argument('--scale_factor', type=int, default=scaleFactor, help='Scale Factor for visualisation')
 
     parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  # Global oder Sonar einstellbar
-    parser.add_argument('--time_penalty', type=str2bool, default='True', help='Reward function with time step penalty')
+    parser.add_argument('--time_penalty', type=str2bool, default='False', help='Reward function with time step penalty')
     parser.add_argument('--angle_steps', type=int, default=angleStepsSonar, help='Angle Steps for sonar training')
 
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
@@ -70,10 +73,11 @@ if __name__ == '__main__':
 
 
     app = QApplication(sys.argv)
-    env = Environment.Environment(app, args.steps, args, env_dim[0])
+    # env = Environment.Environment(app, args.steps, args, env_dim[0])
+    envs = [Environment.Environment(app, args.steps, args, env_dim[0]) for _ in range(2)]
 
 
-    act_dim = np.asarray(env.get_actions()) #TODO bei kontinuierlchem 2 actions
+    act_dim = np.asarray(envs[0].get_actions()) #TODO bei kontinuierlchem 2 actions
 
     if args.path == "":
         args.path = os.path.join(os.getcwd(), "models", "")
@@ -91,14 +95,16 @@ if __name__ == '__main__':
         model = DQN(act_dim, env_dim, args)
 
     if args.training:
-        model.train(env, args)
+        # model.train(envs[0], args)
+        model.trainMultiple(envs, args)
     elif not args.training:
         #model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
         additionalTerm = '_071220'
         # additionalTerm = '_081220MultiRobTrain'
         # additionalTerm = ''
         model.load_weights('models\A2C_actor_Critic_' + args.mode + additionalTerm + '.h5')
-        model.execute(env, args)
+        #TODO liste von environments
+        model.execute(envs[0], args)
 
 
 

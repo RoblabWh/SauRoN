@@ -1,4 +1,4 @@
-from PyQt5.QtGui import QPainter
+from PyQt5.QtGui import QPainter, QFont
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel
 import RobotRepresentation
 from Station import Station
@@ -60,6 +60,13 @@ class SimulationWindow(QMainWindow):
         self.btSimulation.move(0, 0)
         self.btSimulation.setFixedWidth(150)
 
+        self.lbSteps = QLabel(self)
+        self.lbSteps.setText("0")
+        self.lbSteps.move(self.width-68, 0)
+        self.lbSteps.setFont(QFont("Helvetica", 14, QFont.Black, ))
+        self.lbSteps.setStyleSheet("color: rgba(0,0 ,0, 96);")
+
+
         if self.mode == 'sonar':
             self.btSonar = QPushButton(self)
             self.btSonar.clicked.connect(self.clickedSonar)
@@ -110,8 +117,10 @@ class SimulationWindow(QMainWindow):
             robot.paint(self.painter, self.sonarShowing)
         self.painter.end()
 
-    def updateRobot(self, robot, num):
+    def updateRobot(self, robot, num, stepsLeft):
+
         self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing, robot.isActive(), robot.debugAngle)
         if self.simShowing:
+            self.lbSteps.setText(str(stepsLeft))
             self.repaint()
         self.app.processEvents()
