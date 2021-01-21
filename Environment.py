@@ -70,6 +70,7 @@ class Environment:
         return self.steps_left <= 0 or robotsDone
 
     def step(self, actions):
+        # print(actions)
         time1 = time.time()
         self.steps_left -= 1
 
@@ -87,6 +88,7 @@ class Environment:
             else:
                 robotsDataCurrentFrame.append((None, None, None))
         time2 = time.time()
+        # print(self.steps_left, self.id, time1, time2)
         #print("Env", time2-time1)
         #print(self.id, self.steps_left)
         return (robotsDataCurrentFrame, self.id)
@@ -96,7 +98,7 @@ class Environment:
     def extractRobotData(self, i, terminantions):
 
         robot = self.simulation.robots[i]
-        outOfArea, reachedPickup, runOutOfTime = terminantions
+        collision, reachedPickup, runOutOfTime = terminantions
 
         ############ State Robot i ############
         next_state = self.get_observation(i)  # TODO state von Robot i bekommen
@@ -136,12 +138,12 @@ class Environment:
         delta_dist = distance_old - distance_new
 
         ########### REWARD CALCULATION ################
-        # reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
+        # reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, collision, reachedPickup)
         # reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-        #                              orientation_goal_new, outOfArea, reachedPickup)
+        #                              orientation_goal_new, collision, reachedPickup)
         reward = self.createReward03(robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-                                     orientation_goal_new, outOfArea, reachedPickup)
-        return (next_state, reward, not robot.isActive(), reachedPickup)
+                                     orientation_goal_new, collision, reachedPickup)
+        return (next_state, reward / 10, not robot.isActive(), reachedPickup)
 
 
     def createReward01(self, robot, delta_dist, robot_orientation, orientation_goal_new, outOfArea, reachedPickup):
@@ -239,32 +241,32 @@ class Environment:
         return reward
 
     def createReward03(self, robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-                       orientation_goal_new, outOfArea, reachedPickup):
+                       orientation_goal_new, collision, reachedPickup):
         reward = 0
         deltaDist = delta_dist #bei max Vel von 0.7 und einem 0.1 Timestep ist die max Dist 0.07m --> 7cm
         angularDeviation = (abs(robot.angularDeviation / math.pi) *-1) + 0.5
 
 
-        reward = deltaDist + (angularDeviation/20)
+        reward = deltaDist + (angularDeviation/25)
 
-        if outOfArea:
+        if collision:
             reward += -1.0
 
         if reachedPickup:
             reward += 1.0
 
-        timeInfluence = 0.05
-        bonusTime = 200
-
-        timePenalty = 0
-        if(self.steps-self.steps_left > bonusTime):
-            timePenalty = (1/self.steps) * (self.steps+bonusTime - self.steps_left) * timeInfluence
+        # timeInfluence = 0.05
+        # bonusTime = 200
+        #
+        # timePenalty = 0
+        # if(self.steps-self.steps_left > bonusTime):
+        #     timePenalty = (1/self.steps) * (self.steps+bonusTime - self.steps_left) * timeInfluence
 
 
         # print('Orient. Diff: ', angularDeviation, '   deltaDist: ', deltaDist, '   reward: ', reward)
 
 
-        return (reward-timePenalty)
+        return reward
 
     def reset(self):
 

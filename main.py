@@ -21,14 +21,14 @@ memory_size = 10000
 
 gamma = 0.999
 lr = 0.0001
-num_episodes = 5000
-steps = 1000
+num_episodes = 400
+steps = 1250
 
 arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 80
-angleStepsSonar = 2
+angleStepsSonar = 10
 
 if __name__ == '__main__':
     args = None
@@ -71,17 +71,17 @@ if __name__ == '__main__':
 
 
     app = QApplication(sys.argv)
-    env = EnvironmentWithUI.Environment(app, args.steps, args, env_dim[0], 1)
+    env = EnvironmentWithUI.Environment(app, args.steps, args, env_dim[0], 3)
     # env2 = Environment.Environment(app, args.steps, args, env_dim[0], 2)
     # env3 = Environment.Environment(app, args.steps, args, env_dim[0], 3)
     # env4 = Environment.Environment(app, args.steps, args, env_dim[0], 4)
-
-    envs = [Environment.Environment(app, args.steps, args, env_dim[0], i) for i in range(5)]
-    envs.append(env)
+    if(args.training):
+        envs = [Environment.Environment(app, args.steps, args, env_dim[0], i) for i in range(0)]
+        envs.append(env)
     #envs = [env, env2, env3, env4, env5, env6, env7, env8]
 
 
-    act_dim = np.asarray(envs[0].get_actions()) #TODO bei kontinuierlichem 2 actions
+    act_dim = np.asarray(env.get_actions()) #TODO bei kontinuierlichem 2 actions
 
     if args.path == "":
         args.path = os.path.join(os.getcwd(), "models", "")
@@ -102,7 +102,7 @@ if __name__ == '__main__':
         model.train(envs, args)
     elif not args.training:
         #model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
-        additionalTerm = '_071220'
+        additionalTerm = '_192135JAN20'
         # additionalTerm = '_081220MultiRobTrain'
         # additionalTerm = ''
         model.load_weights('models\A2C_actor_Critic_' + args.mode + additionalTerm + '.h5')

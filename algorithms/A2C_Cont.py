@@ -11,6 +11,7 @@ from keras.backend import max, mean, exp, log, function, squeeze, categorical_cr
 from keras import backend as K
 import ray
 import time
+import datetime
 import multiprocessing
 import concurrent.futures
 
@@ -221,6 +222,7 @@ class A2C_C:
         timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
         # print(laser.shape, orientation.shape, distance.shape, velocity.shape)
         if(self.timePenalty):
+            #Hier breaken um zu gucken, ob auch wirklich 4 timeframes hier eingegeben werden oder was genau das kommt
             return self.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]), np.array([timesteps])) #Liste mit [actions, value]
         else:
             return self._predict([np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])]) #Liste mit [actions, value]
@@ -320,13 +322,15 @@ class A2C_C:
 
 
                 advantagesTmp = discounted_rewardsTmp - np.reshape(evaluations, len(evaluations))  # Warum reshape
-                advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)
+                # advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)
                 advantages = np.concatenate((advantages, advantagesTmp))
 
 
                 # print("discounted_rewards", discounted_rewards.shape, "state_values", state_values.shape, "advantages",
                 #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
                 # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
         self.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
 
 
@@ -337,7 +341,7 @@ class A2C_C:
     def train(self, envs, args):
         """ Main A2C Training Algorithm
         """
-
+        self.taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")#Zeitstempel beim Start des trainings für das gespeicherte Modell
         results = []            # wird nirgendwo gebraucht -> returned leeres Array
 
         liste = np.array([], dtype=object)
@@ -383,27 +387,27 @@ class A2C_C:
             while not allDone:
 
                 envActions = []
-                for singleEnvData in envsData:
-                    robotsData = singleEnvData[0]
-                    robotsOldState = singleEnvData[1]
-                    robotsActions = []
+                for j in range(0, len(envsData)):
+                # for singleEnvData in envsData:
+                    robotsActions = [] #actiobs for every Robot in the selected environment
                     # Actor picks an action (following the policy)
-                    for i in range(0, len(robotsData)):
-                        if not True in robotsData[i][3]:
-                            # a = self.predict(robotsOldState[i][0:90][:], )
-                            aTmp = self.policy_action(robotsOldState[i][0], (rechedTargetList).count(True)/100)
+                    for i in range(0, len(envsData[j][0])): #iterating over every robot
+                        if not True in envsData[j][0][i][3]:
+                            # a = self.predict(singleEnvData[1][i][0:90][:], )
+                            aTmp = self.policy_action(envsData[j][1][i][0], (rechedTargetList).count(True)/100)
                             a = np.ndarray.tolist(aTmp[0])[0]
                             c = np.ndarray.tolist(aTmp[1])[0]
                             # print(a,c)
                         else:
                             a = [None, None]
-                        robotsActions.append(a)
                         # action_onehot = np.zeros([self.act_dim])
                         # action_onehot[a] = 1
 
+                        robotsActions.append(a)
+
                         if not None in a:
-                            robotsData[i][0].append(a)#action_onehot) #TODO Tupel mit 2 werten von je -1 bis 1
-                            robotsData[i][4].append(c)
+                            envsData[j][0][i][0].append(a)#action_onehot) #TODO Tupel mit 2 werten von je -1 bis 1
+                            envsData[j][0][i][4].append(c)
 
                     # Retrieve new state, reward, and whether the state is terminal
                     # new_state, r, done = env.step(robotsActions)
@@ -441,32 +445,30 @@ class A2C_C:
                 resultList = []
                 for result in results:
                     #print(result)
-                    resultList.append(result)
+                    resultList.append(result[0])
+                    # print(result[1])
                 time2 = time.time()
                 #print("Process Time", time2-time1)
                 #print(resultList)#.sort(key=lambda x:x[1]))
 
-                for j, result in enumerate(resultList):
-                    #print(result)
-                    robotsDataCurrentFrame = result[0]
-                    robotsData = envsData[j][0]
-                    robotsOldState = envsData[j][1]
+                for j, robotsDataCurrentFrameSingleEnv in enumerate(resultList):
 
-                    for i, dataCurrentFrame in enumerate(robotsDataCurrentFrame):
+                    for i, dataCurrentFrameSingleRobot in enumerate(robotsDataCurrentFrameSingleEnv):
 
-                        if not True in robotsData[i][3]:
-                            new_state = dataCurrentFrame[0]
-                            r = dataCurrentFrame[1]
-                            done = dataCurrentFrame[2]
-                            robotsData[i][1].append(robotsOldState[i][0])
-                            robotsData[i][2].append(r)
-                            robotsData[i][3].append(done)
+                        if not True in envsData[j][0][i][3]: #[environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
+                            # print("dataCurent Frame 0 of env",results[j][1], dataCurrentFrame[0])
+                            new_state = dataCurrentFrameSingleRobot[0]
+                            r = dataCurrentFrameSingleRobot[1]
+                            done = dataCurrentFrameSingleRobot[2]
+                            envsData[j][0][i][1].append(envsData[j][1][i][0])
+                            envsData[j][0][i][2].append(r)
+                            envsData[j][0][i][3].append(done)
                             if(done):
-                                reachedPickup = dataCurrentFrame[3]
+                                reachedPickup = dataCurrentFrameSingleRobot[3]
                                 rechedTargetList.pop(0)
                                 rechedTargetList.append(reachedPickup)
                             # Update current state
-                            robotsOldState[i] = new_state
+                            envsData[j][1][i] = new_state
                             cumul_reward += r
                     # print("Kumulierter Reward: " + str(cumul_reward) + ", Reward: " + str(r))
                 zeit += 1
@@ -477,26 +479,6 @@ class A2C_C:
                     #if zeit < 500:
                         allDone = False
 
-
-            # Train using discounted rewards ie. compute updates
-            # liste = np.append([liste], [[states], [actions], [rewards], [done]])
-            #
-            #
-            # if counter == waitForN:   # train after 9 Episodes
-            #     for i in range(0, liste.size, 4):
-            #         self.train_models(liste[i+0], liste[i+1], liste[i+2], liste[i+3])
-            #
-            #     liste = np.array([], dtype=object)
-            #     counter = 0
-            #
-            # counter += 1
-            # Gather stats every episode for plotting
-
-            # for singleRobotData in robotsData:
-            #     # print(singleRobotData[1], singleRobotData[0], singleRobotData[2])
-            #     self.train_models(np.asarray(singleRobotData[1]), singleRobotData[0], singleRobotData[2])
-            # for singleEnvData in envsData:
-            #     robotsData = singleEnvData[0]
 
             self.train_models(envsData)
 
@@ -515,7 +497,7 @@ class A2C_C:
 
     def save_weights(self, path):
         path += 'A2C'
-        self._model.save_weights(path + '_actor_Critic_' + self.args.mode + '.h5')
+        self._model.save_weights(path + '_actor_Critic_' + self.args.mode + self.taktischeZeit +'.h5')
 
     def load_weights(self, path):
         self._model.load_weights(path)
@@ -550,7 +532,7 @@ class A2C_C:
                     robotsActions.append(a)
 
 
-                robotsStates = env.step(robotsActions)
+                robotsStates = env.step(robotsActions)[0]
 
                 rewards = ''
                 for i, stateData in enumerate(robotsStates):

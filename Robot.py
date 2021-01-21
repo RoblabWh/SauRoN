@@ -111,7 +111,7 @@ class Robot:
     def resetSonar(self, robots):
         if self.args.mode == 'sonar':
             for _ in range(self.time_steps):
-                self.sonarReading(robots, 1,1)
+                self.sonarReading(robots, self.args.steps,self.args.steps)
 
 
     def denormdata(self, data, limits):
@@ -535,7 +535,8 @@ class Robot:
         dir = self.getDirectionAngle()
         posX = self.getPosX()
         posY = self.getPosY()
-        for angD in range(0, 360, alpha):
+        for rayCounter in range(0, 360, alpha):
+            angD = (rayCounter + 110) % 360
             ang = (dir + (angD * piFactor)) % twoPi
             ray = Ray(posX, posY, ang)
             rayV = ray.getVector()

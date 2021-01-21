@@ -69,6 +69,7 @@ class Environment:
         return self.steps_left <= 0 or robotsDone
 
     def step(self, actions):
+        # print(actions)
         time1 = time.time()
         self.steps_left -= 1
 
@@ -86,6 +87,7 @@ class Environment:
             else:
                 robotsDataCurrentFrame.append((None, None, None))
         time2 = time.time()
+        # print(self.steps_left, self.id, time1, time2, 'derEinzelne')
         #print("Env", time2-time1)
         #print(self.id, self.steps_left)
         return (robotsDataCurrentFrame, self.id)
