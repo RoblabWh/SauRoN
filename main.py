@@ -30,7 +30,7 @@ arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 80
-angleStepsSonar = 10
+angleStepsSonar = 5
 numbOfParallelEnvs = 3
 numbOfRobots = 4
 
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
 
     app = QApplication(sys.argv)
-    env = EnvironmentWithUI.Environment(app, args.steps, args, env_dim[0], 3)
+    env = EnvironmentWithUI.Environment(app, args, env_dim[0], 3)
     # env2 = Environment.Environment(app, args.steps, args, env_dim[0], 2)
     # env3 = Environment.Environment(app, args.steps, args, env_dim[0], 3)
     # env4 = Environment.Environment(app, args.steps, args, env_dim[0], 4)

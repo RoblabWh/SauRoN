@@ -1,6 +1,6 @@
 import ray
 import numpy as np
-from Environment import Environment
+from EnvironmentWithUI import Environment
 from algorithms.A2C_parallel.A2C_Network import A2C_Network
 
 @ray.remote
@@ -10,7 +10,7 @@ class A2C_MultiprocessingActor:
         self.args = args
         self.network = A2C_Network(act_dim, env_dim, args)
         self.network.setWeights(weights)
-        self.env = Environment(args.steps, args, env_dim[0], 0) #TODO wnn möglich nur ein environment und über parameter bestimmen ob mit UI
+        self.env = Environment(None, args, env_dim[0], 0) #None --> No UI
         self.numbOfRobots = args.numb_of_robots
         self.timePenalty = args.time_penalty
         # self.av_meter = AverageMeter()

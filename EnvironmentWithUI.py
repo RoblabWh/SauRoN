@@ -6,15 +6,17 @@ from old.PlotterWindow import PlotterWindow
 import time
 
 class Environment:
-    def __init__(self, app, steps, args, timeframes, id):
+    def __init__(self, app, args, timeframes, id):
         self.args = args
-        self.steps = steps
-        self.steps_left = steps
+        self.steps = args.steps
+        self.steps_left = args.steps
         self.simulation = Simulation.Simulation(app, args, timeframes)
         self.total_reward = 0.0
         self.done = False
         self.shape = np.asarray([0]).shape
         self.id = id     # Multiprocessing Wiedererkennung zum Zuordnen der Rückgabewerte
+
+
 
 
     def get_observation(self, i):

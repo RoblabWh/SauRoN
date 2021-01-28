@@ -22,6 +22,7 @@ class Simulation:
         # Skalierungsparameter für Visualisierung
         self.scaleFactor = args.scale_factor
         self.steps = args.steps
+        self.hasUI = app is not None
 
         # Parameter width & length über args
         self.arenaWidth = args.arena_width
@@ -57,8 +58,9 @@ class Simulation:
         for robot in self.robots:
             robot.resetSonar(self.robots)
 
-        self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args)
-        self.simulationWindow.show()
+        if self.hasUI:
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args)
+            self.simulationWindow.show()
 
         self.simTime = 0  # s
         self.simTimestep = 0.1  # s
@@ -108,10 +110,10 @@ class Simulation:
             for i, robot in enumerate(self.robots):
                 if robotsTarVels[i] != (None, None):
                     robot.sonarReading(self.robots, stepsLeft, self.steps)
-
-        if self.simulationWindow != 0:
-            for i, robot in enumerate(self.robots):
-                self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
+        if self.hasUI:
+            if self.simulationWindow != 0:
+                for i, robot in enumerate(self.robots):
+                    self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
 
 
 
