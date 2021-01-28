@@ -34,7 +34,7 @@ class A2C_Multi:
     def train(self, env):
         """ Main A2C Training Algorithm
         """
-        rechedTargetList = [False] * 100
+        reachedTargetList = [False] * 100
         # countEnvs = len(envs)
 
         ray.init()
@@ -77,7 +77,7 @@ class A2C_Multi:
                 robotsActions = [] #actions of every Robot in the selected environment
                 for i in range(0, len(robotsData)): #iterating over every robot
                     if not True in robotsData[i][3]:
-                        aTmp = self.policy_action(robotsOldState[i][0], (rechedTargetList).count(True)/100)
+                        aTmp = self.policy_action(robotsOldState[i][0], (reachedTargetList).count(True)/100)
                         a = np.ndarray.tolist(aTmp[0])[0]
                         c = np.ndarray.tolist(aTmp[1])[0]
                     else:
@@ -104,8 +104,8 @@ class A2C_Multi:
                         robotsData[i][3].append(done)
                         if(done):
                             reachedPickup = dataCurrentFrameSingleRobot[3]
-                            rechedTargetList.pop(0)
-                            rechedTargetList.append(reachedPickup)
+                            reachedTargetList.pop(0)
+                            reachedTargetList.append(reachedPickup)
                         # Update current state
                         robotsOldState[i] = new_state
                         cumul_reward += r
@@ -129,7 +129,14 @@ class A2C_Multi:
             self.av_meter.update(cumul_reward)
 
             # Display score
-            tqdm_e.set_description("Reward Episode: " + str(cumul_reward) + " -- Average Reward: " + str(self.av_meter.avg) + " Average Reached Target (last 100): " + str((rechedTargetList).count(True)/100))
+            allReachedTargetList = reachedTargetList.copy()
+
+            for actor in multiActors:
+                tmpTargetList = ray.get(actor.getTargetList.remote())
+                allReachedTargetList += tmpTargetList
+
+            targetDivider = (self.numbOfParallelEnvs + 1) * 100  # Erfolg der letzten 100
+            tqdm_e.set_description("Reward Episode: " + str(cumul_reward) + " -- Average Reward: " + str(self.av_meter.avg) + " Average Reached Target (last 100): " + str(allReachedTargetList.count(True)/targetDivider))
             tqdm_e.refresh()
 
 

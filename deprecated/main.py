@@ -1,6 +1,6 @@
-import Environment, sys
+import sys
 from old import DQN
-from deprecated import Agent
+from deprecated import Agent, Environment
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 from collections import namedtuple

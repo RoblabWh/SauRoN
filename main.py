@@ -3,13 +3,10 @@ import numpy as np
 import os
 from PyQt5.QtWidgets import QApplication
 
-import Environment
 import EnvironmentWithUI
 import sys
 import datetime
 from algorithms.DQN import DQN
-from algorithms.A2C import A2C
-from algorithms.A2C_Cont import A2C_C
 from algorithms.A2C_parallel.A2C_Multi import A2C_Multi
 from algorithms.utils import str2bool
 

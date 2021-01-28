@@ -1,8 +1,6 @@
 import math
 import SimulationWithoutUI
-import time
 import numpy as np
-from old.PlotterWindow import PlotterWindow
 import time
 
 class Environment:

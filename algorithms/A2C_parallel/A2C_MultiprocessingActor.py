@@ -15,11 +15,14 @@ class A2C_MultiprocessingActor:
         self.timePenalty = args.time_penalty
         # self.av_meter = AverageMeter()
         self.gamma = args.gamma
-        self.rechedTargetList = [False] * 100 #TODO mit erfolgsliste aus main Process zusammenlegen
+        self.reachedTargetList = [False] * 100 #TODO mit erfolgsliste aus main Process zusammenlegen
 
 
     def setWeights(self, weights):
         self.network.setWeights(weights)
+
+    def getTargetList(self):
+        return self.reachedTargetList
 
 
     def trainOneEpisode(self):
@@ -48,7 +51,7 @@ class A2C_MultiprocessingActor:
             robotsActions = []  # actions of every Robot in the selected environment
             for i in range(0, len(robotsData)):  # iterating over every robot
                 if not True in robotsData[i][3]:
-                    aTmp = self.policy_action(robotsOldState[i][0], (self.rechedTargetList).count(True) / 100)
+                    aTmp = self.policy_action(robotsOldState[i][0], (self.reachedTargetList).count(True) / 100)
                     a = np.ndarray.tolist(aTmp[0])[0]
                     c = np.ndarray.tolist(aTmp[1])[0]
                 else:
@@ -74,8 +77,8 @@ class A2C_MultiprocessingActor:
                     robotsData[i][3].append(done)
                     if (done):
                         reachedPickup = dataCurrentFrameSingleRobot[3]
-                        self.rechedTargetList.pop(0)
-                        self.rechedTargetList.append(reachedPickup)
+                        self.reachedTargetList.pop(0)
+                        self.reachedTargetList.append(reachedPickup)
                     # Update current state
                     robotsOldState[i] = new_state
                     cumul_reward += r

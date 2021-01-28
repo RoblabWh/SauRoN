@@ -39,7 +39,7 @@ class Simulation:
         # Erstelle Stationen und Roboter
         self.pickUp = Station(5, 1.2, 0.75, 0.75, 0, self.scaleFactor)
         self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 3, self.scaleFactor)
-        self.pickUp3 = Station(2, 5.1, 0.75, 0.75, 1, self.scaleFactor) #12, 4.1 gute ergebnisse mit trainierte Netz vom 19Jan  #2, 5.1 geht für das neuste
+        self.pickUp3 = Station(9, 1.1, 0.75, 0.75, 1, self.scaleFactor) #12, 4.1 gute ergebnisse mit trainierte Netz vom 19Jan  #2, 5.1 geht für das neuste
         self.pickUp4 = Station(13, 1.3, 0.75, 0.75, 2, self.scaleFactor)
         self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
         # self.stations = [self.pickUp, self.pickUp3]#, self.pickUp4]

@@ -354,7 +354,7 @@ class A2C_C:
 
 
         for e in tqdm_e:
-            debugFertigesEnv = [-1]
+
             # Reset episode
             zeit, cumul_reward, done = 0, 0, False
 
@@ -382,7 +382,6 @@ class A2C_C:
                 # ...
                 envsData.append((robotsData, robotsOldState))
 
-            print(debugFertigesEnv)
             allDone = False
             while not allDone:
 
