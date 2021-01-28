@@ -9,10 +9,9 @@ from Borders import CollidorLine
 
 class Simulation:
 
-    def __init__(self, app, args, timeframes):
+    def __init__(self, args, timeframes):
         """
         Creates a simulation containing the robots, stations and simulation window
-        :param app: PyQt5.QtWidgets.QApplication
         :param args:
             args defined in main
         :param timeframes: int -

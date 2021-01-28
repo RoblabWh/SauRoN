@@ -322,14 +322,13 @@ class A2C_C:
 
 
                 advantagesTmp = discounted_rewardsTmp - np.reshape(evaluations, len(evaluations))  # Warum reshape
-                # advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)
+                advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)
                 advantages = np.concatenate((advantages, advantagesTmp))
 
 
                 # print("discounted_rewards", discounted_rewards.shape, "state_values", state_values.shape, "advantages",
                 #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
                 # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         self.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
 
@@ -355,7 +354,7 @@ class A2C_C:
 
 
         for e in tqdm_e:
-
+            debugFertigesEnv = [-1]
             # Reset episode
             zeit, cumul_reward, done = 0, 0, False
 
@@ -383,6 +382,7 @@ class A2C_C:
                 # ...
                 envsData.append((robotsData, robotsOldState))
 
+            print(debugFertigesEnv)
             allDone = False
             while not allDone:
 
@@ -426,6 +426,7 @@ class A2C_C:
 
 
                 #### Multiprocessing mit Ray ####
+                # futures = [stepSingleEnv.remote(envs[j], envActions[j]) for j in range(countEnvs-1)]
                 futures = [stepSingleEnv.remote(envs[j], envActions[j]) for j in range(countEnvs-1)]
                 resultsEnvUI = envs[countEnvs-1].step(envActions[countEnvs-1])
                 returnValues = ray.get(futures)
@@ -474,10 +475,15 @@ class A2C_C:
                 zeit += 1
                 #print(zeit)
                 allDone = True
-                for env in envs:
+                for j, env in enumerate(envs):
+                    # print(j, env.is_done(), zeit)
                     if not env.is_done():
-                    #if zeit < 500:
                         allDone = False
+                    else:
+                        if not j in debugFertigesEnv:
+                            print(j, ' done!', zeit)
+                            debugFertigesEnv.append(j)
+
 
 
             self.train_models(envsData)

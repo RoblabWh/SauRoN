@@ -6,9 +6,11 @@ from PyQt5.QtWidgets import QApplication
 import Environment
 import EnvironmentWithUI
 import sys
+import datetime
 from algorithms.DQN import DQN
 from algorithms.A2C import A2C
 from algorithms.A2C_Cont import A2C_C
+from algorithms.A2C_parallel.A2C_Multi import A2C_Multi
 from algorithms.utils import str2bool
 
 # HYPERPARAMETERS
@@ -21,7 +23,7 @@ memory_size = 10000
 
 gamma = 0.999
 lr = 0.0001
-num_episodes = 400
+num_episodes = 600
 steps = 1250
 
 arenaWidth = 22   # m
@@ -29,6 +31,10 @@ arenaLength = 10  # m
 
 scaleFactor = 80
 angleStepsSonar = 10
+numbOfParallelEnvs = 3
+numbOfRobots = 4
+
+taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
 
 if __name__ == '__main__':
     args = None
@@ -37,6 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--nb_episodes', type=int, default=num_episodes, help='Number of training episodes')
     parser.add_argument('--save_intervall', type=int, default=50, help='Save Intervall')
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
+    parser.add_argument('--model_timestamp', type=str, default=taktischeZeit, help='Timestamp from when the model was created')
     parser.add_argument('--alg', type=str, default='a2c', choices=['a2c', 'dqn'], help='Reinforcement Learning Algorithm')
     parser.add_argument('-lr', '--learningrate', type=float, default=lr, help='Learning Rate')
     parser.add_argument('--gamma', type=float, default=gamma, help='Gamma')
@@ -57,6 +64,8 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  # Global oder Sonar einstellbar
     parser.add_argument('--time_penalty', type=str2bool, default='False', help='Reward function with time step penalty')
     parser.add_argument('--angle_steps', type=int, default=angleStepsSonar, help='Angle Steps for sonar training')
+    parser.add_argument('--parallel_envs', type=int, default=numbOfParallelEnvs, help='Number of parallel environments used during training in addition to the main training process')
+    parser.add_argument('--numb_of_robots', type=int, default=numbOfRobots, help='Number of robots acting in one environment')
 
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
 
@@ -75,9 +84,9 @@ if __name__ == '__main__':
     # env2 = Environment.Environment(app, args.steps, args, env_dim[0], 2)
     # env3 = Environment.Environment(app, args.steps, args, env_dim[0], 3)
     # env4 = Environment.Environment(app, args.steps, args, env_dim[0], 4)
-    if(args.training):
-        envs = [Environment.Environment(app, args.steps, args, env_dim[0], i) for i in range(0)]
-        envs.append(env)
+    # if(args.training):
+    #     envs = [Environment.Environment(args.steps, args, env_dim[0], i) for i in numbOfParallelEnvs]
+    #     envs.append(env)
     #envs = [env, env2, env3, env4, env5, env6, env7, env8]
 
 
@@ -93,16 +102,17 @@ if __name__ == '__main__':
         args.steps = 1000000
 
     if args.alg == 'a2c':
-        model = A2C_C(act_dim, env_dim, args)
+        model = A2C_Multi(act_dim, env_dim, args)
         # model = A2C(act_dim, env_dim, args)
     elif args.alg == 'dqn':
         model = DQN(act_dim, env_dim, args)
 
     if args.training:
-        model.train(envs, args)
+        model.train(env)
     elif not args.training:
         #model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
-        additionalTerm = '_192135JAN20'
+        # additionalTerm = '_192135JAN20'
+        additionalTerm = '211712Jan21'
         # additionalTerm = '_081220MultiRobTrain'
         # additionalTerm = ''
         model.load_weights('models\A2C_actor_Critic_' + args.mode + additionalTerm + '.h5')

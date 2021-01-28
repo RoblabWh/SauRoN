@@ -6,12 +6,12 @@ from old.PlotterWindow import PlotterWindow
 import time
 
 class Environment:
-    def __init__(self, app, steps, args, timeframes, id):
+    def __init__(self, steps, args, timeframes, id):
         self.args = args
         self.steps = steps
         self.steps_left = steps
         #self.simulation = Simulation.Simulation(app, args, timeframes)
-        self.simulation = SimulationWithoutUI.Simulation(app, args, timeframes)
+        self.simulation = SimulationWithoutUI.Simulation(args, timeframes)
         self.total_reward = 0.0
         self.done = False
         self.shape = np.asarray([0]).shape
