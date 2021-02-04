@@ -11,3 +11,9 @@ class CollidorLine:
 
     def getN(self):
         return self.n
+
+    def getStart(self):
+        return self.a
+
+    def getEnd(self):
+        return self.b

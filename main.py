@@ -20,14 +20,14 @@ memory_size = 10000
 
 gamma = 0.999
 lr = 0.0001
-num_episodes = 600
+num_episodes = 800
 steps = 1250
 
 arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 80
-angleStepsSonar = 5
+angleStepsSonar = 4
 numbOfParallelEnvs = 3
 numbOfRobots = 4
 

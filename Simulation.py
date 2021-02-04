@@ -3,6 +3,7 @@ import Robot
 from Station import Station
 import SimulationWindow
 import math, random
+import numpy as np
 import time
 from old.PlotterWindow import PlotterWindow
 from Borders import CollidorLine
@@ -141,8 +142,10 @@ class Simulation:
                 # for dist in robot.distances:
                 #     if dist<robot.getRadius()+0.05:
                 #         collision = True
-                if any(d <= robot.getRadius()+0.05 for d in robot.distances):
+                if(np.min(robot.distances)<=robot.getRadius()+0.05):
                     collision = True
+                # if any(d <= robot.getRadius()+0.05 for d in robot.distances):
+                #     collision = True
 
                 # Wenn der Roboter mit der PickUpStation kollidiert und sie als Ziel hat wird ein neues Ziel generiert
                 # und reachedPickUp auf True gesetzt, ansonsten bleibt das alte Ziel

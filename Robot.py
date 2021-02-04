@@ -1,4 +1,4 @@
-import math, random
+import math, random, time
 
 
 # import keyboard
@@ -253,9 +253,9 @@ class Robot:
         # frame_sonar.append(self.getLinearVelocityNorm())
         # frame_sonar.append(self.getAngularVelocityNorm())
 
-        distancesNorm = []
-        for i in range(len(self.distances)):
-            distancesNorm.append(self.distances[i] / maxDist)
+        distancesNorm = self.distances/maxDist
+        # for i in range(len(self.distances)):
+        #     distancesNorm.append(self.distances[i] / maxDist)
 
         currentTimestep = (steps - stepsLeft)/steps
 
@@ -535,71 +535,174 @@ class Robot:
         dir = self.getDirectionAngle()
         posX = self.getPosX()
         posY = self.getPosY()
-        for rayCounter in range(0, 360, alpha):
-            angD = (rayCounter + 110) % 360
+
+        colLinesStartPoints= np.swapaxes(np.array([cl.getStart() for cl in collisionLines]),0,1) #[[x,x,x,x],[y,y,y,y]]
+        colLinesEndPoints = np.swapaxes(np.array([cl.getEnd() for cl in collisionLines]),0,1)
+        time0 = time.time()
+
+        for rayCounter in range(1): #range(0, 360, alpha):
+            angD = (rayCounter) % 360
             ang = (dir + (angD * piFactor)) % twoPi
             ray = Ray(posX, posY, ang)
             rayV = ray.getVector()
             intersections = []
-
-            for line in collisionLines:
-
-                lineN = line.getN()
-                skalarProd = lineN[0] * rayV[0] + lineN[1] * rayV[1]
-
-                if skalarProd < 0:
-                    intersect = ray.cast(line)
-
-                    if intersect is not None:
-                        # print("Hat  Treffer bei",angD, " mit Abstand :", intersect[0],"  l:", lineN, "  r:", rayV)
-                        intersections.append(intersect)
-                # else:
-                #     print("Kein Treffer", skalarProd)
-            nmbOfIntersections = len(intersections)
-            if  nmbOfIntersections > 1:
-
-                shortest = 0
-                for i in range(1, nmbOfIntersections):
-                    if intersections[i][0] < intersections[shortest][0]:
-                        shortest = i
-                radarHits.append(intersections[shortest][1])
-                distances.append(intersections[shortest][0])
-
-            elif nmbOfIntersections == 1:
-                radarHits.append(intersections[0][1])
-                distances.append(intersections[0][0])
-            else:
-                radarHits.append([posX, posY])
-                distances.append(0)
-
-            for circle in roboterList:
-                intersectCircle = ray.castOnCircle((circle[0], circle[1]), circle[2], (posX, posY), radarHits[
-                    len(radarHits)-1])
-                # print(intersectCircle)
-                circleDists = []
-                for i in range(0, len(intersectCircle)):
-                    circleDists.append( (posX-intersectCircle[i][0])**2 + (posY-intersectCircle[i][1])**2)
-
-                shortestIndex = -1
-                shortestDist = distances[len(distances)-1] **2
-                for i in range(0, len(circleDists)):
-                    if shortestDist > circleDists[i]:
-                        shortestDist = circleDists[i]
-                        shortestIndex = i
-
-                if shortestIndex is not -1:
-                    radarHits.pop(len(radarHits)-1)
-                    distances.pop(len(distances)-1)
-                    radarHits.append(intersectCircle[shortestIndex])
-                    distances.append(math.sqrt(shortestDist))
+            rayCol = FastCollisionRay2([self.getPosX(), self.getPosY()], int(360/alpha), dir)
+            rayHit = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints))
+            radarHits = (rayHit[1])
+            distances = (rayHit[0])
 
 
+            # for line in collisionLines:
+            #
+            #     lineN = line.getN()
+            #     skalarProd = lineN[0] * rayV[0] + lineN[1] * rayV[1]
+            #
+            #     if skalarProd < 0:
+            #         intersect = ray.cast(line)
+            #
+            #         if intersect is not None:
+            #             intersections.append(intersect)
+            #
+            # nmbOfIntersections = len(intersections)
+            # if  nmbOfIntersections > 1:
+            #
+            #     shortest = 0
+            #     for i in range(1, nmbOfIntersections):
+            #         if intersections[i][0] < intersections[shortest][0]:
+            #             shortest = i
+            #     radarHits.append(intersections[shortest][1])
+            #     distances.append(intersections[shortest][0])
+            #
+            # elif nmbOfIntersections == 1:
+            #     radarHits.append(intersections[0][1])
+            #     distances.append(intersections[0][0])
+            # else:
+            #     radarHits.append([posX, posY])
+            #     distances.append(0)
+
+            # for circle in roboterList:
+            #     intersectCircle = ray.castOnCircle((circle[0], circle[1]), circle[2], (posX, posY), radarHits[
+            #         len(radarHits)-1])
+            #     # print(intersectCircle)
+            #     circleDists = []
+            #     for i in range(0, len(intersectCircle)):
+            #         circleDists.append( (posX-intersectCircle[i][0])**2 + (posY-intersectCircle[i][1])**2)
+            #
+            #     shortestIndex = -1
+            #     shortestDist = distances[len(distances)-1] **2
+            #     for i in range(0, len(circleDists)):
+            #         if shortestDist > circleDists[i]:
+            #             shortestDist = circleDists[i]
+            #             shortestIndex = i
+            #
+            #     if shortestIndex is not -1:
+            #         radarHits.pop(len(radarHits)-1)
+            #         distances.pop(len(distances)-1)
+            #         radarHits.append(intersectCircle[shortestIndex])
+            #         distances.append(math.sqrt(shortestDist))
+            #
 
 
         self.radarHits = radarHits
         self.distances = distances
 
 
+
+import numpy as np
+class FastCollisionRay:
+    def __init__(self, rayOrigin, rayDirectionAngle):
+        self.rayOrigin = rayOrigin #np.array([[rayOrigin[0]],[rayOrigin[1]]], dtype=np.float)
+        self.rayDirection = (math.cos(rayDirectionAngle), math.sin(rayDirectionAngle))#np.array([math.cos(rayDirectionAngle), math.sin(rayDirectionAngle)], dtype=np.float)
+
+    def lineRayIntersectionPoint(self, points1, points2):
+        """
+
+        :param points1: Liste der Startpunkte von Kollisionslinien points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
+        :param points2: Liste der Endpunkte von Kollisionslinien points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
+        :return:
+        """
+
+        # # Ray-Line Segment Intersection Test in 2D
+        # # http://bit.ly/1CoxdrG
+        # v1 = self.rayOrigin - points1
+        # v2 = points2 - points1
+        # v3 = np.array([- self.rayDirection[1], self.rayDirection[0]])
+        # print(v1.shape)
+        # print(v2.shape)
+        # t1 = np.cross(v2, v1) / np.dot(v2, v3)
+        # t2 = np.dot(v1, v3) / np.dot(v2, v3)
+        # # jetzt hätten wir t1 und t2 für jede mögliche Kollisionswand, brauchen aber nur den kürzesten über 0
+        # iWhereT2betweenZeroAndOne = np.where(np.logical_and(t2>=0, t2<=1))
+        # t1Hits = np.take(t1, iWhereT2betweenZeroAndOne)
+        # t1NearestHit = np.min(t1Hits[np.greater_equal(t1Hits,0)])
+
+        # return [t1NearestHit, (self.rayOrigin + t1NearestHit * self.rayDirection)]
+        #Will crash if no Line collision is detected (in positive direction of the current ray)
+
+
+
+        x1 = self.rayOrigin[0] #originX
+        y1 = self.rayOrigin[1] #originY
+        x2 = x1 + self.rayDirection[0] #directionX
+        y2 = y1 + self.rayDirection[1] #directionY
+
+        x3 = points1[0] #lineStartXArray
+        y3 = points1[1] #lineStartYArray
+        x4 = points2[0] #lineEndXArray
+        y4 = points2[1] #lineEndYArray
+
+        t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+        t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+
+
+        iWhereT2betweenZeroAndOne = np.where(np.logical_and(t2 >= 0, t2 <= 1))
+        t1Hits = np.take(t1, iWhereT2betweenZeroAndOne)
+        t1NearestHit = np.min(t1Hits[np.greater_equal(t1Hits, 0)])
+
+        return [t1NearestHit, (self.rayOrigin[0] + t1NearestHit * self.rayDirection[0], self.rayOrigin[1] + t1NearestHit * self.rayDirection[1])]
+
+
+import numpy as np
+class FastCollisionRay2:
+    def __init__(self, rayOrigin, rayCount, startAngle):
+        self.rayOrigin = rayOrigin #np.array([[rayOrigin[0]],[rayOrigin[1]]], dtype=np.float)
+        steps = np.arange(startAngle, startAngle+2*math.pi, 2*math.pi/rayCount)
+        self.rayDirX = np.array([math.cos(step) for step in steps])
+        self.rayDirY = np.array([math.sin(step) for step in steps])
+        # self.rayDirection = (math.cos(rayDirectionAngle), math.sin(rayDirectionAngle))#np.array([math.cos(rayDirectionAngle), math.sin(rayDirectionAngle)], dtype=np.float)
+
+    def lineRayIntersectionPoint(self, points1, points2):
+        """
+
+        :param points1: Liste der Startpunkte von Kollisionslinien points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
+        :param points2: Liste der Endpunkte von Kollisionslinien points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
+        :return:
+        """
+
+        x1 = self.rayOrigin[0] #originX
+        y1 = self.rayOrigin[1] #originY
+        x2V = np.swapaxes(np.array([self.rayDirX for _ in range(len(points1[0]))]),0,1) #directionX
+        y2V = np.swapaxes(np.array([self.rayDirY for _ in range(len(points1[0]))]),0,1) #directionY
+        x2 = x2V+x1
+        y2 = y2V+y1
+
+        x3 = np.array([points1[0] for _ in range(len(self.rayDirX))]) #lineStartXArray
+        y3 = np.array([points1[1] for _ in range(len(self.rayDirX))]) #lineStartYArray
+        x4 = np.array([points2[0] for _ in range(len(self.rayDirX))]) #lineEndXArray
+        y4 = np.array([points2[1] for _ in range(len(self.rayDirX))]) #lineEndYArray
+
+
+        t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+        t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+
+        t1 = np.where((t2<0) | (t2>1), -1, t1)
+        t1 = np.where (t1>=0, t1, 2**10)
+        # t1NearestHit = np.min(t1[np.greater_equal(t1, 0)])
+        t1NearestHit = np.amin(t1, axis=1)
+
+        collisionPoints = np.swapaxes(np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]),0, 1) #[:,0] returns the first column
+
+        return [t1NearestHit, collisionPoints]
 
 
 
@@ -645,6 +748,7 @@ class Ray:
             pot = [x, y]
             # return pot
             return [u,pot]
+
 
 
     def castOnCircle(self, circle_center, circle_radius, pt1, pt2, full_line=False, tangent_tol=1e-9):
