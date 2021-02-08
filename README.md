@@ -13,3 +13,9 @@ conda install -c anaconda pyqtgraph
 conda install -c conda-forge pynput oder pip install pynput
 
 pip install ray
+
+pip install tqdm
+
+
+
+for tensorflow-gpu install latest Cuda drivers
