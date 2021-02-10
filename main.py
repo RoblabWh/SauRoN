@@ -28,7 +28,7 @@ arenaLength = 10  # m
 
 scaleFactor = 80
 angleStepsSonar = 4
-numbOfParallelEnvs = 3
+numbOfParallelEnvs = 1
 numbOfRobots = 4
 
 taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell

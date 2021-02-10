@@ -541,13 +541,15 @@ class Robot:
         time0 = time.time()
 
         for rayCounter in range(1): #range(0, 360, alpha):
+            robotsX = [r[0] for r in roboterList]
+            robotsY = [r[1] for r in roboterList]
             angD = (rayCounter) % 360
             ang = (dir + (angD * piFactor)) % twoPi
             ray = Ray(posX, posY, ang)
             rayV = ray.getVector()
             intersections = []
             rayCol = FastCollisionRay2([self.getPosX(), self.getPosY()], int(360/alpha), dir)
-            rayHit = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints))
+            rayHit = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, np.array([robotsX, robotsY]), .25))
             radarHits = (rayHit[1])
             distances = (rayHit[0])
 
@@ -671,11 +673,12 @@ class FastCollisionRay2:
         self.rayDirY = np.array([math.sin(step) for step in steps])
         # self.rayDirection = (math.cos(rayDirectionAngle), math.sin(rayDirectionAngle))#np.array([math.cos(rayDirectionAngle), math.sin(rayDirectionAngle)], dtype=np.float)
 
-    def lineRayIntersectionPoint(self, points1, points2):
+    def lineRayIntersectionPoint(self, points1, points2, pointsRobots, radius):
         """
 
         :param points1: Liste der Startpunkte von Kollisionslinien points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
         :param points2: Liste der Endpunkte von Kollisionslinien points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
+        :param pointsRobots: Liste derRoboterpositionen mit denen kollidiert werden kann als np.array[[x0, x2, x3..xn], [y0, y2, y3..yn]]
         :return:
         """
 
@@ -696,13 +699,51 @@ class FastCollisionRay2:
         t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
 
         t1 = np.where((t2<0) | (t2>1), -1, t1)
-        t1 = np.where (t1>=0, t1, 2**10)
+        t1 = np.where (t1>=0, t1, 2048)
         # t1NearestHit = np.min(t1[np.greater_equal(t1, 0)])
         t1NearestHit = np.amin(t1, axis=1)
 
-        collisionPoints = np.swapaxes(np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]),0, 1) #[:,0] returns the first column
+        collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
 
+
+        #TODO prüfen, für jedes Segement zwischen Robot-Origin und Collision Point prüfen, ob ein anderer Roboter dazwischen ist.
+        # Dafür benötigt: Mittelpunkte aller Roboter und Linie (also start und Ziel)
+
+        qX = np.array([pointsRobots[0] for _ in range(len(collisionPoints[0]))])
+        qY = np.array([pointsRobots[1] for _ in range(len(collisionPoints[0]))])
+        qX = np.swapaxes(qX,0,1)
+        qY = np.swapaxes(qY,0,1)
+        colX = np.array([collisionPoints[0] for _ in range(len(pointsRobots[0]))])
+        colY = np.array([collisionPoints[1] for _ in range(len(pointsRobots[0]))])
+
+
+        vX = colX - x1
+        vY = colY - y1
+
+        # a,b und c als Array zum Berechnen der Diskriminanten
+        a = vX * vX + vY * vY # array voll skalarere Werte
+        b = 2 * (vX * (x1 - qX) + vY * (y1 - qY))
+        c = (x1**2 + y1**2) + (qX**2 + qY**2) - (2* (x1 * qX + y1*qY)) - radius**2
+
+        disc = b**2 - 4 * a * c
+        tc1 = np.where((disc>0), ((-b + np.sqrt(disc)) / (2 * a)), -1) #check if discriminat is negative --> no collision
+        tc2 = np.where((disc>0), ((-b - np.sqrt(disc)) / (2 * a)), -1)
+        tc1 = np.where((tc1>=0), tc1, 2048)
+        tc2 = np.where((tc2>=0), tc2, 2048)
+
+        smallestTOfCircle = np.where((tc1<tc2), tc1, tc2)
+        smallestTOfCircle = np.amin(smallestTOfCircle, axis=0)
+
+        t1NearestHit = np.where(smallestTOfCircle<2048, smallestTOfCircle, t1NearestHit)
+
+        collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
+        #TODO der neu t wert ist nihct normiert und daher muss er auf seinen eigenen vektor berchnet werden und nihct auf den normierten ursprungsvektor
+
+
+
+        collisionPoints = np.swapaxes(collisionPoints, 0, 1)#für Rückgabe in x,y-Paaren
         return [t1NearestHit, collisionPoints]
+
 
 
 
@@ -765,10 +806,10 @@ class Ray:
         Note: We follow: http://mathworld.wolfram.com/Circle-LineIntersection.html
         """
 
-        (p1x, p1y), (p2x, p2y), (cx, cy) = pt1, pt2, circle_center
-        (x1, y1), (x2, y2) = (p1x - cx, p1y - cy), (p2x - cx, p2y - cy)
-        dx, dy = (x2 - x1), (y2 - y1)
-        dr = (dx ** 2 + dy ** 2)**.5
+        (p1x, p1y), (p2x, p2y), (cx, cy) = pt1, pt2, circle_center # p1 = roboter pos | p2 = aktueller nächster kollisionspunkt | circle_center trivial
+        (x1, y1), (x2, y2) = (p1x - cx, p1y - cy), (p2x - cx, p2y - cy) #Vektor con Kreismitte zu P1 und Kreismitte zu P2
+        dx, dy = (x2 - x1), (y2 - y1) #Vektor von P1 zu P2
+        dr = (dx ** 2 + dy ** 2)**.5 #Betrag
         big_d = x1 * y2 - x2 * y1
         discriminant = circle_radius ** 2 * dr ** 2 - big_d ** 2
 
