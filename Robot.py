@@ -695,8 +695,17 @@ class FastCollisionRay2:
         y4 = np.array([points2[1] for _ in range(len(self.rayDirX))]) #lineEndYArray
 
 
-        t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-        t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+        #t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+        #t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+
+        # Kleiner vorschlag von mir :)
+        # Ersten den denominator berechnen, da er für t1 und t2 gleich ist.
+        # 1 / ... um später für beiden die Multiplikation zu verwenden. Division ist die teuerste mathematische Operation ;)
+        denominator = 1 / ((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+
+        # das koennte nochmal einen kleinen boost geben
+        t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))*denominator
+        t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))*denominator
 
         t1 = np.where((t2<0) | (t2>1), -1, t1)
         t1 = np.where (t1>=0, t1, 2048)
