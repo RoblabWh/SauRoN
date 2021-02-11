@@ -28,7 +28,7 @@ class RobotRepresentation:
         if colorIndex == 1:
             self.lineColor = Qt.red
         if colorIndex == 2:
-            self.lineColor = Qt.yellow
+            self.lineColor = Qt.darkGray
         if colorIndex == 3:
             self.lineColor = Qt.green
         if colorIndex == 4:
@@ -50,8 +50,8 @@ class RobotRepresentation:
 
         if self.mode == 'sonar' and self.isActive:
             if sonarShowing:
-                painter.setPen(QPen(Qt.darkMagenta, 1.5, Qt.DotLine))
-                painter.setBrush(QBrush(Qt.darkMagenta, self.brushStyle))
+                painter.setPen(QPen(self.lineColor, 1.5, Qt.DotLine))
+                painter.setBrush(QBrush(self.lineColor, self.brushStyle))
                 for i in range(0, len(self.radarHits)):
                     painter.drawLine(self.posX,
                                      self.posY,

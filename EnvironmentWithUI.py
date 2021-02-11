@@ -116,8 +116,11 @@ class Environment:
         robot_orientation_old = robot.getDirectionAngle(last=True)
         #TODO Goal des Robots nutzen
         orientation_goal_old = math.atan2(
-            (goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_old_y),
-            (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_old_x))
+            (goal_pose_old_y - robot_pose_old_y),
+            (goal_pose_old_x - robot_pose_old_x))
+        # orientation_goal_old = math.atan2( #old from rectangular target with position in upper left corner
+        #     (goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_old_y),
+        #     (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_old_x))
         if orientation_goal_old < 0:
             orientation_goal_old += (2 * math.pi)
 
@@ -126,16 +129,16 @@ class Environment:
         robot_pose_current_y = robot.getPosY()
         robot_orientation_new = robot.getDirectionAngle()
         orientation_goal_new = math.atan2(
-            (goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_current_y),
-            (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_current_x))
+            (goal_pose_old_y - robot_pose_current_y),
+            (goal_pose_old_x - robot_pose_current_x))
         if orientation_goal_new < 0:
             orientation_goal_new += (2 * math.pi)
         # TODO Goal des Robots nutzen
-        distance_old = math.sqrt((robot_pose_old_x - (goal_pose_old_x + (self.simulation.getGoalWidth() / 2))) ** 2 +
-                                 (robot_pose_old_y - (goal_pose_old_y + (self.simulation.getGoalLength() / 2))) ** 2)
+        distance_old = math.sqrt((robot_pose_old_x - (goal_pose_old_x)) ** 2 +
+                                 (robot_pose_old_y - (goal_pose_old_y)) ** 2)
         distance_new = math.sqrt(
-            (robot_pose_current_x - (goal_pose_old_x + (self.simulation.getGoalWidth() / 2))) ** 2 +
-            (robot_pose_current_y - (goal_pose_old_y + (self.simulation.getGoalLength() / 2))) ** 2)
+            (robot_pose_current_x - (goal_pose_old_x)) ** 2 +
+            (robot_pose_current_y - (goal_pose_old_y)) ** 2)
         delta_dist = distance_old - distance_new
 
         ########### REWARD CALCULATION ################
@@ -144,7 +147,7 @@ class Environment:
         #                              orientation_goal_new, outOfArea, reachedPickup)
         reward = self.createReward03(robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
                                      orientation_goal_new, outOfArea, reachedPickup)
-        return (next_state, reward, not robot.isActive(), reachedPickup)
+        return (next_state, reward/10, not robot.isActive(), reachedPickup)
 
 
     def createReward01(self, robot, delta_dist, robot_orientation, orientation_goal_new, outOfArea, reachedPickup):
@@ -248,7 +251,7 @@ class Environment:
         angularDeviation = (abs(robot.angularDeviation / math.pi) *-1) + 0.5
 
 
-        reward = deltaDist + (angularDeviation/20)
+        reward = deltaDist + (angularDeviation/25)
 
         if outOfArea:
             reward += -1.0
@@ -272,12 +275,7 @@ class Environment:
         return (reward-timePenalty)
 
     def reset(self):
-
-        for robot in self.simulation.robots:
-            robot.reset()
-        for robot in self.simulation.robots:
-            robot.resetSonar(self.simulation.robots)
-
+        self.simulation.reset()
         self.steps_left = self.steps
         self.total_reward = 0.0
         self.done = False

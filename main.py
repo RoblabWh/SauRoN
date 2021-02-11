@@ -20,15 +20,15 @@ memory_size = 10000
 
 gamma = 0.999
 lr = 0.0001
-num_episodes = 800
+num_episodes = 1200
 steps = 1250
 
 arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 80
-angleStepsSonar = 4
-numbOfParallelEnvs = 1
+angleStepsSonar = 2
+numbOfParallelEnvs = 6
 numbOfRobots = 4
 
 taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     elif not args.training:
         #model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
         # additionalTerm = '_192135JAN20'
-        additionalTerm = '211712Jan21'
+        additionalTerm = '111235Feb21'
         # additionalTerm = '_081220MultiRobTrain'
         # additionalTerm = ''
         model.load_weights('models\A2C_actor_Critic_' + args.mode + additionalTerm + '.h5')

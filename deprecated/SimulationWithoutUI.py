@@ -1,9 +1,7 @@
-from PyQt5.QtCore import QTimer
 import Robot
-from StationWithoutUI import Station
+from deprecated.StationWithoutUI import Station
 
-import math, random
-import time
+import math
 
 from Borders import CollidorLine
 

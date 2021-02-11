@@ -38,10 +38,10 @@ class Simulation:
         #TODO mehrere Robots mit eigenen Pickup stationen erstellen
 
         # Erstelle Stationen und Roboter
-        self.pickUp = Station(5, 1.2, 0.75, 0.75, 0, self.scaleFactor)
-        self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 3, self.scaleFactor)
-        self.pickUp3 = Station(9, 1.1, 0.75, 0.75, 1, self.scaleFactor) #12, 4.1 gute ergebnisse mit trainierte Netz vom 19Jan  #2, 5.1 geht für das neuste
-        self.pickUp4 = Station(13, 1.3, 0.75, 0.75, 2, self.scaleFactor)
+        self.pickUp = Station(5, 1.2, 1, 0, self.scaleFactor)
+        self.pickUp2 = Station(1.15, 1.25, 1, 3, self.scaleFactor)
+        self.pickUp3 = Station(9, 0.8, 1, 1, self.scaleFactor) #12, 4.1 gute ergebnisse mit trainierte Netz vom 19Jan  #2, 5.1 geht für das neuste
+        self.pickUp4 = Station(13, 1.3, 1, 2, self.scaleFactor)
         self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
         # self.stations = [self.pickUp, self.pickUp3]#, self.pickUp4]
 
@@ -55,7 +55,7 @@ class Simulation:
         # self.robots = [self.robot2]#, self.robot]#, self.robot3]
 
         for robot in self.robots:
-            robot.reset()
+            robot.reset(self.stations)
         for robot in self.robots:
             robot.resetSonar(self.robots)
 
@@ -69,6 +69,61 @@ class Simulation:
 
 
         # self.plotterWindow = PlotterWindow(app)
+
+    def reset(self):
+        randomSim = True
+        robotsPositions = []
+        orientations = []
+        if(randomSim):
+            stationRadius = self.stations[0].getRadius()
+            robotRadius = self.robots[0].getRadius()
+            clearance = 0.25
+            stationPosLimitsX = [stationRadius + clearance, self.arenaWidth - stationRadius - clearance]
+            stationPosLimitsY = [stationRadius + clearance, self.arenaLength - stationRadius - clearance]
+            stationDistance = stationRadius * 2 + 2 * robotRadius + clearance
+            robotPosLimitsX = [robotRadius + clearance, self.arenaWidth - robotRadius - clearance]
+            robotPosLimitsY = [robotRadius + clearance, self.arenaLength - robotRadius - clearance]
+            robotDistance = robotRadius * 2 + clearance
+            robotStationDistance = robotRadius * 2 + stationRadius + clearance
+
+            stationPositions = [ (random.uniform(stationPosLimitsX[0], stationPosLimitsX[1]),
+                                  random.uniform(stationPosLimitsY[0], stationPosLimitsY[1])) ]
+
+            for i in range(len(self.stations)-1):
+                while True:
+                    randPos = (random.uniform(stationPosLimitsX[0], stationPosLimitsX[1]),
+                               random.uniform(stationPosLimitsY[0], stationPosLimitsY[1]))
+                    if(self.isFarEnoughApart(stationPositions, randPos, stationDistance)):
+                        stationPositions.append(randPos)
+                        break
+            for i, s in enumerate(self.stations):
+                s.setPos(stationPositions[i])
+            for i in range(len(self.robots)):
+                while True:
+                    randPos = (random.uniform(robotPosLimitsX[0], robotPosLimitsX[1]),
+                               random.uniform(robotPosLimitsY[0], robotPosLimitsY[1]))
+                    if(self.isFarEnoughApart(stationPositions, randPos, robotStationDistance)):
+                        if(self.isFarEnoughApart(robotsPositions, randPos, robotDistance)):
+                            robotsPositions.append(randPos)
+                            break
+            orientations = [random.uniform(0, math.pi*2) for _ in range(len(self.robots))]
+
+        for i, r in enumerate(self.robots):
+            r.reset(self.stations, robotsPositions[i], orientations[i])
+
+
+        for robot in self.robots:
+            robot.resetSonar(self.robots)
+
+
+    def isFarEnoughApart(self, stationPositions, randPos, minDist):
+
+        for pos in stationPositions:
+            dist = math.sqrt((pos[0]-randPos[0])**2+(pos[1]-randPos[1])**2)
+            if(dist<minDist):
+                return False
+
+        return True
 
     def getRobot(self):
         return self.robot
@@ -150,7 +205,7 @@ class Simulation:
                 # Wenn der Roboter mit der PickUpStation kollidiert und sie als Ziel hat wird ein neues Ziel generiert
                 # und reachedPickUp auf True gesetzt, ansonsten bleibt das alte Ziel
                 #if robot.hasGoal(self.pickUp):
-                if robot.collideWithTargetStation():
+                if robot.collideWithTargetStationCircular():
                     reachedPickUp = True
                 #     goal = (self.delivery.getPosX(), self.delivery.getPosY())
                 # else:

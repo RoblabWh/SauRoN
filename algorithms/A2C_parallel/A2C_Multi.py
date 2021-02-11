@@ -244,6 +244,60 @@ class A2C_Multi:
     def save_weights(self, path):
         self.network.saveWeights(path)
 
+    def loadWeights(self, path):
+        self.network.load
+
+    def load_weights(self, path):
+        self.network.load_weights(path)
+
+        # def load_weights(self, path_actor, path_critic):
+        #     self.critic.load_weights(path_critic)
+        #     self.actor.load_weights(path_actor)
+
+    def execute(self, env, args):
+        robotsCount = self.numbOfRobots
+
+        for e in range(0, 4):
+
+            env.reset()
+            # TODO nach erstem Mal auf trainiertem env sowas wie environment.randomizeForTesting() einbauen (alternativ hier ein fester Testsatz)
+            # robotsOldState = [env.get_observation(i) for i in range(0, robotsCount)]
+            robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
+            robotsDone = [False for i in range(0, robotsCount)]
+
+            while not env.is_done():
+
+                robotsActions = []
+                # Actor picks an action (following the policy)
+                for i in range(0, robotsCount):
+
+                    if not robotsDone[i]:
+                        aTmp = self.network.policy_action_certain(
+                            robotsOldState[i][0])  # , (rechedTargetList).count(True) / 100)
+                        a = np.ndarray.tolist(aTmp[0])[0]
+                    else:
+                        a = [None, None]
+
+                    robotsActions.append(a)
+
+                robotsStates = env.step(robotsActions)[0]
+
+                rewards = ''
+                for i, stateData in enumerate(robotsStates):
+                    new_state = stateData[0]
+                    rewards += (str(i) + ': ' + str(stateData[1]) + '   ')
+                    done = stateData[2]
+
+                    # if (done):
+                    #     reachedPickup = stateData[3]
+                    #     rechedTargetList.pop(0)
+                    #     rechedTargetList.append(reachedPickup)
+
+                    robotsOldState[i] = new_state
+                    if not robotsDone[i]:
+                        robotsDone[i] = done
+                print(rewards)
+
 
 # Bug beim Importieren -> deswegen AverageMeter hierdrin kopiert
 class AverageMeter(object):

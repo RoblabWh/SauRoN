@@ -175,6 +175,30 @@ class A2C_Network:
     def setWeights(self, weights):
         self._model.set_weights(weights)
 
+    def load_weights(self, path):
+        self._model.load_weights(path)
+
+    def policy_action_certain(self, s):  # TODO obs_timestep mit übergeben
+        """ Use the actor to predict the next action to take, using the policy
+        """
+        # std = ((1-successrate)**2)*0.55
+
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))])
+        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))])
+        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
+        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
+        # timesteps = np.array([np.array(0) for i in range(0, len(s))])
+        timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
+        if (self.timePenalty):
+            mu = self._sample(
+                [np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]),
+                 np.array([timesteps])])
+        else:
+            mu = self._sample(
+                [np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])])
+
+        return mu
+
 
 ########################################################################
 ######################## Helper classes for NN #########################
