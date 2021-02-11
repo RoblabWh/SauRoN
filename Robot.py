@@ -728,6 +728,11 @@ class FastCollisionRay2:
 
         vX = colX - x1
         vY = colY - y1
+        # normalize vector to a length of 1, so that the t parameters of the line-line intersection can be compared with the t's from cirle-line intersection
+        vLength = np.sqrt(vX**2 + vY**2)
+        vX= vX/vLength
+        vY= vY/vLength
+
 
         # a,b und c als Array zum Berechnen der Diskriminanten
         a = vX * vX + vY * vY # array voll skalarere Werte
