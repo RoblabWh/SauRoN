@@ -20,15 +20,15 @@ memory_size = 10000
 
 gamma = 0.999
 lr = 0.0001
-num_episodes = 1200
+num_episodes = 1600
 steps = 1250
 
 arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 80
-angleStepsSonar = 2
-numbOfParallelEnvs = 6
+angleStepsSonar = 1
+numbOfParallelEnvs = 4
 numbOfRobots = 4
 
 taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     parser.add_argument('--parallel_envs', type=int, default=numbOfParallelEnvs, help='Number of parallel environments used during training in addition to the main training process')
     parser.add_argument('--numb_of_robots', type=int, default=numbOfRobots, help='Number of robots acting in one environment')
 
-    parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
+    parser.add_argument('--training', type=bool, default=False, help='Training or Loading trained weights')
 
     args = parser.parse_args(args)
 
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     elif not args.training:
         #model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
         # additionalTerm = '_192135JAN20'
-        additionalTerm = '111235Feb21'
+        additionalTerm = '251530Feb21'
         # additionalTerm = '_081220MultiRobTrain'
         # additionalTerm = ''
         model.load_weights('models\A2C_actor_Critic_' + args.mode + additionalTerm + '.h5')

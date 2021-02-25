@@ -16,6 +16,7 @@ class A2C_MultiprocessingActor:
         # self.av_meter = AverageMeter()
         self.gamma = args.gamma
         self.reachedTargetList = [False] * 100 #TODO mit erfolgsliste aus main Process zusammenlegen
+        self.level = 0
 
 
     def setWeights(self, weights):
@@ -24,12 +25,17 @@ class A2C_MultiprocessingActor:
     def getTargetList(self):
         return self.reachedTargetList
 
+    def setLevel(self, level):
+        self.level = level
+        for _ in range(len(self.reachedTargetList)):
+            self.reachedTargetList.pop(0)
+            self.reachedTargetList.append(False)
 
     def trainOneEpisode(self):
         # Reset episode
         zeit, cumul_reward, done = 0, 0, False
 
-        self.env.reset()
+        self.env.reset(self.level)
         robotsData = []
         robotsOldState = []
 

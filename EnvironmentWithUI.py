@@ -18,7 +18,6 @@ class Environment:
 
 
 
-
     def get_observation(self, i):
         #TODO den richtigen Roboter aus der Liste wählen mit parameter i --> getRobot(i)
         if self.args.mode == 'global':
@@ -147,7 +146,7 @@ class Environment:
         #                              orientation_goal_new, outOfArea, reachedPickup)
         reward = self.createReward03(robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
                                      orientation_goal_new, outOfArea, reachedPickup)
-        return (next_state, reward/10, not robot.isActive(), reachedPickup)
+        return (next_state, reward/2, not robot.isActive(), reachedPickup)
 
 
     def createReward01(self, robot, delta_dist, robot_orientation, orientation_goal_new, outOfArea, reachedPickup):
@@ -247,35 +246,36 @@ class Environment:
     def createReward03(self, robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
                        orientation_goal_new, outOfArea, reachedPickup):
         reward = 0
-        deltaDist = delta_dist #bei max Vel von 0.7 und einem 0.1 Timestep ist die max Dist 0.07m --> 7cm
-        angularDeviation = (abs(robot.angularDeviation / math.pi) *-1) + 0.5
+        deltaDist = delta_dist #bei max Vel von 0.7 und einem 0.1s Timestep ist die max delta_Dist 0.07m --> 7cm
+        # angularDeviation = (abs(robot.angularDeviation / math.pi) *-1) + 0.5
+        angularDeviation = (robot.debugAngle[0]-0.5)
 
 
-        reward = deltaDist + (angularDeviation/25)
+        # reward =  (angularDeviation*0.1)
+        reward = (deltaDist)# + (angularDeviation*0.08)
 
         if outOfArea:
-            reward += -1.0
+            reward += -2.0
 
         if reachedPickup:
-            reward += 1.0
+            reward += 2.0
 
-        timeInfluence = 0.05
-        bonusTime = 200
 
         timePenalty = 0
 
         if(self.args.time_penalty):
+            print("!!!!!TIMEPENALTY!!!")
+            timeInfluence = 0.05
+            bonusTime = 200
             if(self.steps-self.steps_left > bonusTime):
                 timePenalty = (1/self.steps) * (self.steps+bonusTime - self.steps_left) * timeInfluence
 
 
-        # print('Orient. Diff: ', angularDeviation, '   deltaDist: ', deltaDist, '   reward: ', reward)
-
 
         return (reward-timePenalty)
 
-    def reset(self):
-        self.simulation.reset()
+    def reset(self, level):
+        self.simulation.reset(level)
         self.steps_left = self.steps
         self.total_reward = 0.0
         self.done = False

@@ -39,25 +39,65 @@ class Simulation:
 
         # Erstelle Stationen und Roboter
         self.pickUp = Station(5, 1.2, 1, 0, self.scaleFactor)
-        self.pickUp2 = Station(1.15, 1.25, 1, 3, self.scaleFactor)
-        self.pickUp3 = Station(9, 0.8, 1, 1, self.scaleFactor) #12, 4.1 gute ergebnisse mit trainierte Netz vom 19Jan  #2, 5.1 geht für das neuste
-        self.pickUp4 = Station(13, 1.3, 1, 2, self.scaleFactor)
+        self.pickUp2 = Station(1.15, 1.25, 1, 1, self.scaleFactor)
+        self.pickUp3 = Station(9, 0.8, 1, 2, self.scaleFactor) #12, 4.1 gute ergebnisse mit trainierte Netz vom 19Jan  #2, 5.1 geht für das neuste
+        self.pickUp4 = Station(13, 1.3, 1, 3, self.scaleFactor)
         self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
-        # self.stations = [self.pickUp, self.pickUp3]#, self.pickUp4]
 
 
-        self.robot = Robot.Robot((10.5, 8.8), 3.2*math.pi/2, self.pickUp3, args, timeframes, self.walls, self.stations)
-        self.robot2 = Robot.Robot((4, 8.6), 2.6*math.pi/2, self.pickUp, args, timeframes, self.walls, self.stations)
-        self.robot3 = Robot.Robot((1.1, 8.9), 3.6*math.pi/2, self.pickUp4, args, timeframes, self.walls, self.stations)
-        self.robot4 = Robot.Robot((13.1, 3.9), 3.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
+        self.robot = Robot.Robot((10.5, 8.8), 3.2*math.pi/2, self.pickUp, args, timeframes, self.walls, self.stations)
+        self.robot2 = Robot.Robot((4, 8.6), 2.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
+        self.robot3 = Robot.Robot((1.1, 8.9), 3.6*math.pi/2, self.pickUp3, args, timeframes, self.walls, self.stations)
+        self.robot4 = Robot.Robot((13.1, 3.9), 3.6*math.pi/2, self.pickUp4, args, timeframes, self.walls, self.stations)
 
-        self.robots = [self.robot2, self.robot, self.robot3, self.robot4]
-        # self.robots = [self.robot2]#, self.robot]#, self.robot3]
+        self.robots = [self.robot, self.robot2, self.robot3, self.robot4]
 
-        for robot in self.robots:
-            robot.reset(self.stations)
-        for robot in self.robots:
-            robot.resetSonar(self.robots)
+        level00_robotPos = [(self.arenaWidth / 5, self.arenaLength - 3.5),
+                             (self.arenaWidth / 5 * 2, self.arenaLength - 3.5),
+                             (self.arenaWidth / 5 * 3, self.arenaLength - 3.5),
+                             (self.arenaWidth / 5 * 4, self.arenaLength - 3.5)]
+        level01_robotPos = [(self.arenaWidth / 5, self.arenaLength - 4),
+                            (self.arenaWidth / 5 * 2, self.arenaLength - 2.5),
+                            (self.arenaWidth / 5 * 3, self.arenaLength - 2.5),
+                            (self.arenaWidth / 5 * 4, self.arenaLength - 4)]
+        level02_robotPos = [(1, 1),
+                            (self.arenaWidth -1, 1),
+                            (self.arenaWidth -1, self.arenaLength -1),
+                            (1,  self.arenaLength -1)]
+        level03_robotPos = [(self.arenaWidth / 5 *2, 1),
+                            (self.arenaWidth / 5   , 1),
+                            (self.arenaWidth / 5 *4, self.arenaLength -1),
+                            (self.arenaWidth / 5 *3,  self.arenaLength -1)]
+
+        level00_robotOrient = [math.pi/2*3 for _ in range(4)]
+        level01_robotOrient = [math.pi/4 *7, math.pi/2 *3, math.pi/2 *3, math.pi/4 *5]
+        level02_robotOrient = [math.pi/4 , math.pi/4 *3, math.pi/4 *5, math.pi/4 *7]
+        level03_robotOrient = [math.pi/4 , math.pi/4 *3, math.pi/4 *5, math.pi/4 *7]
+
+        level00_stationsPos = [(self.arenaWidth / 5, 3.5),
+                                (self.arenaWidth / 5 * 2, 3.5),
+                                (self.arenaWidth / 5 * 3, 3.5),
+                                (self.arenaWidth / 5 * 4, 3.5)]
+        level01_stationsPos = [(self.arenaWidth / 2 - 3, 2.2),
+                               (self.arenaWidth / 2 -1.15, 3.1),
+                               (self.arenaWidth / 2 +1.15, 3.1),
+                               (self.arenaWidth / 2 + 3, 2.2)]
+        level02_stationsPos = [(self.arenaWidth / 2 -1, self.arenaLength / 2 -1),
+                               (self.arenaWidth / 2 +1, self.arenaLength / 2 -1),
+                               (self.arenaWidth / 2 +1, self.arenaLength / 2 +1),
+                               (self.arenaWidth / 2 -1, self.arenaLength / 2 +1)]
+        level03_stationsPos = [(self.arenaWidth / 5   , self.arenaLength -1),
+                               (self.arenaWidth / 5 *2, self.arenaLength -1),
+                               (self.arenaWidth / 5 *3, 1),
+                               (self.arenaWidth / 5 *4, 1)]
+        self.noiseStrength = [0.1, 0.2, 0.4, 0.8]
+        self.level = [(level00_robotPos,level00_robotOrient,level00_stationsPos),
+                      (level01_robotPos,level01_robotOrient,level01_stationsPos),
+                      (level02_robotPos,level02_robotOrient,level02_stationsPos),
+                      (level03_robotPos,level03_robotOrient,level03_stationsPos)]
+
+        self.reset(0)
+
 
         if self.hasUI:
             self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args)
@@ -70,8 +110,8 @@ class Simulation:
 
         # self.plotterWindow = PlotterWindow(app)
 
-    def reset(self):
-        randomSim = True
+    def reset(self, level):
+        randomSim = False
         robotsPositions = []
         orientations = []
         if(randomSim):
@@ -107,9 +147,17 @@ class Simulation:
                             robotsPositions.append(randPos)
                             break
             orientations = [random.uniform(0, math.pi*2) for _ in range(len(self.robots))]
+            for i, r in enumerate(self.robots):
+                r.reset(self.stations, robotsPositions[i], orientations[i])
 
-        for i, r in enumerate(self.robots):
-            r.reset(self.stations, robotsPositions[i], orientations[i])
+
+        else:
+            for i, s in enumerate(self.stations):
+                s.setPos(self.level[level][2][i])
+            for i, r in enumerate(self.robots):
+                r.reset(self.stations, self.level[level][0][i], self.level[level][1][i]+(random.uniform(0, math.pi)*self.noiseStrength[level]))
+
+
 
 
         for robot in self.robots:

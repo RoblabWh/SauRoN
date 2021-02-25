@@ -39,6 +39,7 @@ class A2C_Multi:
 
         ray.init()
         multiActors = [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, self.network.getWeights()) for _ in range(self.numbOfParallelEnvs)]
+        envLevel = [0 for _ in range(self.numbOfParallelEnvs+1)]
 
         # Main Loop
         tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
@@ -53,7 +54,7 @@ class A2C_Multi:
             zeit, cumul_reward, done = 0, 0, False
 
 
-            env.reset()
+            env.reset(envLevel[0])# parameter is level
             robotsData = []
             robotsOldState = []
 
@@ -115,10 +116,39 @@ class A2C_Multi:
             # if(allTrainingResults )
             allTrainingResults.append(robotsData)
             self.train_models(allTrainingResults)
-
             trainedWeights = self.network.getWeights()
+
             for actor in multiActors:
                 actor.setWeights.remote(trainedWeights)
+
+
+            #Checking current success and updating level if nessessary
+            allReachedTargetList = reachedTargetList.copy()
+
+            for actor in multiActors:
+                tmpTargetList = ray.get(actor.getTargetList.remote())
+                allReachedTargetList += tmpTargetList
+
+            targetDivider = (self.numbOfParallelEnvs + 1) * 100  # Erfolg der letzten 100
+            successrate = allReachedTargetList.count(True)/targetDivider
+
+            if(successrate>0.75):
+                currenthardest = envLevel[0]
+                if currenthardest != 3:
+                    for i in range(self.numbOfParallelEnvs-currenthardest): #bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
+                        envLevel[i] = envLevel[i]+1
+
+                    print(envLevel)
+
+                    for _ in range(len(reachedTargetList)):
+                        reachedTargetList.pop(0)
+                        reachedTargetList.append(False)
+
+                    for i, actor in enumerate(multiActors):
+                        actor.setLevel.remote(envLevel[i + 1])
+
+
+
 
 
             if e % self.args.save_intervall == 0:
@@ -129,14 +159,9 @@ class A2C_Multi:
             self.av_meter.update(cumul_reward)
 
             # Display score
-            allReachedTargetList = reachedTargetList.copy()
 
-            for actor in multiActors:
-                tmpTargetList = ray.get(actor.getTargetList.remote())
-                allReachedTargetList += tmpTargetList
 
-            targetDivider = (self.numbOfParallelEnvs + 1) * 100  # Erfolg der letzten 100
-            tqdm_e.set_description("Reward Episode: " + str(cumul_reward) + " -- Average Reward: " + str(self.av_meter.avg) + " Average Reached Target (last 100): " + str(allReachedTargetList.count(True)/targetDivider))
+            tqdm_e.set_description("Reward Episode: " + str(cumul_reward) + " -- Average Reward: " + str(self.av_meter.avg) + " Average Reached Target (last 100): " + str(successrate))
             tqdm_e.refresh()
 
 
@@ -257,9 +282,9 @@ class A2C_Multi:
     def execute(self, env, args):
         robotsCount = self.numbOfRobots
 
-        for e in range(0, 4):
+        for e in range(0, 7):
 
-            env.reset()
+            env.reset(e%4)
             # TODO nach erstem Mal auf trainiertem env sowas wie environment.randomizeForTesting() einbauen (alternativ hier ein fester Testsatz)
             # robotsOldState = [env.get_observation(i) for i in range(0, robotsCount)]
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]

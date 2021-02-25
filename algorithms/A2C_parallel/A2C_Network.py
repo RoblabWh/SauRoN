@@ -136,6 +136,7 @@ class A2C_Network:
                 [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity], [self._mu])
 
     def select_action_continuous_clip(self, mu, var):
+        print(var)
         return clip(mu + exp(var) * random_normal(shape(mu)), -1.0, 1.0)
 
     def neglog_continuous(self, action, mu, var):
