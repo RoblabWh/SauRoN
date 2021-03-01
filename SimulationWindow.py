@@ -44,6 +44,7 @@ class SimulationWindow(QMainWindow):
 
         self.sonarShowing = True
         self.simShowing = True
+        self.SaveNetClicked = False
         self.mode = args.mode
 
 
@@ -66,6 +67,12 @@ class SimulationWindow(QMainWindow):
         self.lbSteps.setFont(QFont("Helvetica", 14, QFont.Black, ))
         self.lbSteps.setStyleSheet("color: rgba(0,0 ,0, 96);")
 
+        self.btSaveNet = QPushButton(self)
+        self.btSaveNet.clicked.connect(self.clickedSaveNet)
+        self.btSaveNet.move(290, 0)
+        self.btSaveNet.setFixedWidth(120)
+        self.btSaveNet.setText("Netz speichern")
+
         if self.mode == 'sonar':
             self.btSonar = QPushButton(self)
             self.btSonar.clicked.connect(self.clickedSonar)
@@ -81,12 +88,16 @@ class SimulationWindow(QMainWindow):
             self.sonarShowing = True
         self.updateButtons()
 
+
     def clickedSimulation(self):
         if self.simShowing:
             self.simShowing = False
         elif not self.simShowing:
             self.simShowing = True
         self.updateButtons()
+
+    def clickedSaveNet(self):
+        self.SaveNetClicked = True
 
 
     def updateButtons(self):
@@ -120,4 +131,10 @@ class SimulationWindow(QMainWindow):
             self.repaint()
             self.lbSteps.setText(str(stepsLeft))
         self.app.processEvents()
+
+        if self.SaveNetClicked:
+            self.SaveNetClicked = False
+            return True
+        else:
+            return False
 

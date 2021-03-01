@@ -114,6 +114,7 @@ class Simulation:
         randomSim = False
         robotsPositions = []
         orientations = []
+
         if(randomSim):
             stationRadius = self.stations[0].getRadius()
             robotRadius = self.robots[0].getRadius()
@@ -130,12 +131,14 @@ class Simulation:
                                   random.uniform(stationPosLimitsY[0], stationPosLimitsY[1])) ]
 
             for i in range(len(self.stations)-1):
+
                 while True:
                     randPos = (random.uniform(stationPosLimitsX[0], stationPosLimitsX[1]),
                                random.uniform(stationPosLimitsY[0], stationPosLimitsY[1]))
                     if(self.isFarEnoughApart(stationPositions, randPos, stationDistance)):
                         stationPositions.append(randPos)
                         break
+
             for i, s in enumerate(self.stations):
                 s.setPos(stationPositions[i])
             for i in range(len(self.robots)):

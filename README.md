@@ -17,5 +17,17 @@ pip install ray
 pip install tqdm
 
 
-
 for tensorflow-gpu install latest Cuda drivers
+
+
+### Genaue Reihenfolge:
+
+1. Anaconda Community Version installieren
+2. conda create -n aiarena python=3.6
+3. pip install tensorflow==2.2.0
+4. pip install keras==2.3.1
+5. conda install -c anaconda pyqt
+6. conda install -c anaconda pyqtgraph
+7. pip install pynput
+8. pip install ray
+9. pip install tqdm

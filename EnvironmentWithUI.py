@@ -18,6 +18,7 @@ class Environment:
 
 
 
+
     def get_observation(self, i):
         #TODO den richtigen Roboter aus der Liste wählen mit parameter i --> getRobot(i)
         if self.args.mode == 'global':
