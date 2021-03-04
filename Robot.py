@@ -327,7 +327,6 @@ class Robot:
             linVel += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
             if linVel > self.maxLinearVelocity:
                 linVel = self.maxLinearVelocity
-
         # bremsen
         elif linVel > tarLinVel:
             linVel += self.minLinearAcceleration * dt
@@ -339,7 +338,6 @@ class Robot:
             angVel += self.maxAngularAcceleration * dt
             if angVel > self.maxAngularVelocity:
                 angVel = self.maxAngularVelocity
-
         # nach rechts drehen
         elif angVel > tarAngVel:
             angVel += self.minAngularAcceleration * dt

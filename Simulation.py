@@ -267,7 +267,7 @@ class Simulation:
         if self.hasUI:
             if self.simulationWindow != 0:
                 for i, robot in enumerate(self.robots):
-                    saveWeights = self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
+                    self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
 
 
 
@@ -319,5 +319,5 @@ class Simulation:
             else:
                 robotsTerminations.append((None, None, None))
 
-        return robotsTerminations, saveWeights
+        return robotsTerminations
 

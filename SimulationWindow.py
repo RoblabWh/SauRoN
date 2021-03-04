@@ -57,6 +57,8 @@ class SimulationWindow(QMainWindow):
         self.painter = QPainter(self)
 
         self.initUI()
+        self.saveButtonListenrs = []
+
 
     def initUI(self):
         self.btSimulation = QPushButton(self)
@@ -91,7 +93,6 @@ class SimulationWindow(QMainWindow):
             self.sonarShowing = True
         self.updateButtons()
 
-
     def clickedSimulation(self):
         if self.simShowing:
             self.simShowing = False
@@ -100,7 +101,8 @@ class SimulationWindow(QMainWindow):
         self.updateButtons()
 
     def clickedSaveNet(self):
-        self.SaveNetClicked = True
+        for observer in self.saveButtonListenrs:
+            observer.saveCurrentWeights()
 
 
     def updateButtons(self):
@@ -139,12 +141,11 @@ class SimulationWindow(QMainWindow):
             self.lbSteps.setText(str(stepsLeft))
         self.app.processEvents()
 
-        if self.SaveNetClicked:
-            self.SaveNetClicked = False
-            return True
-        else:
-            return False
-
     def setWalls(self, walls):
         self.walls = walls
+
+    def setSaveListener(self, observer):
+        self.saveButtonListenrs.append(observer)
+
+
 

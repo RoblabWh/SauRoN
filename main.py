@@ -28,10 +28,11 @@ arenaLength = 10  # m
 
 scaleFactor = 80
 angleStepsSonar = 1
-numbOfParallelEnvs = 12
+numbOfParallelEnvs = 0
 numbOfRobots = 4
 
-taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
+# taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
+startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
 
 if __name__ == '__main__':
     args = None
@@ -40,7 +41,7 @@ if __name__ == '__main__':
     parser.add_argument('--nb_episodes', type=int, default=num_episodes, help='Number of training episodes')
     parser.add_argument('--save_intervall', type=int, default=50, help='Save Intervall')
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
-    parser.add_argument('--model_timestamp', type=str, default=taktischeZeit, help='Timestamp from when the model was created')
+    parser.add_argument('--model_timestamp', type=str, default=startTime, help='Timestamp from when the model was created')
     parser.add_argument('--alg', type=str, default='a2c', choices=['a2c', 'dqn'], help='Reinforcement Learning Algorithm')
     parser.add_argument('-lr', '--learningrate', type=float, default=lr, help='Learning Rate')
     parser.add_argument('--gamma', type=float, default=gamma, help='Gamma')
@@ -65,6 +66,7 @@ if __name__ == '__main__':
     parser.add_argument('--numb_of_robots', type=int, default=numbOfRobots, help='Number of robots acting in one environment')
 
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
+    parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
 
     args = parser.parse_args(args)
 
@@ -105,12 +107,15 @@ if __name__ == '__main__':
         model = DQN(act_dim, env_dim, args)
 
     if args.training:
+        if args.load_old:
+            additionalTerm = '_21-03-04--11-59'
+            # additionalTerm = ''
+            model.load_weights('models\A2C_actor_Critic_' + args.mode + additionalTerm + '.h5')
         model.train(env)
     elif not args.training:
         #model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
-        # additionalTerm = '_192135JAN20'
-        additionalTerm = '251530Feb21'
-        # additionalTerm = '_081220MultiRobTrain'
+        # additionalTerm = '251530Feb21'
+        additionalTerm = '_21-03-04--11-59'
         # additionalTerm = ''
         model.load_weights('models\A2C_actor_Critic_' + args.mode + additionalTerm + '.h5')
         model.execute(env, args)

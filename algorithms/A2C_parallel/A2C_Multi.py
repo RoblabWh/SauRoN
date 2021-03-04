@@ -40,12 +40,13 @@ class A2C_Multi:
         ray.init()
         multiActors = [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, self.network.getWeights()) for _ in range(self.numbOfParallelEnvs)]
         envLevel = [0 for _ in range(self.numbOfParallelEnvs+1)]
+        env.setUISaveListener(self)
 
         # Main Loop
         tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
 
         for e in tqdm_e:
-
+            self.curentEpisode = e
             #Start of episode for the parallel A2C actors with their own environment
             futures = [actor.trainOneEpisode.remote() for actor in multiActors]
 
@@ -55,7 +56,6 @@ class A2C_Multi:
 
 
             env.reset(envLevel[0])# parameter is level
-            # env.setUISaveListener(self)
             robotsData = []
             robotsOldState = []
             saveCurrentWeights = False
@@ -93,11 +93,9 @@ class A2C_Multi:
 
                 #environment makes a step with selected actions
                 results = env.step(robotsActions)
-                if saveCurrentWeights != True:
-                    saveCurrentWeights = results[1]
 
 
-                for i, dataCurrentFrameSingleRobot in enumerate(results[0]):
+                for i, dataCurrentFrameSingleRobot in enumerate(results):
 
                     if not True in robotsData[i][3]: #[environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
                         # print("dataCurent Frame 0 of env",results[j][1], dataCurrentFrame[0])
@@ -122,9 +120,6 @@ class A2C_Multi:
             if (e+1) % self.args.save_intervall == 0:
                 print('Saving')
                 self.save_weights(self.args.path)
-            if saveCurrentWeights:
-                print('Saving individual')
-                self.save_weights(self.args.path, "_"+str(e))
 
 
             allTrainingResults.append(robotsData)
@@ -159,11 +154,6 @@ class A2C_Multi:
 
                     for i, actor in enumerate(multiActors):
                         actor.setLevel.remote(envLevel[i + 1])
-
-
-
-
-
 
 
             # Update Average Rewards
@@ -277,6 +267,10 @@ class A2C_Multi:
             discounted_r[t] = cumul_r
         return discounted_r
 
+    def saveCurrentWeights(self):
+        print('Saving individual')
+        self.save_weights(self.args.path, "_e" + str(self.curentEpisode))
+
     def save_weights(self, path, additional=""):
         self.network.saveWeights(path, additional)
 
@@ -316,7 +310,7 @@ class A2C_Multi:
 
                     robotsActions.append(a)
 
-                robotsStates= env.step(robotsActions)[0]
+                robotsStates= env.step(robotsActions)
 
 
                 rewards = ''
@@ -333,7 +327,7 @@ class A2C_Multi:
                     robotsOldState[i] = new_state
                     if not robotsDone[i]:
                         robotsDone[i] = done
-                print(rewards)
+                # print(rewards)
 
 
 # Bug beim Importieren -> deswegen AverageMeter hierdrin kopiert

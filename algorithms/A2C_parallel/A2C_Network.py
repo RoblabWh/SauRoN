@@ -131,7 +131,7 @@ class A2C_Network:
 
             self._predict = function(
                 [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
-                [self._selected_action, self._value])
+                [self._selected_action, self._value, self._mu_var])
             self._sample = function(
                 [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity], [self._mu])
 
@@ -163,7 +163,8 @@ class A2C_Network:
         return action, values
 
     def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
-        action, values = self._predict([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity])
+        action, values, var = self._predict([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity])
+        print(var)
         return action, values
 
     def saveWeights(self, path, additional=""):

@@ -71,7 +71,7 @@ class A2C_MultiprocessingActor:
             # environment makes a step with selected actions
             results = self.env.step(robotsActions)
 
-            for i, dataCurrentFrameSingleRobot in enumerate(results[0]):  # results[1] hat id, die hierfür nicht mehr gebraucht wird
+            for i, dataCurrentFrameSingleRobot in enumerate(results):  # results[1] hat id, die hierfür nicht mehr gebraucht wird
 
                 if not True in robotsData[i][3]:  # [environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
                     # print("dataCurent Frame 0 of env",results[j][1], dataCurrentFrame[0])

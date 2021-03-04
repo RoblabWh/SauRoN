@@ -81,7 +81,7 @@ class Environment:
             tarLinVel, tarAngVel = action #self.get_velocity(action)
             robotsTarVels.append((tarLinVel, tarAngVel))
 
-        robotsTermination, saveWeights = self.simulation.update(robotsTarVels, self.steps_left)
+        robotsTermination = self.simulation.update(robotsTarVels, self.steps_left)
         robotsDataCurrentFrame = []
         for i, termination in enumerate(robotsTermination):
             if termination != (None, None, None):
@@ -92,7 +92,7 @@ class Environment:
         # print(self.steps_left, self.id, time1, time2, 'derEinzelne')
         #print("Env", time2-time1)
         #print(self.id, self.steps_left)
-        return (robotsDataCurrentFrame, saveWeights)
+        return robotsDataCurrentFrame
 
 
 
@@ -150,7 +150,7 @@ class Environment:
 
         reward = self.createReward04(robot, distance_new, distance_old, reachedPickup, outOfArea)
 
-        return (next_state, reward/2, not robot.isActive(), reachedPickup)
+        return (next_state, reward, not robot.isActive(), reachedPickup)
 
 
     def createReward01(self, robot, delta_dist, robot_orientation, orientation_goal_new, outOfArea, reachedPickup):
@@ -276,16 +276,16 @@ class Environment:
 
 
 
-        return (reward-timePenalty)
+        return (reward-timePenalty)/2
 
     def createReward04(self, robot, dist_new, dist_old, reachedPickup, collision):
 
         deltaDist = dist_old - dist_new
-        distPos = 0.01
-        distNeg = 0.002
+        distPos = 0.02
+        distNeg = 0.004
 
-        oriPos = 0.0001
-        oriNeg = 0.00002
+        oriPos = 0.001
+        oriNeg = 0.0002
 
         lastDistPos = 0.05
 
@@ -324,3 +324,6 @@ class Environment:
         self.steps_left = self.steps
         self.total_reward = 0.0
         self.done = False
+
+    def setUISaveListener(self, observer):
+        self.simulation.simulationWindow.setSaveListener(observer)
