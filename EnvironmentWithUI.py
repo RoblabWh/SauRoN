@@ -145,8 +145,11 @@ class Environment:
         # reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
         # reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
         #                              orientation_goal_new, outOfArea, reachedPickup)
-        reward = self.createReward03(robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-                                     orientation_goal_new, outOfArea, reachedPickup)
+        #reward = self.createReward03(robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
+        #                             orientation_goal_new, outOfArea, reachedPickup)
+
+        reward = self.createReward04(robot, distance_new, distance_old, reachedPickup, outOfArea)
+
         return (next_state, reward/2, not robot.isActive(), reachedPickup)
 
 
@@ -274,6 +277,47 @@ class Environment:
 
 
         return (reward-timePenalty)
+
+    def createReward04(self, robot, dist_new, dist_old, reachedPickup, collision):
+
+        deltaDist = dist_old - dist_new
+        distPos = 0.01
+        distNeg = 0.002
+
+        oriPos = 0.0001
+        oriNeg = 0.00002
+
+        lastDistPos = 0.05
+
+        if deltaDist > 0:
+            rewardDist = deltaDist * distPos
+        else:
+            rewardDist = deltaDist * distNeg
+
+        angularDeviation = (abs(robot.angularDeviation / math.pi) *-2) +1
+
+        if angularDeviation > 0:
+            rewardOrient = angularDeviation * oriPos
+        else:
+            rewardOrient = angularDeviation * oriNeg
+
+        lastBestDistance = robot.bestDistToGoal
+        distGoal = dist_new
+        rewardLastDist = 0
+
+        if distGoal < lastBestDistance:
+            rewardLastDist = (lastBestDistance - distGoal) * lastDistPos
+            robot.bestDistToGoal = distGoal
+
+        if collision:
+            reward = -1
+        elif reachedPickup:
+            reward = 1
+        else:
+            reward = rewardDist + rewardOrient + rewardLastDist
+
+        return reward
+
 
     def reset(self, level):
         self.simulation.reset(level)

@@ -126,6 +126,8 @@ class Robot:
         if walls != None:
             self.walls = walls
 
+        self.bestDistToGoal = goalDist
+
     def resetSonar(self, robots):
         if self.args.mode == 'sonar':
             for _ in range(self.time_steps):
@@ -696,7 +698,7 @@ class FastCollisionRay2:
         t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))*denominator
 
         t1 = np.where((t2<0) | (t2>1), -1, t1)
-        t1 = np.where (t1>=0, t1, 2048)
+        t1 = np.where(t1>=0, t1, 2048)
         # t1NearestHit = np.min(t1[np.greater_equal(t1, 0)])
         t1NearestHit = np.amin(t1, axis=1)
 
