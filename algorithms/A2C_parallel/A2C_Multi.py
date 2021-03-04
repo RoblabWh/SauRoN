@@ -55,8 +55,10 @@ class A2C_Multi:
 
 
             env.reset(envLevel[0])# parameter is level
+            # env.setUISaveListener(self)
             robotsData = []
             robotsOldState = []
+            saveCurrentWeights = False
 
             for i in range(self.numbOfRobots):
 
@@ -90,10 +92,12 @@ class A2C_Multi:
                         robotsData[i][4].append(c)
 
                 #environment makes a step with selected actions
-                results =  env.step(robotsActions)
+                results = env.step(robotsActions)
+                if saveCurrentWeights != True:
+                    saveCurrentWeights = results[1]
 
 
-                for i, dataCurrentFrameSingleRobot in enumerate(results[0]): # results[1] hat id, die hierfür nicht mehr gebraucht wird
+                for i, dataCurrentFrameSingleRobot in enumerate(results[0]):
 
                     if not True in robotsData[i][3]: #[environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
                         # print("dataCurent Frame 0 of env",results[j][1], dataCurrentFrame[0])
@@ -114,6 +118,15 @@ class A2C_Multi:
 
             allTrainingResults = ray.get(futures)
             # if(allTrainingResults )
+
+            if (e+1) % self.args.save_intervall == 0:
+                print('Saving')
+                self.save_weights(self.args.path)
+            if saveCurrentWeights:
+                print('Saving individual')
+                self.save_weights(self.args.path, "_"+str(e))
+
+
             allTrainingResults.append(robotsData)
             self.train_models(allTrainingResults)
             trainedWeights = self.network.getWeights()
@@ -134,7 +147,7 @@ class A2C_Multi:
 
             if(successrate>0.75):
                 currenthardest = envLevel[0]
-                if currenthardest != 3:
+                if currenthardest != 7:
                     for i in range(self.numbOfParallelEnvs-currenthardest): #bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
                         envLevel[i] = envLevel[i]+1
 
@@ -151,9 +164,7 @@ class A2C_Multi:
 
 
 
-            if e % self.args.save_intervall == 0:
-                print('Saving')
-                self.save_weights(self.args.path)
+
 
             # Update Average Rewards
             self.av_meter.update(cumul_reward)
@@ -266,8 +277,8 @@ class A2C_Multi:
             discounted_r[t] = cumul_r
         return discounted_r
 
-    def save_weights(self, path):
-        self.network.saveWeights(path)
+    def save_weights(self, path, additional=""):
+        self.network.saveWeights(path, additional)
 
     def loadWeights(self, path):
         self.network.load
@@ -282,9 +293,9 @@ class A2C_Multi:
     def execute(self, env, args):
         robotsCount = self.numbOfRobots
 
-        for e in range(0, 7):
+        for e in range(16):
 
-            env.reset(e%4)
+            env.reset(e%8)
             # TODO nach erstem Mal auf trainiertem env sowas wie environment.randomizeForTesting() einbauen (alternativ hier ein fester Testsatz)
             # robotsOldState = [env.get_observation(i) for i in range(0, robotsCount)]
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
@@ -305,7 +316,8 @@ class A2C_Multi:
 
                     robotsActions.append(a)
 
-                robotsStates = env.step(robotsActions)[0]
+                robotsStates= env.step(robotsActions)[0]
+
 
                 rewards = ''
                 for i, stateData in enumerate(robotsStates):

@@ -81,7 +81,7 @@ class Environment:
             tarLinVel, tarAngVel = action #self.get_velocity(action)
             robotsTarVels.append((tarLinVel, tarAngVel))
 
-        robotsTermination = self.simulation.update(robotsTarVels, self.steps_left)
+        robotsTermination, saveWeights = self.simulation.update(robotsTarVels, self.steps_left)
         robotsDataCurrentFrame = []
         for i, termination in enumerate(robotsTermination):
             if termination != (None, None, None):
@@ -92,7 +92,7 @@ class Environment:
         # print(self.steps_left, self.id, time1, time2, 'derEinzelne')
         #print("Env", time2-time1)
         #print(self.id, self.steps_left)
-        return (robotsDataCurrentFrame, self.id)
+        return (robotsDataCurrentFrame, saveWeights)
 
 
 

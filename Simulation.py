@@ -60,19 +60,31 @@ class Simulation:
                             (self.arenaWidth / 5 * 2, self.arenaLength - 2.5),
                             (self.arenaWidth / 5 * 3, self.arenaLength - 2.5),
                             (self.arenaWidth / 5 * 4, self.arenaLength - 4)]
-        level02_robotPos = [(1, 1),
-                            (self.arenaWidth -1, 1),
-                            (self.arenaWidth -1, self.arenaLength -1),
-                            (1,  self.arenaLength -1)]
+        level02_robotPos = [(1.5, 1.5),
+                            (self.arenaWidth -1.5, 1.5),
+                            (self.arenaWidth -1.5, self.arenaLength -1.5),
+                            (1.5,  self.arenaLength -1.5)]
         level03_robotPos = [(self.arenaWidth / 5 *2, 1),
                             (self.arenaWidth / 5   , 1),
                             (self.arenaWidth / 5 *4, self.arenaLength -1),
                             (self.arenaWidth / 5 *3,  self.arenaLength -1)]
+        level04_robotPos = level01_robotPos
+        level05_robotPos = level02_robotPos
+        level06_robotPos = level03_robotPos
+        level07_robotPos = [(self.arenaWidth /2, self.arenaLength /2 - 3.5),
+                            (self.arenaWidth /2 +3.5, self.arenaLength /2),
+                            (self.arenaWidth /2, self.arenaLength / 2 + 3.5),
+                            (self.arenaWidth /2 -3.5, self.arenaLength / 2)]
 
         level00_robotOrient = [math.pi/2*3 for _ in range(4)]
         level01_robotOrient = [math.pi/4 *7, math.pi/2 *3, math.pi/2 *3, math.pi/4 *5]
         level02_robotOrient = [math.pi/4 , math.pi/4 *3, math.pi/4 *5, math.pi/4 *7]
         level03_robotOrient = [math.pi/4 , math.pi/4 *3, math.pi/4 *5, math.pi/4 *7]
+        level04_robotOrient = level01_robotOrient
+        level05_robotOrient = level02_robotOrient
+        level06_robotOrient = level03_robotOrient
+        level07_robotOrient = [math.pi/2 , math.pi, math.pi/2 *3, 0]
+
 
         level00_stationsPos = [(self.arenaWidth / 5, 3.5),
                                 (self.arenaWidth / 5 * 2, 3.5),
@@ -90,18 +102,53 @@ class Simulation:
                                (self.arenaWidth / 5 *2, self.arenaLength -1),
                                (self.arenaWidth / 5 *3, 1),
                                (self.arenaWidth / 5 *4, 1)]
-        self.noiseStrength = [0.1, 0.2, 0.4, 0.8]
-        self.level = [(level00_robotPos,level00_robotOrient,level00_stationsPos),
-                      (level01_robotPos,level01_robotOrient,level01_stationsPos),
-                      (level02_robotPos,level02_robotOrient,level02_stationsPos),
-                      (level03_robotPos,level03_robotOrient,level03_stationsPos)]
+        level04_stationsPos = [level01_stationsPos[2], level01_stationsPos[3], level01_stationsPos[0], level01_stationsPos[1]]
+        level05_stationsPos = [level02_stationsPos[2], level02_stationsPos[3], level02_stationsPos[0], level02_stationsPos[1]]
+        level06_stationsPos = level03_stationsPos
+        level07_stationsPos = [(self.arenaWidth /2, self.arenaLength / 2 + 5),
+                               (self.arenaWidth /2 -5, self.arenaLength / 2),
+                               (self.arenaWidth /2, self.arenaLength /2 - 5),
+                               (self.arenaWidth /2 +5, self.arenaLength /2)]
+
+        noWalls = self.walls
+        level06_walls = self.walls + [CollidorLine(0,self.arenaLength/3, self.arenaWidth/24 *6, self.arenaLength/3),
+                                      CollidorLine(self.arenaWidth/24 *6, self.arenaLength/3,self.arenaWidth/24 *6, self.arenaLength/3*2),
+                                      CollidorLine(self.arenaWidth/24 *9, self.arenaLength/3, self.arenaWidth/24 *9, self.arenaLength/3 *2),
+                                      CollidorLine(self.arenaWidth/24 *9, self.arenaLength/3, self.arenaWidth/24 *12, self.arenaLength/3),
+                                      CollidorLine(self.arenaWidth/2, 0, self.arenaWidth/2, self.arenaLength),
+                                      CollidorLine(self.arenaWidth/24 *12, self.arenaLength/3*2, self.arenaWidth/24 *15, self.arenaLength/3 *2),
+                                      CollidorLine(self.arenaWidth/24 *15, self.arenaLength/3, self.arenaWidth/24 *15, self.arenaLength/3 *2),
+                                      CollidorLine(self.arenaWidth/24 *18,self.arenaLength/3,self.arenaWidth/24 *18, self.arenaLength/3*2),
+                                      CollidorLine(self.arenaWidth/24 * 18,self.arenaLength/3 * 2,self.arenaWidth, self.arenaLength/3 * 2)]
+        centerW = self.arenaWidth/2
+        centerL = self.arenaLength/2
+        level07_walls = self.walls+[CollidorLine(0, centerL-1, centerW-1, centerL-1),
+                                    CollidorLine(0, centerL+1, centerW-1, centerL+1),
+                                    CollidorLine(centerW+1, centerL - 1, self.arenaWidth, centerL - 1),
+                                    CollidorLine(centerW+1, centerL + 1, self.arenaWidth, centerL + 1),
+                                    CollidorLine(centerW-1, 0 , centerW-1, centerL-1),
+                                    CollidorLine(centerW+1, 0 , centerW+1, centerL-1),
+                                    CollidorLine(centerW-1, centerL+1 , centerW-1, self.arenaLength),
+                                    CollidorLine(centerW+1, centerL+1 , centerW+1, self.arenaLength)]
+
+        self.noiseStrength = [0.1, 0.2, 0.33, 0.5, 0.66, 0.2, 0.5, 0.15]
+        self.level = [(level00_robotPos,level00_robotOrient,level00_stationsPos, noWalls),
+                      (level01_robotPos,level01_robotOrient,level01_stationsPos, noWalls),
+                      (level02_robotPos,level02_robotOrient,level02_stationsPos, noWalls),
+                      (level03_robotPos,level03_robotOrient,level03_stationsPos, noWalls),
+                      (level04_robotPos,level04_robotOrient,level04_stationsPos, noWalls),
+                      (level05_robotPos,level05_robotOrient,level05_stationsPos, noWalls),
+                      (level06_robotPos,level06_robotOrient,level06_stationsPos, level06_walls),
+                      (level07_robotPos,level07_robotOrient,level07_stationsPos, level07_walls)]
+        self.simulationWindow = None
 
         self.reset(0)
 
-
         if self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args)
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls)
             self.simulationWindow.show()
+
+
 
         self.simTime = 0  # s
         self.simTimestep = 0.1  # s
@@ -158,13 +205,12 @@ class Simulation:
             for i, s in enumerate(self.stations):
                 s.setPos(self.level[level][2][i])
             for i, r in enumerate(self.robots):
-                r.reset(self.stations, self.level[level][0][i], self.level[level][1][i]+(random.uniform(0, math.pi)*self.noiseStrength[level]))
-
-
-
+                r.reset(self.stations, self.level[level][0][i], self.level[level][1][i]+(random.uniform(0, math.pi)*self.noiseStrength[level]), self.level[level][3])
 
         for robot in self.robots:
             robot.resetSonar(self.robots)
+        if self.hasUI and self.simulationWindow != None:
+            self.simulationWindow.setWalls(self.level[level][3])
 
 
     def isFarEnoughApart(self, stationPositions, randPos, minDist):
@@ -217,10 +263,11 @@ class Simulation:
             for i, robot in enumerate(self.robots):
                 if robotsTarVels[i] != (None, None):
                     robot.sonarReading(self.robots, stepsLeft, self.steps)
+        saveWeights = False
         if self.hasUI:
             if self.simulationWindow != 0:
                 for i, robot in enumerate(self.robots):
-                    self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
+                    saveWeights = self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
 
 
 
@@ -271,5 +318,6 @@ class Simulation:
                 robotsTerminations.append((collision, reachedPickUp, runOutOfTime))
             else:
                 robotsTerminations.append((None, None, None))
-        return robotsTerminations
+
+        return robotsTerminations, saveWeights
 

@@ -166,9 +166,9 @@ class A2C_Network:
         action, values = self._predict([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity])
         return action, values
 
-    def saveWeights(self, path):
+    def saveWeights(self, path, additional=""):
         path += 'A2C'
-        self._model.save_weights(path + '_actor_Critic_' + self.args.mode + self.args.model_timestamp +'.h5')
+        self._model.save_weights(path + '_actor_Critic_' + self.args.mode + self.args.model_timestamp + additional +'.h5')
 
     def getWeights(self):
         return  self._model.get_weights()

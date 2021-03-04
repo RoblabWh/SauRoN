@@ -2,6 +2,7 @@ from PyQt5.QtGui import QPainter, QFont
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel
 import RobotRepresentation
 from Station import Station
+from Borders import CollidorLine
 
 
 def initRobots(robots, scaleFactor, mode):
@@ -31,7 +32,7 @@ def initStations(stations, scaleFactor):
 
 class SimulationWindow(QMainWindow):
 
-    def __init__(self, application, robots, stations, args):
+    def __init__(self, application, robots, stations, args, walls):
         super().__init__()
 
         self.app = application
@@ -46,10 +47,12 @@ class SimulationWindow(QMainWindow):
         self.simShowing = True
         self.SaveNetClicked = False
         self.mode = args.mode
+        self.scaleFactor = args.scale_factor
 
 
         self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode)
         self.stations = stations#initStations(stations, args.scale_factor)
+        self.walls = walls
 
         self.painter = QPainter(self)
 
@@ -119,10 +122,14 @@ class SimulationWindow(QMainWindow):
     def paintEvent(self, event):
 
         self.painter.begin(self)
+
+        for wall in self.walls:
+            wall.paint(self.painter, self.scaleFactor)
         for station in self.stations:
             station.paint(self.painter)
         for robot in self.robotRepresentations:
             robot.paint(self.painter, self.sonarShowing)
+
         self.painter.end()
 
     def updateRobot(self, robot, num, stepsLeft):
@@ -137,4 +144,7 @@ class SimulationWindow(QMainWindow):
             return True
         else:
             return False
+
+    def setWalls(self, walls):
+        self.walls = walls
 

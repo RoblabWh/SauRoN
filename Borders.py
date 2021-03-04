@@ -1,3 +1,6 @@
+from PyQt5.QtGui import QBrush, QPen
+from PyQt5.QtCore import Qt
+
 class CollidorLine:
     def __init__(self,x1, y1, x2, y2, xn = 0, yn = 0):
         self.a = (x1, y1)
@@ -17,3 +20,7 @@ class CollidorLine:
 
     def getEnd(self):
         return self.b
+
+    def paint(self, painter, scaleFactor):
+        painter.setPen(QPen(Qt.black))
+        painter.drawLine(self.a[0] * scaleFactor, self.a[1] * scaleFactor, self.b[0] * scaleFactor, self.b[1] * scaleFactor)

@@ -62,7 +62,7 @@ class Robot:
         self.station = station
         self.walls = walls
 
-        #TODO only use with rectangular targets
+        #only use with rectangular targets
         self.collidorStationsWalls = []
         # for pickUp in allStations:
         #     if not station is pickUp:
@@ -79,7 +79,7 @@ class Robot:
             self.angTast = 0
 
 
-    def reset(self, allStations, pos = None, orientation = None):
+    def reset(self, allStations, pos = None, orientation = None, walls = None):
         """
         resets the robots position (to his starting position), his orientation (to his starting orientation)
         and sets all velocities back to zero.
@@ -123,6 +123,8 @@ class Robot:
         self.distances = []
         self.radarHits = []
         self.netOutput = (0, 0)
+        if walls != None:
+            self.walls = walls
 
     def resetSonar(self, robots):
         if self.args.mode == 'sonar':
@@ -255,7 +257,16 @@ class Robot:
         oriTargetVLength = distance
         oriRobotVLength = 1
 
-        angularDeviation = math.acos(skalarProd/(oriTargetVLength*oriRobotVLength))
+        ratio = skalarProd/(oriTargetVLength*oriRobotVLength)
+
+        if ratio>1 or ratio<-1:
+            print("oriRobotV:", oriRobotV, "| oriTargetV:", oriTargetV, "| skalarProd:", skalarProd, "| oriTargetVLength:", oriTargetVLength, "|ratio: ", ratio)
+            if ratio<-1:
+                ratio = -1
+            else:
+                ratio = 1
+
+        angularDeviation = math.acos(ratio)
 
         c = (self.getPosX()+oriRobotV[0], self.getPosY()+oriRobotV[1])
         angularDeviation = angularDeviation - math.pi
@@ -263,8 +274,9 @@ class Robot:
             angularDeviation = angularDeviation*-1
 
         self.angularDeviation = angularDeviation
+        # print(angularDeviation)
 
-        anglDeviationV=self.directionVectorFromAngle(angularDeviation)
+        anglDeviationV = self.directionVectorFromAngle(angularDeviation)
 
         orientation = [anglDeviationV[0], anglDeviationV[1]]
         self.debugAngle = orientation
@@ -546,11 +558,11 @@ class Robot:
         if key.char == 'w':
             self.linTast = 0.5
         if key.char == 'a':
-            self.angTast = -0.15
+            self.angTast = -0.005
         if key.char == 's':
             self.linTast = 0
         if key.char == 'd':
-            self.angTast = 0.15
+            self.angTast = 0.005
         if key.char == 'c':
             self.angTast = 0
 
@@ -636,59 +648,6 @@ class Robot:
         self.distances = distances
 
 
-
-import numpy as np
-class FastCollisionRay:
-    def __init__(self, rayOrigin, rayDirectionAngle):
-        self.rayOrigin = rayOrigin #np.array([[rayOrigin[0]],[rayOrigin[1]]], dtype=np.float)
-        self.rayDirection = (math.cos(rayDirectionAngle), math.sin(rayDirectionAngle))#np.array([math.cos(rayDirectionAngle), math.sin(rayDirectionAngle)], dtype=np.float)
-
-    def lineRayIntersectionPoint(self, points1, points2):
-        """
-
-        :param points1: Liste der Startpunkte von Kollisionslinien points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
-        :param points2: Liste der Endpunkte von Kollisionslinien points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
-        :return:
-        """
-
-        # # Ray-Line Segment Intersection Test in 2D
-        # # http://bit.ly/1CoxdrG
-        # v1 = self.rayOrigin - points1
-        # v2 = points2 - points1
-        # v3 = np.array([- self.rayDirection[1], self.rayDirection[0]])
-        # print(v1.shape)
-        # print(v2.shape)
-        # t1 = np.cross(v2, v1) / np.dot(v2, v3)
-        # t2 = np.dot(v1, v3) / np.dot(v2, v3)
-        # # jetzt hätten wir t1 und t2 für jede mögliche Kollisionswand, brauchen aber nur den kürzesten über 0
-        # iWhereT2betweenZeroAndOne = np.where(np.logical_and(t2>=0, t2<=1))
-        # t1Hits = np.take(t1, iWhereT2betweenZeroAndOne)
-        # t1NearestHit = np.min(t1Hits[np.greater_equal(t1Hits,0)])
-
-        # return [t1NearestHit, (self.rayOrigin + t1NearestHit * self.rayDirection)]
-        #Will crash if no Line collision is detected (in positive direction of the current ray)
-
-
-
-        x1 = self.rayOrigin[0] #originX
-        y1 = self.rayOrigin[1] #originY
-        x2 = x1 + self.rayDirection[0] #directionX
-        y2 = y1 + self.rayDirection[1] #directionY
-
-        x3 = points1[0] #lineStartXArray
-        y3 = points1[1] #lineStartYArray
-        x4 = points2[0] #lineEndXArray
-        y4 = points2[1] #lineEndYArray
-
-        t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-        t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-
-
-        iWhereT2betweenZeroAndOne = np.where(np.logical_and(t2 >= 0, t2 <= 1))
-        t1Hits = np.take(t1, iWhereT2betweenZeroAndOne)
-        t1NearestHit = np.min(t1Hits[np.greater_equal(t1Hits, 0)])
-
-        return [t1NearestHit, (self.rayOrigin[0] + t1NearestHit * self.rayDirection[0], self.rayOrigin[1] + t1NearestHit * self.rayDirection[1])]
 
 
 import numpy as np
@@ -779,7 +738,7 @@ class FastCollisionRay2:
         smallestTOfCircle = np.where((tc1<tc2), tc1, tc2)
         smallestTOfCircle = np.amin(smallestTOfCircle, axis=0)
 
-        t1NearestHit = np.where(smallestTOfCircle<2048, smallestTOfCircle, t1NearestHit)
+        t1NearestHit = np.where(((smallestTOfCircle<2048) & (smallestTOfCircle<t1NearestHit)), smallestTOfCircle, t1NearestHit)
 
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
         #TODO der neu t wert ist nihct normiert und daher muss er auf seinen eigenen vektor berchnet werden und nihct auf den normierten ursprungsvektor
