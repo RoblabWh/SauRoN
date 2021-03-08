@@ -27,15 +27,15 @@ class A2C_Network:
         self.rays = int(360/args.angle_steps)
         self.timePenalty = args.time_penalty
 
-        self._input_laser = Input(shape=(4, self.rays), dtype='float32', name='input_laser')
+        self._input_laser = Input(shape=(env_dim[0], self.rays), dtype='float32', name='input_laser')
         # Orientation input
-        self._input_orientation = Input(shape=(4, 2,), dtype='float32', name='input_orientation')
+        self._input_orientation = Input(shape=(env_dim[0], 2,), dtype='float32', name='input_orientation')
         # Distance input
-        self._input_distance = Input(shape=(4, 1,), dtype='float32', name='input_distance')
+        self._input_distance = Input(shape=(env_dim[0], 1,), dtype='float32', name='input_distance')
         # Velocity input
-        self._input_velocity = Input(shape=(4, 2,), dtype='float32', name='input_velocity')
+        self._input_velocity = Input(shape=(env_dim[0], 2,), dtype='float32', name='input_velocity')
         # Passed Time input
-        self._input_timestep = Input(shape=(4, 1,), dtype='float32', name='input_Timestep')
+        self._input_timestep = Input(shape=(env_dim[0], 1,), dtype='float32', name='input_Timestep')
 
         # Create actor and critic networks
         self.buildNetWithOpti()
@@ -164,7 +164,7 @@ class A2C_Network:
 
     def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
         action, values, var = self._predict([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity])
-        print(var)
+        # print(var)
         return action, values
 
     def saveWeights(self, path, additional=""):

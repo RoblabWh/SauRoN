@@ -11,6 +11,7 @@ class Environment:
         self.steps = args.steps
         self.steps_left = args.steps
         self.simulation = Simulation.Simulation(app, args, timeframes)
+        self.timeframs = timeframes
         self.total_reward = 0.0
         self.done = False
         self.shape = np.asarray([0]).shape
@@ -282,24 +283,27 @@ class Environment:
 
         deltaDist = dist_old - dist_new
         distPos = 0.02
-        distNeg = 0.004
+        distNeg = 0.004 #in Masterarbeit alles = 0 außer distPos (mit 0.1)
 
         oriPos = 0.001
         oriNeg = 0.0002
 
         lastDistPos = 0.05
 
+        rotatingNeg = -0.01
+
+
         if deltaDist > 0:
             rewardDist = deltaDist * distPos
         else:
-            rewardDist = deltaDist * distNeg
+            rewardDist = deltaDist * -distNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
         angularDeviation = (abs(robot.angularDeviation / math.pi) *-2) +1
 
         if angularDeviation > 0:
             rewardOrient = angularDeviation * oriPos
         else:
-            rewardOrient = angularDeviation * oriNeg
+            rewardOrient = angularDeviation * -oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
         lastBestDistance = robot.bestDistToGoal
         distGoal = dist_new
@@ -309,13 +313,26 @@ class Environment:
             rewardLastDist = (lastBestDistance - distGoal) * lastDistPos
             robot.bestDistToGoal = distGoal
 
+        #The robot is punished if it rotates for more than 3 frames at max rot vel
+        rewardLongDurationRotation = 0
+        rotatingMaxForNFrames = 0
+        for i in range(self.timeframs, 0, -1):
+            angV = robot.state[i-1][5]
+            if angV < 0.95 and angV > -0.95:
+                break
+            else:
+                rotatingMaxForNFrames += 1
+        if rotatingMaxForNFrames >= 3:
+            rewardLongDurationRotation = rotatingMaxForNFrames * rotatingNeg
+
+
         if collision:
             reward = -1
         elif reachedPickup:
             reward = 1
         else:
-            reward = rewardDist + rewardOrient + rewardLastDist
-
+            reward = rewardDist + rewardOrient #+ rewardLastDist + rewardLongDurationRotation
+        # print(rewardOrient, rewardLongDurationRotation)
         return reward
 
 

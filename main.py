@@ -20,7 +20,7 @@ memory_size = 10000
 
 gamma = 0.999
 lr = 0.0001
-num_episodes = 1200
+num_episodes = 1800
 steps = 1250
 
 arenaWidth = 22   # m
@@ -28,7 +28,8 @@ arenaLength = 10  # m
 
 scaleFactor = 80
 angleStepsSonar = 1
-numbOfParallelEnvs = 0
+timeFrames = 4
+numbOfParallelEnvs = 12
 numbOfRobots = 4
 
 # taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
@@ -62,6 +63,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  # Global oder Sonar einstellbar
     parser.add_argument('--time_penalty', type=str2bool, default='False', help='Reward function with time step penalty')
     parser.add_argument('--angle_steps', type=int, default=angleStepsSonar, help='Angle Steps for sonar training')
+    parser.add_argument('--time_frames', type=int, default=timeFrames, help='Number of Timeframes which will be analyzed by neural net')
     parser.add_argument('--parallel_envs', type=int, default=numbOfParallelEnvs, help='Number of parallel environments used during training in addition to the main training process')
     parser.add_argument('--numb_of_robots', type=int, default=numbOfRobots, help='Number of robots acting in one environment')
 
@@ -72,7 +74,7 @@ if __name__ == '__main__':
 
     if args.mode == 'sonar':
         states = int((360 / angleStepsSonar) + 7)
-        env_dim = (4, states)  # Timeframes, Robotstates
+        env_dim = (timeFrames, states)  # Timeframes, Robotstates
 
     elif args.mode == 'global':
         env_dim = (4, 9)

@@ -48,10 +48,10 @@ class Robot:
         self.minLinearVelocity = -0.7  # m/s
         self.maxLinearAcceleration = 1.5  # 5m/s^2
         self.minLinearAcceleration = -1.5  # 5m/s^2
-        self.maxAngularVelocity = 1 * math.pi  # rad/s
-        self.minAngularVelocity = -1 * math.pi  # rad/s
-        self.maxAngularAcceleration = 0.5  # rad/s^2
-        self.minAngularAcceleration = -0.5 # rad/s^2
+        self.maxAngularVelocity = 0.5 * math.pi  # rad/s
+        self.minAngularVelocity = -0.5 * math.pi  # rad/s
+        self.maxAngularAcceleration = 1.5  #rad/s^2
+        self.minAngularAcceleration = -1.5 #rad/s^2
 
         self.XYnorm = [args.arena_width, args.arena_length]
         self.directionnom = [-1, 1]#2 * math.pi]
@@ -558,11 +558,11 @@ class Robot:
         if key.char == 'w':
             self.linTast = 0.5
         if key.char == 'a':
-            self.angTast = -0.005
+            self.angTast = -math.pi
         if key.char == 's':
             self.linTast = 0
         if key.char == 'd':
-            self.angTast = 0.005
+            self.angTast = 0.1
         if key.char == 'c':
             self.angTast = 0
 
