@@ -296,14 +296,14 @@ class Environment:
         if deltaDist > 0:
             rewardDist = deltaDist * distPos
         else:
-            rewardDist = deltaDist * -distNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
+            rewardDist = deltaDist * distNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
         angularDeviation = (abs(robot.angularDeviation / math.pi) *-2) +1
 
         if angularDeviation > 0:
             rewardOrient = angularDeviation * oriPos
         else:
-            rewardOrient = angularDeviation * -oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
+            rewardOrient = angularDeviation * oriPos # -oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
         lastBestDistance = robot.bestDistToGoal
         distGoal = dist_new

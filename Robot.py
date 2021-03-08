@@ -393,8 +393,9 @@ class Robot:
             if angVel < self.minAngularVelocity:
                 angVel = self.minAngularVelocity
 
-        # return tarLinVel, tarAngVel
-        return linVel, angVel
+        return tarLinVel, tarAngVel
+        #return linVel, angVel
+
 
     def directionVectorFromAngle(self, direction):
         angX = math.cos(direction)
