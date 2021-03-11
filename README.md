@@ -1,3 +1,7 @@
+## Umgebung aus environment.yml erstellen
+conda env create -f environment.yml
+(falls das erste nicht geht, das vielleicht mal ausprobieren: conda-env create -n new_env -f=\path\to\base.yml)
+
 ## Umgebung
 
 conda create -n aiarena python=3.6
@@ -31,3 +35,7 @@ for tensorflow-gpu install latest Cuda drivers
 7. pip install pynput
 8. pip install ray
 9. pip install tqdm
+
+
+## Anaconda Umgebung yml File erstellen: 
+conda env export > environment.yml
