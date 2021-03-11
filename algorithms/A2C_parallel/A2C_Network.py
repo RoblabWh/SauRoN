@@ -167,9 +167,8 @@ class A2C_Network:
         # print(var)
         return action, values
 
-    def saveWeights(self, path, additional=""):
-        path += 'A2C'
-        self._model.save_weights(path + '_actor_Critic_' + self.args.mode + self.args.model_timestamp + additional +'.h5')
+    def saveWeights(self, path):
+        self._model.save_weights(path + '.h5')
 
     def getWeights(self):
         return  self._model.get_weights()

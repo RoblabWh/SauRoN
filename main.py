@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 import os
 from PyQt5.QtWidgets import QApplication
+import yaml
 
 import EnvironmentWithUI
 import sys
@@ -20,8 +21,8 @@ memory_size = 10000
 
 gamma = 0.999
 lr = 0.0001
-num_episodes = 1800
-steps = 1250
+num_episodes = 15000
+steps = 1500
 
 arenaWidth = 22   # m
 arenaLength = 10  # m
@@ -29,11 +30,21 @@ arenaLength = 10  # m
 scaleFactor = 80
 angleStepsSonar = 1
 timeFrames = 4
-numbOfParallelEnvs = 10
+numbOfParallelEnvs = 22
 numbOfRobots = 4
 
 # taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
+
+
+
+filename = 'A2C_actor_Critic_sonar_21-03-08--16-48_e565'
+filename = 'A2C_21-03-11--11-24_e0'
+filename = 'A2C_21-03-11--11-40_e89'
+filename = 'A2C_21-03-11--14-24_e94'
+filename = 'A2C_21-03-11--15-07'
+
+
 
 if __name__ == '__main__':
     args = None
@@ -72,27 +83,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args(args)
 
-    if args.mode == 'sonar':
-        states = int((360 / angleStepsSonar) + 7)
-        env_dim = (timeFrames, states)  # Timeframes, Robotstates
-
-    elif args.mode == 'global':
-        env_dim = (4, 9)
-
-
-    app = QApplication(sys.argv)
-    env = EnvironmentWithUI.Environment(app, args, env_dim[0], 3)
-    # env2 = Environment.Environment(app, args.steps, args, env_dim[0], 2)
-    # env3 = Environment.Environment(app, args.steps, args, env_dim[0], 3)
-    # env4 = Environment.Environment(app, args.steps, args, env_dim[0], 4)
-    # if(args.training):
-    #     envs = [Environment.Environment(args.steps, args, env_dim[0], i) for i in numbOfParallelEnvs]
-    #     envs.append(env)
-    #envs = [env, env2, env3, env4, env5, env6, env7, env8]
-
-
-    act_dim = np.asarray(env.get_actions()) #TODO bei kontinuierlichem 2 actions
-
     if args.path == "":
         args.path = os.path.join(os.getcwd(), "models", "")
 
@@ -101,6 +91,33 @@ if __name__ == '__main__':
 
     if args.manually:
         args.steps = 1000000
+        args.parallel_envs = 0
+
+    if args.load_old or not args.training:
+        # Read YAML file
+        with open(args.path + filename + ".yml", 'r') as stream:
+            data_loaded = yaml.load(stream, Loader=yaml.UnsafeLoader)
+            loadedArgs =  data_loaded[0]
+            args.steps = loadedArgs.steps
+            args.time_frames = loadedArgs.time_frames
+            args.time_penalty = loadedArgs.time_penalty
+            args.angle_steps = loadedArgs.angle_steps
+
+
+
+    if args.mode == 'sonar':
+        states = int((360 / angleStepsSonar) + 7)
+        env_dim = (args.time_frames, states)  # Timeframes, Robotstates
+
+    elif args.mode == 'global':
+        env_dim = (4, 9)
+
+
+    app = QApplication(sys.argv)
+    env = EnvironmentWithUI.Environment(app, args, env_dim[0], 3)
+
+
+    act_dim = np.asarray(env.get_actions()) #TODO bei kontinuierlichem 2 actions
 
     if args.alg == 'a2c':
         model = A2C_Multi(act_dim, env_dim, args)
@@ -110,17 +127,13 @@ if __name__ == '__main__':
 
     if args.training:
         if args.load_old:
-            additionalTerm = '_21-03-04--11-59'
-            # additionalTerm = ''
-            model.load_weights('models\A2C_actor_Critic_' + args.mode + additionalTerm + '.h5')
+            model.load_weights(args.path+filename+'.h5')
         model.train(env)
     elif not args.training:
-        #model.load_weights('models\A2C_actor_' + args.mode + '.h5', 'models\A2C_critic_' + args.mode + '.h5')
-        # additionalTerm = '251530Feb21'
-        additionalTerm = '_21-03-04--11-59'
-        # additionalTerm = ''
-        model.load_weights('models\A2C_actor_Critic_' + args.mode + additionalTerm + '.h5')
+        model.load_weights(args.path+filename+'.h5')
         model.execute(env, args)
+
+
 
 
 

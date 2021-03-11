@@ -50,8 +50,8 @@ class Robot:
         self.minLinearAcceleration = -1.5  # 5m/s^2
         self.maxAngularVelocity = 0.5 * math.pi  # rad/s
         self.minAngularVelocity = -0.5 * math.pi  # rad/s
-        self.maxAngularAcceleration = 1.5  #rad/s^2
-        self.minAngularAcceleration = -1.5 #rad/s^2
+        self.maxAngularAcceleration = 0.5 * math.pi   #rad/s^2
+        self.minAngularAcceleration = -0.5 * math.pi  #rad/s^2
 
         self.XYnorm = [args.arena_width, args.arena_length]
         self.directionnom = [-1, 1]#2 * math.pi]
@@ -101,19 +101,19 @@ class Robot:
         angVel = 0
         tarLinVel = 0
         tarAngVel = 0
-        goalX = self.station.getPosX() #random.randrange(100, self.XYnorm[0]-100)#self.goalX
-        goalY = self.station.getPosY() #random.randrange(100, self.XYnorm[1]-100)#self.goalY
-        self.station.reposition(goalX,goalY)
+        self.goalX = self.station.getPosX() #random.randrange(100, self.XYnorm[0]-100)#self.goalX
+        self.goalY = self.station.getPosY() #random.randrange(100, self.XYnorm[1]-100)#self.goalY
+        self.station.reposition(self.goalX,self.goalY)
 
         self.collidorStationsCircles = []
         for station in allStations:
             if not station is self.station:
                 self.collidorStationsCircles.append((station.getPosX(), station.getPosY(), station.getRadius()))
 
-        goalDist = math.sqrt((posX - goalX) ** 2 + (posY - goalY) ** 2)
+        goalDist = math.sqrt((posX - self.goalX) ** 2 + (posY - self.goalY) ** 2)
 
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
-        frame = [posX, posY, directionX, directionY, linVel, angVel, goalX, goalY, goalDist]
+        frame = [posX, posY, directionX, directionY, linVel, angVel, self.goalX, self.goalY, goalDist]
 
         for _ in range(self.time_steps):
             self.push_frame(frame)
@@ -509,7 +509,8 @@ class Robot:
         return self.state_raw[self.time_steps - 1][6]
 
     def getGoalY(self):
-        return self.denormdata(self.state[self.time_steps - 1][7], [0, self.XYnorm[1]])
+        # return self.denormdata(self.state[self.time_steps - 1][7], [0, self.XYnorm[1]])
+        return self.state_raw[self.time_steps - 1][7]
 
     def getVelocity(self):
         return self.getLinearVelocity(), self.getAngularVelocity()
@@ -557,13 +558,13 @@ class Robot:
     def on_press(self, key):
 
         if key.char == 'w':
-            self.linTast = 0.5
+            self.linTast = 1.5
         if key.char == 'a':
-            self.angTast = -math.pi
+            self.angTast = -1.6
         if key.char == 's':
-            self.linTast = 0
+            self.linTast = -1.5
         if key.char == 'd':
-            self.angTast = 0.1
+            self.angTast = 1.6
         if key.char == 'c':
             self.angTast = 0
 

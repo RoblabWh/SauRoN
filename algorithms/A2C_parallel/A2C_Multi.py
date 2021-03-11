@@ -4,18 +4,9 @@ import keras as k
 from algorithms.A2C_parallel.A2C_Network import A2C_Network
 from algorithms.A2C_parallel.A2C_MultiprocessingActor import A2C_MultiprocessingActor
 from tqdm import tqdm
-from keras.models import Model
-from keras.layers import Input, Dense, Flatten, Lambda, Conv1D, concatenate
-from keras.optimizers import RMSprop, Adam
-from keras.losses import mean_squared_error
-from keras.layers import Input, Conv1D, Dense, Flatten, concatenate, MaxPool1D, Lambda
-from keras.backend import max, mean, exp, log, function, squeeze, categorical_crossentropy,placeholder, sum, square, random_normal, shape, cast, clip, softmax, argmax
-from keras import backend as K
 import ray
-import time
-import datetime
-import multiprocessing
-import concurrent.futures
+import yaml
+
 
 
 class A2C_Multi:
@@ -142,8 +133,11 @@ class A2C_Multi:
 
             if(successrate>0.75):
                 currenthardest = envLevel[0]
-                if currenthardest != 7:
-                    for i in range(self.numbOfParallelEnvs-currenthardest): #bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
+                if currenthardest != 8:
+                    levelups = self.numbOfParallelEnvs-currenthardest
+                    if(self.numbOfParallelEnvs > 20):
+                        levelups =  self.numbOfParallelEnvs-2*currenthardest
+                    for i in range(levelups): #bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
                         envLevel[i] = envLevel[i]+1
 
                     print(envLevel)
@@ -272,7 +266,15 @@ class A2C_Multi:
         self.save_weights(self.args.path, "_e" + str(self.curentEpisode))
 
     def save_weights(self, path, additional=""):
-        self.network.saveWeights(path, additional)
+        path += 'A2C' + self.args.model_timestamp + additional
+
+        self.network.saveWeights(path)
+
+        data = [self.args]
+        with open(path+'.yml', 'w') as outfile:
+            yaml.dump(data, outfile, default_flow_style=False)
+
+
 
     def loadWeights(self, path):
         self.network.load
@@ -287,9 +289,9 @@ class A2C_Multi:
     def execute(self, env, args):
         robotsCount = self.numbOfRobots
 
-        for e in range(16):
+        for e in range(18):
 
-            env.reset(e%8)
+            env.reset(e%9)
             # TODO nach erstem Mal auf trainiertem env sowas wie environment.randomizeForTesting() einbauen (alternativ hier ein fester Testsatz)
             # robotsOldState = [env.get_observation(i) for i in range(0, robotsCount)]
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]

@@ -47,7 +47,6 @@ class RobotRepresentation:
         #     self.showSimulation = True
         # if keyboard.is_pressed('t'):
         #     self.showSimulation = False
-
         if self.mode == 'sonar' and self.isActive:
             if sonarShowing:
                 painter.setPen(QPen(self.lineColor, 1.5, Qt.DotLine))
@@ -80,6 +79,11 @@ class RobotRepresentation:
                          self.posY,
                          self.posX + self.radius * math.cos(self.direction),
                          self.posY + self.radius * math.sin(self.direction))
+
+
+        painter.setPen(QPen(Qt.red, self.thickness, self.lineStyle))
+        painter.drawEllipse(self.posX-1, self.posY-1, 2, 2)
+
 
 
 

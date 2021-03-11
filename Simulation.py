@@ -51,6 +51,8 @@ class Simulation:
         self.robot4 = Robot.Robot((13.1, 3.9), 3.6*math.pi/2, self.pickUp4, args, timeframes, self.walls, self.stations)
 
         self.robots = [self.robot, self.robot2, self.robot3, self.robot4]
+        if args.numb_of_robots<= 4:
+            self.robots = self.robots[:args.numb_of_robots]
 
         level00_robotPos = [(self.arenaWidth / 5, self.arenaLength - 3.5),
                              (self.arenaWidth / 5 * 2, self.arenaLength - 3.5),
@@ -64,6 +66,10 @@ class Simulation:
                             (self.arenaWidth -1.5, 1.5),
                             (self.arenaWidth -1.5, self.arenaLength -1.5),
                             (1.5,  self.arenaLength -1.5)]
+        level03b_robotPos = [(self.arenaWidth / 5, self.arenaLength - 2),
+                            (self.arenaWidth / 5 * 2, self.arenaLength - 2),
+                            (self.arenaWidth / 5 * 3, self.arenaLength - 2),
+                            (self.arenaWidth / 5 * 4, self.arenaLength - 2)]
         level03_robotPos = [(self.arenaWidth / 5 *2, 1),
                             (self.arenaWidth / 5   , 1),
                             (self.arenaWidth / 5 *4, self.arenaLength -1),
@@ -79,6 +85,7 @@ class Simulation:
         level00_robotOrient = [math.pi/2*3 for _ in range(4)]
         level01_robotOrient = [math.pi/4 *7, math.pi/2 *3, math.pi/2 *3, math.pi/4 *5]
         level02_robotOrient = [math.pi/4 , math.pi/4 *3, math.pi/4 *5, math.pi/4 *7]
+        level03b_robotOrient = [math.pi/2*3 for _ in range(4)]
         level03_robotOrient = [math.pi/4 , math.pi/4 *3, math.pi/4 *5, math.pi/4 *7]
         level04_robotOrient = level01_robotOrient
         level05_robotOrient = level02_robotOrient
@@ -98,6 +105,10 @@ class Simulation:
                                (self.arenaWidth / 2 +1, self.arenaLength / 2 -1),
                                (self.arenaWidth / 2 +1, self.arenaLength / 2 +1),
                                (self.arenaWidth / 2 -1, self.arenaLength / 2 +1)]
+        level03b_stationsPos = [(self.arenaWidth / 5, 3),
+                               (self.arenaWidth / 5 * 2, 3),
+                               (self.arenaWidth / 5 * 3, 3),
+                               (self.arenaWidth / 5 * 4, 3)]
         level03_stationsPos = [(self.arenaWidth / 5   , self.arenaLength -1),
                                (self.arenaWidth / 5 *2, self.arenaLength -1),
                                (self.arenaWidth / 5 *3, 1),
@@ -111,6 +122,8 @@ class Simulation:
                                (self.arenaWidth /2 +5, self.arenaLength /2)]
 
         noWalls = self.walls
+        level03b_walls = self.walls + [CollidorLine(self.arenaWidth/5, self.arenaLength/2 + 0.5, self.arenaWidth/5*2, self.arenaLength/2 + .5),
+                                       CollidorLine(self.arenaWidth/5 *3, self.arenaLength/2 + 0.5, self.arenaWidth/5 *4, self.arenaLength/2 + .5)]
         level06_walls = self.walls + [CollidorLine(0,self.arenaLength/3, self.arenaWidth/24 *6, self.arenaLength/3),
                                       CollidorLine(self.arenaWidth/24 *6, self.arenaLength/3,self.arenaWidth/24 *6, self.arenaLength/3*2),
                                       CollidorLine(self.arenaWidth/24 *9, self.arenaLength/3, self.arenaWidth/24 *9, self.arenaLength/3 *2),
@@ -131,11 +144,12 @@ class Simulation:
                                     CollidorLine(centerW-1, centerL+1 , centerW-1, self.arenaLength),
                                     CollidorLine(centerW+1, centerL+1 , centerW+1, self.arenaLength)]
 
-        self.noiseStrength = [0.1, 0.2, 0.33, 0.5, 0.66, 0.2, 0.5, 0.15]
+        self.noiseStrength = [0.1, 0.2, 0.33, 0.4, 0.15, 0.4, 0.2, 0.5, 0.15]
         self.level = [(level00_robotPos,level00_robotOrient,level00_stationsPos, noWalls),
                       (level01_robotPos,level01_robotOrient,level01_stationsPos, noWalls),
                       (level02_robotPos,level02_robotOrient,level02_stationsPos, noWalls),
                       (level03_robotPos,level03_robotOrient,level03_stationsPos, noWalls),
+                      (level03b_robotPos,level03b_robotOrient,level03b_stationsPos, level03b_walls),
                       (level04_robotPos,level04_robotOrient,level04_stationsPos, noWalls),
                       (level05_robotPos,level05_robotOrient,level05_stationsPos, noWalls),
                       (level06_robotPos,level06_robotOrient,level06_stationsPos, level06_walls),

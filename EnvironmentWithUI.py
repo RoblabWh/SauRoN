@@ -135,11 +135,11 @@ class Environment:
         if orientation_goal_new < 0:
             orientation_goal_new += (2 * math.pi)
         # TODO Goal des Robots nutzen
-        distance_old = math.sqrt((robot_pose_old_x - (goal_pose_old_x)) ** 2 +
-                                 (robot_pose_old_y - (goal_pose_old_y)) ** 2)
+        distance_old = math.sqrt((robot_pose_old_x - goal_pose_old_x) ** 2 +
+                                 (robot_pose_old_y - goal_pose_old_y) ** 2)
         distance_new = math.sqrt(
-            (robot_pose_current_x - (goal_pose_old_x)) ** 2 +
-            (robot_pose_current_y - (goal_pose_old_y)) ** 2)
+            (robot_pose_current_x - goal_pose_old_x) ** 2 +
+            (robot_pose_current_y - goal_pose_old_y) ** 2)
         delta_dist = distance_old - distance_new
 
         ########### REWARD CALCULATION ################
@@ -282,11 +282,11 @@ class Environment:
     def createReward04(self, robot, dist_new, dist_old, reachedPickup, collision):
 
         deltaDist = dist_old - dist_new
-        distPos = 0.02
-        distNeg = 0.004 #in Masterarbeit alles = 0 außer distPos (mit 0.1)
+        distPos = 0.03
+        distNeg = 0.008 #in Masterarbeit alles = 0 außer distPos (mit 0.1)
 
         oriPos = 0.001
-        oriNeg = 0.0002
+        oriNeg = 0.0008
 
         lastDistPos = 0.05
 
@@ -303,7 +303,7 @@ class Environment:
         if angularDeviation > 0:
             rewardOrient = angularDeviation * oriPos
         else:
-            rewardOrient = angularDeviation * oriPos # -oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
+            rewardOrient = angularDeviation * oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
         lastBestDistance = robot.bestDistToGoal
         distGoal = dist_new
@@ -333,6 +333,9 @@ class Environment:
         else:
             reward = rewardDist + rewardOrient #+ rewardLastDist + rewardLongDurationRotation
         # print(rewardOrient, rewardLongDurationRotation)
+        # print(round(reward,3), round(deltaDist, 3), round(rewardDist, 3), round(angularDeviation,3), round(rewardOrient,3))
+        # print(round(reward,4))
+
         return reward
 
 
