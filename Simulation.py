@@ -156,6 +156,7 @@ class Simulation:
                       (level07_robotPos,level07_robotOrient,level07_stationsPos, level07_walls)]
         self.simulationWindow = None
 
+
         self.reset(0)
 
         if self.hasUI:
@@ -278,10 +279,7 @@ class Simulation:
                 if robotsTarVels[i] != (None, None):
                     robot.sonarReading(self.robots, stepsLeft, self.steps)
         saveWeights = False
-        if self.hasUI:
-            if self.simulationWindow != 0:
-                for i, robot in enumerate(self.robots):
-                    self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
+
 
 
 
@@ -332,6 +330,12 @@ class Simulation:
                 robotsTerminations.append((collision, reachedPickUp, runOutOfTime))
             else:
                 robotsTerminations.append((None, None, None))
+
+
+        if self.hasUI:
+            if self.simulationWindow != 0:
+                for i, robot in enumerate(self.robots):
+                    self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
 
         return robotsTerminations
 

@@ -248,7 +248,7 @@ class Robot:
         target = (self.station.posX, self.station.posY)
         # target = (self.station.posX + (self.station.width / 2), self.station.posY + (self.station.length/2))
         distance = math.sqrt((self.getPosX() - target[0]) ** 2 + (self.getPosY() - target[1]) ** 2)
-        maxDist = math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[0] ** 2)
+        maxDist = math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[1] ** 2)
 
         # frame_sonar.append((distance / maxDist))
 
@@ -393,8 +393,8 @@ class Robot:
             if angVel < self.minAngularVelocity:
                 angVel = self.minAngularVelocity
 
-        return tarLinVel, tarAngVel
-        #return linVel, angVel
+        # return tarLinVel, tarAngVel
+        return linVel, angVel
 
 
     def directionVectorFromAngle(self, direction):
@@ -578,7 +578,7 @@ class Robot:
         twoPi = 2*math.pi
         radarHits = []
         distances = []
-        dir = (self.getDirectionAngle() + (.5*math.pi)) % (2*math.pi)   #offsets the first Collision Line by 90 degrees to avoid edge errors during a convolution in neural net
+        dir = (self.getDirectionAngle() + (math.pi)) % (2*math.pi)   #offsets the first Collision Line by 90 degrees to avoid edge errors during a convolution in neural net
         posX = self.getPosX()
         posY = self.getPosY()
 
@@ -691,7 +691,7 @@ class FastCollisionRay2:
         # Kleiner vorschlag von mir :)
         # Ersten den denominator berechnen, da er für t1 und t2 gleich ist.
         # 1 / ... um später für beiden die Multiplikation zu verwenden. Division ist die teuerste mathematische Operation ;)
-        denominator = 1 / ((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+        denominator = 1.0 / ((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
 
         # das koennte nochmal einen kleinen boost geben
         t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))*denominator

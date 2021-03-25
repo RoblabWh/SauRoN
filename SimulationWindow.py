@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel
 import RobotRepresentation
 from Station import Station
 from Borders import CollidorLine
+import DistanceGraph
 
 
 def initRobots(robots, scaleFactor, mode):
@@ -58,6 +59,10 @@ class SimulationWindow(QMainWindow):
 
         self.initUI()
         self.saveButtonListenrs = []
+        self.monitorGraph = None
+
+        if (True):
+            self.monitorGraph = DistanceGraph.DistanceGraph(application)
 
 
     def initUI(self):
@@ -135,11 +140,20 @@ class SimulationWindow(QMainWindow):
         self.painter.end()
 
     def updateRobot(self, robot, num, stepsLeft):
+
+
         self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing, robot.isActive(), robot.debugAngle)
         if self.simShowing:
+            observatedRobot = 0
+            if self.monitorGraph != None and num == observatedRobot:
+                distancesNormRob0 = robot.stateSonar[len(robot.stateSonar) - 1][0]
+                self.monitorGraph.plot(range(len(distancesNormRob0)), distancesNormRob0)
+
             self.repaint()
             self.lbSteps.setText(str(stepsLeft))
         self.app.processEvents()
+
+
 
     def setWalls(self, walls):
         self.walls = walls

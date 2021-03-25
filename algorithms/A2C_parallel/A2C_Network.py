@@ -48,9 +48,9 @@ class A2C_Network:
         self._REWARD = placeholder(shape=(None,), name='REWARD')
         self._ACTION = placeholder(shape=(None, 2), name='ACTION')
 
-        x_laser = Conv1D(filters=12, kernel_size=5, strides=3, padding='same', activation='relu',
+        x_laser = Conv1D(filters=12, kernel_size=7, strides=3, padding='same', activation='relu',
                          name='shared' + '_conv1d_laser_1')(self._input_laser)
-        x_laser = Conv1D(filters=24, kernel_size=3, strides=2, padding='same', activation='relu',
+        x_laser = Conv1D(filters=24, kernel_size=5, strides=2, padding='same', activation='relu',
                          name='shared' + '_conv1d_laser_2')(x_laser)
         x_laser = Flatten()(x_laser)
 
