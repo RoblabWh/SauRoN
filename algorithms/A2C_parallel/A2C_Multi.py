@@ -25,12 +25,14 @@ class A2C_Multi:
     def train(self, env):
         """ Main A2C Training Algorithm
         """
-        reachedTargetList = [False] * 100
+        reachedTargetList = [False] * 80
         # countEnvs = len(envs)
 
         ray.init()
         multiActors = [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, self.network.getWeights()) for _ in range(self.numbOfParallelEnvs)]
-        envLevel = [0 for _ in range(self.numbOfParallelEnvs+1)]
+        envLevel = [4 for _ in range(self.numbOfParallelEnvs+1)]
+        for i, actor in enumerate(multiActors):
+            actor.setLevel.remote(envLevel[i])
         env.setUISaveListener(self)
 
         # Main Loop
@@ -112,15 +114,6 @@ class A2C_Multi:
                 print('Saving')
                 self.save_weights(self.args.path)
 
-
-            allTrainingResults.append(robotsData)
-            self.train_models(allTrainingResults)
-            trainedWeights = self.network.getWeights()
-
-            for actor in multiActors:
-                actor.setWeights.remote(trainedWeights)
-
-
             #Checking current success and updating level if nessessary
             allReachedTargetList = reachedTargetList.copy()
 
@@ -128,27 +121,38 @@ class A2C_Multi:
                 tmpTargetList = ray.get(actor.getTargetList.remote())
                 allReachedTargetList += tmpTargetList
 
+            allTrainingResults.append(robotsData)
+
             targetDivider = (self.numbOfParallelEnvs + 1) * 100  # Erfolg der letzten 100
-            successrate = allReachedTargetList.count(True)/targetDivider
+            successrate = allReachedTargetList.count(True) / targetDivider
 
-            if(successrate>0.75):
-                currenthardest = envLevel[0]
-                if currenthardest != 8:
-                    levelups = self.numbOfParallelEnvs-currenthardest
-                    if(self.numbOfParallelEnvs > 20):
-                        levelups =  self.numbOfParallelEnvs-2*currenthardest
-                    for i in range(levelups): #bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
-                        envLevel[i] = envLevel[i]+1
+            if (successrate > 0.8):
+                lastindex = len(reachedTargetList)
+                if(reachedTargetList[lastindex-5:lastindex].count(True) == 4):
+                    currenthardest = envLevel[0]
+                    if currenthardest != 8:
+                        levelups = self.numbOfParallelEnvs - currenthardest
+                        if (self.numbOfParallelEnvs > 20):
+                            levelups = self.numbOfParallelEnvs - 2 * currenthardest
+                        for i in range(levelups):  # bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
+                            envLevel[i] = envLevel[i] + 1
 
-                    print(envLevel)
+                        print(envLevel)
+                        self.save_weights(self.args.path, "_endOfLevel-"+str(currenthardest))
 
-                    for _ in range(len(reachedTargetList)):
-                        reachedTargetList.pop(0)
-                        reachedTargetList.append(False)
+                        for _ in range(len(reachedTargetList)):
+                            reachedTargetList.pop(0)
+                            reachedTargetList.append(False)
 
-                    for i, actor in enumerate(multiActors):
-                        actor.setLevel.remote(envLevel[i + 1])
+                        for i, actor in enumerate(multiActors):
+                            actor.setLevel.remote(envLevel[i + 1])
 
+
+            self.train_models(allTrainingResults)
+            trainedWeights = self.network.getWeights()
+
+            for actor in multiActors:
+                actor.setWeights.remote(trainedWeights)
 
             # Update Average Rewards
             self.av_meter.update(cumul_reward)
@@ -156,7 +160,7 @@ class A2C_Multi:
             # Display score
 
 
-            tqdm_e.set_description("Reward Episode: " + str(cumul_reward) + " -- Average Reward: " + str(self.av_meter.avg) + " Average Reached Target (last 100): " + str(successrate))
+            tqdm_e.set_description("Epi r: " + str(cumul_reward) + " -- Avr r: " + str(self.av_meter.avg) + " Avr Reached Target (25 epi): " + str(successrate))
             tqdm_e.refresh()
 
 

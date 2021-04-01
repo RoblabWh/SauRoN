@@ -15,7 +15,7 @@ class A2C_MultiprocessingActor:
         self.timePenalty = args.time_penalty
         # self.av_meter = AverageMeter()
         self.gamma = args.gamma
-        self.reachedTargetList = [False] * 100 #TODO mit erfolgsliste aus main Process zusammenlegen
+        self.reachedTargetList = [False] *100 #TODO mit erfolgsliste aus main Process zusammenlegen
         self.level = 0
 
 

@@ -66,10 +66,10 @@ class Simulation:
                             (self.arenaWidth -1.5, 1.5),
                             (self.arenaWidth -1.5, self.arenaLength -1.5),
                             (1.5,  self.arenaLength -1.5)]
-        level03b_robotPos = [(self.arenaWidth / 5, self.arenaLength - 2),
+        level03b_robotPos = [(self.arenaWidth / 4, self.arenaLength - 2),
                             (self.arenaWidth / 5 * 2, self.arenaLength - 2),
                             (self.arenaWidth / 5 * 3, self.arenaLength - 2),
-                            (self.arenaWidth / 5 * 4, self.arenaLength - 2)]
+                            (self.arenaWidth / 4 * 3, self.arenaLength - 2)]
         level03_robotPos = [(self.arenaWidth / 5 *2, 1),
                             (self.arenaWidth / 5   , 1),
                             (self.arenaWidth / 5 *4, self.arenaLength -1),
@@ -105,10 +105,10 @@ class Simulation:
                                (self.arenaWidth / 2 +1, self.arenaLength / 2 -1),
                                (self.arenaWidth / 2 +1, self.arenaLength / 2 +1),
                                (self.arenaWidth / 2 -1, self.arenaLength / 2 +1)]
-        level03b_stationsPos = [(self.arenaWidth / 5, 3),
-                               (self.arenaWidth / 5 * 2, 3),
-                               (self.arenaWidth / 5 * 3, 3),
-                               (self.arenaWidth / 5 * 4, 3)]
+        level03b_stationsPos = [(self.arenaWidth / 4, 2),
+                               (self.arenaWidth / 5 * 2, 2),
+                               (self.arenaWidth / 5 * 3, 2),
+                               (self.arenaWidth / 4 * 3, 2)]
         level03_stationsPos = [(self.arenaWidth / 5   , self.arenaLength -1),
                                (self.arenaWidth / 5 *2, self.arenaLength -1),
                                (self.arenaWidth / 5 *3, 1),
@@ -122,8 +122,8 @@ class Simulation:
                                (self.arenaWidth /2 +5, self.arenaLength /2)]
 
         noWalls = self.walls
-        level03b_walls = self.walls + [CollidorLine(self.arenaWidth/5, self.arenaLength/2 + 0.5, self.arenaWidth/5*2, self.arenaLength/2 + .5),
-                                       CollidorLine(self.arenaWidth/5 *3, self.arenaLength/2 + 0.5, self.arenaWidth/5 *4, self.arenaLength/2 + .5)]
+        level03b_walls = self.walls + [CollidorLine(self.arenaWidth/15*2, self.arenaLength/2 + 0.5, self.arenaWidth/5*2, self.arenaLength/2 + .5),
+                                       CollidorLine(self.arenaWidth/5 *3, self.arenaLength/2 + 0.5, self.arenaWidth/15 *13, self.arenaLength/2 + .5)]
         level06_walls = self.walls + [CollidorLine(0,self.arenaLength/3, self.arenaWidth/24 *6, self.arenaLength/3),
                                       CollidorLine(self.arenaWidth/24 *6, self.arenaLength/3,self.arenaWidth/24 *6, self.arenaLength/3*2),
                                       CollidorLine(self.arenaWidth/24 *9, self.arenaLength/3, self.arenaWidth/24 *9, self.arenaLength/3 *2),

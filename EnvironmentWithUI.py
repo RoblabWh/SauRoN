@@ -16,6 +16,7 @@ class Environment:
         self.done = False
         self.shape = np.asarray([0]).shape
         self.id = id     # Multiprocessing Wiedererkennung zum Zuordnen der Rückgabewerte
+        self.piFact = 1 / math.pi
 
 
 
@@ -72,9 +73,9 @@ class Environment:
         return self.steps_left <= 0 or robotsDone
 
     def step(self, actions):
-        # print(actions)
-        time1 = time.time()
+        # time1 = time.time()
         self.steps_left -= 1
+
 
         ######## Update der Simulation #######
         robotsTarVels = []
@@ -89,7 +90,9 @@ class Environment:
                 robotsDataCurrentFrame.append(self.extractRobotData(i, robotsTermination[i]))
             else:
                 robotsDataCurrentFrame.append((None, None, None))
-        time2 = time.time()
+
+
+        # time2 = time.time()
         # print(self.steps_left, self.id, time1, time2, 'derEinzelne')
         #print("Env", time2-time1)
         #print(self.id, self.steps_left)
@@ -109,38 +112,19 @@ class Environment:
 
         ############ Euklidsche Distanz und Orientierung ##############
 
-        radius = robot.radius
-        goal_pose_old_x = robot.getGoalX()
-        goal_pose_old_y = robot.getGoalY()
-        robot_pose_old_x = robot.getLastPosX()
-        robot_pose_old_y = robot.getLastPosY()
-        robot_orientation_old = robot.getDirectionAngle(last=True)
-        #TODO Goal des Robots nutzen
-        orientation_goal_old = math.atan2(
-            (goal_pose_old_y - robot_pose_old_y),
-            (goal_pose_old_x - robot_pose_old_x))
-        # orientation_goal_old = math.atan2( #old from rectangular target with position in upper left corner
-        #     (goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_old_y),
-        #     (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_old_x))
-        if orientation_goal_old < 0:
-            orientation_goal_old += (2 * math.pi)
+        goal_pos_x = robot.getGoalX()
+        goal_pos_y = robot.getGoalY()
+        robot_pos_old_x = robot.getLastPosX()
+        robot_pos_old_y = robot.getLastPosY()
 
-        # einzeln Abstand berechnen
-        robot_pose_current_x = robot.getPosX()
-        robot_pose_current_y = robot.getPosY()
-        robot_orientation_new = robot.getDirectionAngle()
-        orientation_goal_new = math.atan2(
-            (goal_pose_old_y - robot_pose_current_y),
-            (goal_pose_old_x - robot_pose_current_x))
-        if orientation_goal_new < 0:
-            orientation_goal_new += (2 * math.pi)
-        # TODO Goal des Robots nutzen
-        distance_old = math.sqrt((robot_pose_old_x - goal_pose_old_x) ** 2 +
-                                 (robot_pose_old_y - goal_pose_old_y) ** 2)
+        robot_pos_current_x = robot.getPosX()
+        robot_pos_current_y = robot.getPosY()
+
+        distance_old = math.sqrt((robot_pos_old_x - goal_pos_x) ** 2 +
+                                 (robot_pos_old_y - goal_pos_y) ** 2)
         distance_new = math.sqrt(
-            (robot_pose_current_x - goal_pose_old_x) ** 2 +
-            (robot_pose_current_y - goal_pose_old_y) ** 2)
-        delta_dist = distance_old - distance_new
+            (robot_pos_current_x - goal_pos_x) ** 2 +
+            (robot_pos_current_y - goal_pos_y) ** 2)
 
         ########### REWARD CALCULATION ################
         # reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
@@ -208,7 +192,6 @@ class Environment:
 
         # reward = factor * distance        # evtl. reward gewichten
         return reward
-
 
     def createReward02(self, robot, delta_dist, robot_orientation_old,orientation_goal_old, robot_orientation_new, orientation_goal_new, outOfArea, reachedPickup):
 
@@ -280,50 +263,46 @@ class Environment:
         return (reward-timePenalty)/2
 
     def createReward04(self, robot, dist_new, dist_old, reachedPickup, collision):
-
-        deltaDist = dist_old - dist_new
         distPos = 0.03
-        distNeg = 0.008 #in Masterarbeit alles = 0 außer distPos (mit 0.1)
-
+        distNeg = 0.008  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
         oriPos = 0.001
         oriNeg = 0.0008
+        # lastDistPos = 0.05
+        # rotatingNeg = -0.01
 
-        lastDistPos = 0.05
-
-        rotatingNeg = -0.01
-
+        deltaDist = dist_old - dist_new
 
         if deltaDist > 0:
             rewardDist = deltaDist * distPos
         else:
             rewardDist = deltaDist * distNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
-        angularDeviation = (abs(robot.angularDeviation / math.pi) *-2) +1
+        angularDeviation = (abs(robot.angularDeviation * self.piFact) *-2) +1
 
         if angularDeviation > 0:
             rewardOrient = angularDeviation * oriPos
         else:
             rewardOrient = angularDeviation * oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
-        lastBestDistance = robot.bestDistToGoal
-        distGoal = dist_new
-        rewardLastDist = 0
-
-        if distGoal < lastBestDistance:
-            rewardLastDist = (lastBestDistance - distGoal) * lastDistPos
-            robot.bestDistToGoal = distGoal
+        # lastBestDistance = robot.bestDistToGoal
+        # distGoal = dist_new
+        # rewardLastDist = 0
+        #
+        # if distGoal < lastBestDistance:
+        #     rewardLastDist = (lastBestDistance - distGoal) * lastDistPos
+        #     robot.bestDistToGoal = distGoal
 
         #The robot is punished if it rotates for more than 3 frames at max rot vel
-        rewardLongDurationRotation = 0
-        rotatingMaxForNFrames = 0
-        for i in range(self.timeframs, 0, -1):
-            angV = robot.state[i-1][5]
-            if angV < 0.95 and angV > -0.95:
-                break
-            else:
-                rotatingMaxForNFrames += 1
-        if rotatingMaxForNFrames >= 3:
-            rewardLongDurationRotation = rotatingMaxForNFrames * rotatingNeg
+        #rewardLongDurationRotation = 0
+        # rotatingMaxForNFrames = 0
+        # for i in range(self.timeframs, 0, -1):
+        #     angV = robot.state[i-1][5]
+        #     if angV < 0.95 and angV > -0.95:
+        #         break
+        #     else:
+        #         rotatingMaxForNFrames += 1
+        # if rotatingMaxForNFrames >= 3:
+        #     rewardLongDurationRotation = rotatingMaxForNFrames * rotatingNeg
 
 
         if collision:
@@ -332,9 +311,6 @@ class Environment:
             reward = 1
         else:
             reward = rewardDist + rewardOrient #+ rewardLastDist + rewardLongDurationRotation
-        # print(rewardOrient, rewardLongDurationRotation)
-        # print(round(reward,3), round(deltaDist, 3), round(rewardDist, 3), round(angularDeviation,3), round(rewardOrient,3))
-        # print(round(reward,4))
 
         return reward
 

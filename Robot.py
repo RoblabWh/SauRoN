@@ -26,6 +26,8 @@ class Robot:
         self.startposX, self.startposY = position
         self.startDirectionX = math.cos((startDirection))
         self.startDirectionY = math.sin((startDirection))
+        self.startOrientation = startDirection
+
 
         # print(self.startDirectionX, self.startDirectionY, startDirection)
         self.goalX, self.goalY = station.getPosX(), station.getPosY()
@@ -53,8 +55,13 @@ class Robot:
         self.maxAngularAcceleration = 0.5 * math.pi   #rad/s^2
         self.minAngularAcceleration = -0.5 * math.pi  #rad/s^2
 
+        self.maxLinearVelocityFact = 1/self.maxLinearVelocity
+        self.maxAngularVelocityFact = 1/self.maxAngularVelocity
+
         self.XYnorm = [args.arena_width, args.arena_length]
+        self.XYnormFact = [1/args.arena_width, 1/args.arena_length]
         self.directionnom = [-1, 1]#2 * math.pi]
+        self.maxDistFact = 1/math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[1] ** 2)
 
         self.manuell = args.manually
         self.args = args
@@ -92,6 +99,8 @@ class Robot:
         if(orientation != None):
             self.startDirectionX = math.cos(orientation)
             self.startDirectionY = math.sin(orientation)
+        else:
+            orientation = self.startOrientation
         posX = self.startposX
         posY = self.startposY
         # randDirection = random.uniform(0, 2*math.pi)
@@ -113,7 +122,7 @@ class Robot:
         goalDist = math.sqrt((posX - self.goalX) ** 2 + (posY - self.goalY) ** 2)
 
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
-        frame = [posX, posY, directionX, directionY, linVel, angVel, self.goalX, self.goalY, goalDist]
+        frame = [posX, posY, directionX, directionY, linVel, angVel, self.goalX, self.goalY, goalDist, orientation]
 
         for _ in range(self.time_steps):
             self.push_frame(frame)
@@ -157,15 +166,15 @@ class Robot:
         :return: list -
             normalized frame with values only between 0 an 1
         """
-        posX = frame[0] / self.XYnorm[0]
-        posY = frame[1] / self.XYnorm[1]
-        directionX = (frame[2] - self.directionnom[0]) / (self.directionnom[1] - self.directionnom[0])
-        directionY = (frame[3] - self.directionnom[0]) / (self.directionnom[1] - self.directionnom[0])
-        linVel = frame[4]/ self.maxLinearVelocity #(frame[4] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
-        angVel = frame[5]/self.maxAngularVelocity #(frame[5] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
-        goalX = frame[6] / self.XYnorm[0]
-        goalY = frame[7] / self.XYnorm[1]
-        dist = frame[8] / math.sqrt(self.XYnorm[0]**2+self.XYnorm[0]**2)
+        posX = frame[0] * self.XYnormFact[0]
+        posY = frame[1] * self.XYnormFact[1]
+        directionX = frame[2]
+        directionY = frame[3]
+        linVel = frame[4] * self.maxLinearVelocityFact #(frame[4] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
+        angVel = frame[5] * self.maxAngularVelocityFact #(frame[5] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
+        goalX = frame[6] * self.XYnormFact[0]
+        goalY = frame[7] * self.XYnormFact[1]
+        dist = frame[8] * self.maxDistFact
         # tarLinVel = (frame[7] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
         # tarAngVel = (frame[8] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
 
@@ -217,48 +226,39 @@ class Robot:
             angVel = self.angTast
 
         goalDist = math.sqrt((posX-goalX)**2+(posY-goalY)**2)
-
         direction = (self.getDirectionAngle() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
         posX += math.cos(direction) * linVel * dt
         posY += math.sin(direction) * linVel * dt
         directionVector = self.directionVectorFromAngle(direction)
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY]
-        frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist]
+        frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist, direction]
         self.push_frame(frame)
 
 
     def sonarReading(self, robots, stepsLeft, steps):
-        #TODO bei mehreren Stationen nicht die eigene als hindernis, nur andere
-        #TODO Kollision mit Robotern /Geraden- Kreis Kollision
         colliders = self.walls + self.collidorStationsWalls
 
         circleCollisionPos = []
         for robotA in robots:
-            if robotA is not  self:
+            if robotA is not self:
                 circleCollisionPos.append((robotA.getPosX(), robotA.getPosY(), robotA.getRadius()))
-        #TODO runde ziele mit hinzufügen
 
 
-        circleCollisionPos = circleCollisionPos + self.collidorStationsCircles
-
+        circleCollisionPos = circleCollisionPos # + self.collidorStationsCircles
         self.lookAround(self.args.angle_steps, colliders, circleCollisionPos)
 
         # frame_sonar = []
         target = (self.station.posX, self.station.posY)
         # target = (self.station.posX + (self.station.width / 2), self.station.posY + (self.station.length/2))
         distance = math.sqrt((self.getPosX() - target[0]) ** 2 + (self.getPosY() - target[1]) ** 2)
-        maxDist = math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[1] ** 2)
+        #TODO (performance) das kann im KOnstruktor berechnet werden (Konstante)
 
-        # frame_sonar.append((distance / maxDist))
-
-        #robot_orientation = self.getDirectionAngle()
         oriRobotV = (self.getDirectionX(), self.getDirectionY())
         oriTargetV = ((self.getPosX() - target[0]),(self.getPosY() - target[1]))
         skalarProd = oriRobotV[0]*oriTargetV[0]+oriRobotV[1]*oriTargetV[1]
         oriTargetVLength = distance
         oriRobotVLength = 1
-
         ratio = skalarProd/(oriTargetVLength*oriRobotVLength)
 
         if ratio>1 or ratio<-1:
@@ -288,15 +288,15 @@ class Robot:
         # frame_sonar.append(self.getLinearVelocityNorm())
         # frame_sonar.append(self.getAngularVelocityNorm())
 
-        distancesNorm = self.distances/maxDist
+        distancesNorm = self.distances* self.maxDistFact
         distancesNorm = distancesNorm.tolist()
         # for i in range(len(self.distances)):
         #     distancesNorm.append(self.distances[i] / maxDist)
 
-        currentTimestep = (steps - stepsLeft)/steps
+        currentTimestep = (steps - stepsLeft)/steps #TODO setps im Konstruktor übergeben und einenFaktor draus machen, muss nicht bei jedem Aufruf mit übergeben werden
 
 
-        frame_sonar = [distancesNorm, orientation, [(distance / maxDist)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
+        frame_sonar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateSonar) >= self.time_steps:
             self.stateSonar.pop(0)
@@ -516,7 +516,7 @@ class Robot:
         return self.getLinearVelocity(), self.getAngularVelocity()
 
     def getRadius(self):
-        return self.width/2
+        return self.width * .5
 
     def isActive(self):
         return self.active
@@ -526,34 +526,39 @@ class Robot:
 
     def getDirectionAngle(self, last=False):
         if not last:
-            angX = self.getDirectionX()
-            angY = self.getDirectionY()
-        else:
-            angX = self.getLastDirectionX()
-            angY = self.getLastDirectionY()
+            return self.state_raw[self.time_steps - 1][9]
+        return self.state_raw[self.time_steps - 2][9]
 
-
-        direction = 0
-        if angX == 0:
-            if (angY > 0):
-                direction = 0.5 * math.pi
-            elif angY < -1:
-                direction = 1.5 * math.pi
-            else:
-                print("error! wrong input vector length | angX: ", angX, " | angY: " + angY)
-        elif angY == 1:
-            direction = 0.5 * math.pi
-        elif angY == -1:
-            direction = 1.5 * math.pi
-        else:
-            direction = math.atan(angY / angX)
-            if angX < 0:
-                direction = direction + math.pi
-            elif angY < 0:
-                direction = direction + 2 * math.pi
-
-        direction = (direction + (2*math.pi)) % (2*math.pi)
-        return direction
+        #
+        # if not last:
+        #     angX = self.getDirectionX()
+        #     angY = self.getDirectionY()
+        # else:
+        #     angX = self.getLastDirectionX()
+        #     angY = self.getLastDirectionY()
+        #
+        #
+        # direction = 0
+        # if angX == 0:
+        #     if (angY > 0):
+        #         direction = 0.5 * math.pi
+        #     elif angY < -1:
+        #         direction = 1.5 * math.pi
+        #     else:
+        #         print("error! wrong input vector length | angX: ", angX, " | angY: " + angY)
+        # elif angY == 1:
+        #     direction = 0.5 * math.pi
+        # elif angY == -1:
+        #     direction = 1.5 * math.pi
+        # else:
+        #     direction = math.atan(angY / angX)
+        #     if angX < 0:
+        #         direction = direction + math.pi
+        #     elif angY < 0:
+        #         direction = direction + 2 * math.pi
+        #
+        # direction = (direction + (2*math.pi)) % (2*math.pi)
+        # return direction
 
     def on_press(self, key):
 
@@ -572,15 +577,10 @@ class Robot:
         self.linTast = 0
         self.angTast = 0
 
-    def lookAround(self, alpha, collisionLines, roboterList = []):#TODO cas 7.8s und lookAraound 22.768a --> Optimierungsbedarf
+    def lookAround(self, alpha, collisionLines, roboterList = []):
 
-        piFactor = (math.pi/180)
-        twoPi = 2*math.pi
-        radarHits = []
-        distances = []
+
         dir = (self.getDirectionAngle() + (math.pi)) % (2*math.pi)   #offsets the first Collision Line by 90 degrees to avoid edge errors during a convolution in neural net
-        posX = self.getPosX()
-        posY = self.getPosY()
 
         colLinesStartPoints= np.swapaxes(np.array([cl.getStart() for cl in collisionLines]),0,1) #[[x,x,x,x],[y,y,y,y]]
         colLinesEndPoints = np.swapaxes(np.array([cl.getEnd() for cl in collisionLines]),0,1)
@@ -589,7 +589,7 @@ class Robot:
         circleR = [r[2] for r in roboterList]
 
 
-        rayCol = FastCollisionRay2([self.getPosX(), self.getPosY()], int(360/alpha), dir)
+        rayCol = FastCollisionRay2([self.getPosX(), self.getPosY()], int(360/alpha), dir) #TODO int(360/alpha) kann beriets als Konstante im Konstruktor erzeugt werden
         rayHit = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, np.array([circleX, circleY]), circleR))
         distances = (rayHit[0])
         radarHits = (rayHit[1])
@@ -688,7 +688,7 @@ class FastCollisionRay2:
         #t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
         #t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
 
-        # Kleiner vorschlag von mir :)
+
         # Ersten den denominator berechnen, da er für t1 und t2 gleich ist.
         # 1 / ... um später für beiden die Multiplikation zu verwenden. Division ist die teuerste mathematische Operation ;)
         denominator = 1.0 / ((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
@@ -705,7 +705,7 @@ class FastCollisionRay2:
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
 
 
-        #TODO prüfen, für jedes Segement zwischen Robot-Origin und Collision Point prüfen, ob ein anderer Roboter dazwischen ist.
+        # prüfen, für jedes Segement zwischen Robot-Origin und Collision Point prüfen, ob ein anderer Roboter dazwischen ist.
         # Dafür benötigt: Mittelpunkte aller Roboter und Linie (also start und Ziel)
 
         qX = np.array([pointsRobots[0] for _ in range(len(collisionPoints[0]))])
@@ -721,9 +721,9 @@ class FastCollisionRay2:
         vX = colX - x1
         vY = colY - y1
         # normalize vector to a length of 1, so that the t parameters of the line-line intersection can be compared with the t's from cirle-line intersection
-        vLength = np.sqrt(vX**2 + vY**2)
-        vX= vX/vLength
-        vY= vY/vLength
+        vLengthFact = 1/np.sqrt(vX**2 + vY**2) #again division costs too much for us poor students so we like to use multiplications with a factor
+        vX= vX * vLengthFact
+        vY= vY * vLengthFact
 
 
         # a,b und c als Array zum Berechnen der Diskriminanten
@@ -732,8 +732,9 @@ class FastCollisionRay2:
         c = (x1**2 + y1**2) + (qX**2 + qY**2) - (2* (x1 * qX + y1*qY)) - radii**2
 
         disc = b**2 - 4 * a * c
-        tc1 = np.where((disc>0), ((-b + np.sqrt(disc)) / (2 * a)), -1) #check if discriminat is negative --> no collision
-        tc2 = np.where((disc>0), ((-b - np.sqrt(disc)) / (2 * a)), -1)
+        denominator = 1/ (2 * a)
+        tc1 = np.where((disc>0), ((-b + np.sqrt(disc)) * denominator), -1) #check if discriminat is negative --> no collision
+        tc2 = np.where((disc>0), ((-b - np.sqrt(disc)) * denominator), -1)
         tc1 = np.where((tc1>=0), tc1, 2048)
         tc2 = np.where((tc2>=0), tc2, 2048)
 
@@ -743,7 +744,6 @@ class FastCollisionRay2:
         t1NearestHit = np.where(((smallestTOfCircle<2048) & (smallestTOfCircle<t1NearestHit)), smallestTOfCircle, t1NearestHit)
 
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
-        #TODO der neu t wert ist nihct normiert und daher muss er auf seinen eigenen vektor berchnet werden und nihct auf den normierten ursprungsvektor
 
 
 

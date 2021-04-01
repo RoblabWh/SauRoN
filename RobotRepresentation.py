@@ -96,4 +96,6 @@ class RobotRepresentation:
             self.isActive = isActive
             self.dirV = dirV
 
+    def updateScale(self, scaleFactor):
+        self.scale = scaleFactor
 
