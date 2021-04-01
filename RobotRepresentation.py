@@ -8,8 +8,9 @@ class RobotRepresentation:
     def __init__(self, x, y, direction, width, height, scaleFactor, mode, colorIndex):
         self.mode = mode
         self.scale = scaleFactor
-        self.width = width * self.scale
-        self.height = height * self.scale
+        print(self.scale)
+        self.width = width #* self.scale
+        self.height = height # * self.scale
 
         self.thickness = 2
         self.lineStyle = Qt.SolidLine
@@ -58,6 +59,7 @@ class RobotRepresentation:
                                      self.radarHits[i][1] * self.scale)
                     painter.drawEllipse(self.radarHits[i][0] * self.scale - 3, self.radarHits[i][1] * self.scale - 3, 6, 6)
 
+
         painter.setPen(QPen(self.lineColor, self.thickness, Qt.DotLine))
 
         painter.drawLine(self.posX,
@@ -70,7 +72,7 @@ class RobotRepresentation:
 
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
         painter.setBrush(QBrush(self.fillColor, self.brushStyle))
-        painter.drawEllipse(self.posX-self.radius, self.posY-self.radius, self.width, self.height)
+        painter.drawEllipse(self.posX - self.radius * self.scale, self.posY - self.radius * self.scale, self.width * self.scale, self.height * self.scale)
 
         middlex = self.posX + self.radius
         middley = self.posY + self.radius

@@ -27,8 +27,8 @@ steps = 1000
 arenaWidth = 22   # m
 arenaLength = 10  # m
 
-scaleFactor = 69
-angleStepsSonar = .5
+scaleFactor = 65
+angleStepsSonar = 1
 timeFrames = 4
 numbOfParallelEnvs = 4
 numbOfRobots = 4
@@ -44,10 +44,7 @@ filename = 'A2C_21-03-11--11-40_e89'
 filename = 'A2C_21-03-11--14-24_e94'
 filename = 'A2C_21-03-11--15-07'
 filename = 'A2C_21-03-11--17-09_e634'
-filename = 'A2C_21-03-26--21-46_e555'
-filename = 'A2C_21-03-27--11-05'#_endOfLevel-4'
-filename = 'A2C_21-03-27--15-35_endOfLevel-4'
-filename = 'A2C_21-03-27--18-22'
+filename = 'A2C_21-03-25--15-21_e1279'
 
 
 

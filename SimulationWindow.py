@@ -1,5 +1,6 @@
 from PyQt5.QtGui import QPainter, QFont
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel
+from PyQt5 import QtWidgets
 import RobotRepresentation
 from Station import Station
 from Borders import CollidorLine
@@ -31,13 +32,15 @@ def initStations(stations, scaleFactor):
     return _stations
 
 
-class SimulationWindow(QMainWindow):
+class SimulationWindow(QtWidgets.QMainWindow):
 
     def __init__(self, application, robots, stations, args, walls):
         super().__init__()
 
         self.app = application
         self.setWindowTitle("Simulation")
+        self.arenaWidth = args.arena_width
+        self.arenaHeight = args.arena_length
         self.width = int(args.arena_width*args.scale_factor)
         self.height = int(args.arena_length*args.scale_factor)
         self.setGeometry(200, 100, self.width, self.height)
@@ -63,6 +66,26 @@ class SimulationWindow(QMainWindow):
 
         if (True):
             self.monitorGraph = DistanceGraph.DistanceGraph(application)
+
+
+    def resizeEvent (self, event):
+        windowHeight = self.geometry().height()
+        windowWidth = self.geometry().width()
+
+        QtWidgets.QMainWindow.resizeEvent(self, event)
+
+        newScaleFactorWidth = windowWidth / self.arenaWidth
+
+        self.setFixedHeight(self.arenaHeight * newScaleFactorWidth)
+
+        self.scaleFactor = newScaleFactorWidth
+
+        for robot in self.robotRepresentations:
+            RobotRepresentation.RobotRepresentation.updateScale(robot, newScaleFactorWidth)
+
+        for station in self.stations:
+            Station.updateScale(station, newScaleFactorWidth)   # doof das wir alles anders importieren z.B. Station und RobotRepresentation -> TODO: alles einheitlich importieren
+
 
 
     def initUI(self):

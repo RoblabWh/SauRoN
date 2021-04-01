@@ -245,7 +245,7 @@ class Robot:
                 circleCollisionPos.append((robotA.getPosX(), robotA.getPosY(), robotA.getRadius()))
 
 
-        circleCollisionPos = circleCollisionPos # + self.collidorStationsCircles
+        circleCollisionPos = circleCollisionPos  + self.collidorStationsCircles
         self.lookAround(self.args.angle_steps, colliders, circleCollisionPos)
 
         # frame_sonar = []
