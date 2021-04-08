@@ -16,7 +16,8 @@ class RobotRepresentation:
         self.lineStyle = Qt.SolidLine
         self.fillColor = Qt.white
         self.brushStyle = Qt.SolidPattern
-        self.radius = self.width / 2
+        self.radiusUnscaled = self.width / 2
+        self.radius = self.radiusUnscaled
 
         self.posX = x * self.scale
         self.posY = y * self.scale
@@ -64,15 +65,15 @@ class RobotRepresentation:
 
         painter.drawLine(self.posX,
                          self.posY,
-                         self.posX + 1.25 * self.radius * + (
+                         self.posX + 1.25 * self.radius * (
                                      self.dirV[0] * math.cos(self.direction) - self.dirV[1] * math.sin(self.direction)),
-                         self.posY + 1.25 * self.radius * + (
+                         self.posY + 1.25 * self.radius * (
                                      self.dirV[0] * math.sin(self.direction) + self.dirV[1] * math.cos(self.direction)))
 
 
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
         painter.setBrush(QBrush(self.fillColor, self.brushStyle))
-        painter.drawEllipse(self.posX - self.radius * self.scale, self.posY - self.radius * self.scale, self.width * self.scale, self.height * self.scale)
+        painter.drawEllipse(self.posX - self.radius , self.posY - self.radius, self.width * self.scale, self.height * self.scale)
 
         middlex = self.posX + self.radius
         middley = self.posY + self.radius
@@ -98,6 +99,8 @@ class RobotRepresentation:
             self.isActive = isActive
             self.dirV = dirV
 
+
     def updateScale(self, scaleFactor):
         self.scale = scaleFactor
+        self.radius = self.radiusUnscaled * self.scale
 

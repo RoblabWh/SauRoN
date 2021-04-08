@@ -525,6 +525,7 @@ class Robot:
         self.active = False
 
     def getDirectionAngle(self, last=False):
+
         if not last:
             return self.state_raw[self.time_steps - 1][9]
         return self.state_raw[self.time_steps - 2][9]
