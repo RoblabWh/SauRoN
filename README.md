@@ -37,6 +37,12 @@ for tensorflow-gpu install latest Cuda drivers
 8. pip install ray
 9. pip install tqdm
 
+Cuda 10.1 installieren https://developer.nvidia.com/cuda-10.1-download-archive-base
+  - falls Fehler auftauchen nur CUDA ohne Drivers und Other components installieren (falls es dabei steht, ohne Nvidia Geforce Experice)
+  - bei Problemen eventuell andere Versionen von CUDA deinstallieren
+ cuDNN v7 installieren 
+  - für Windows im Cuda installationspfad (vermutlich C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1) die Datein aus bin, include und in lib die entsprechnden Ordner einfügen (bei lib die Datei in den x64 Ordner)
+  
 
 ## Anaconda Umgebung yml File erstellen: 
 conda env export > environment.yml
