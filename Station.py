@@ -94,3 +94,6 @@ class Station:
     def reposition(self, posX, posY):
         self.posX = posX
         self.posY = posY
+
+    def updateScale(self, scaleFactor):
+        self.scaleFactor = scaleFactor
