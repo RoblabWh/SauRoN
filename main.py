@@ -30,7 +30,7 @@ arenaLength = 10  # m
 scaleFactor = 69
 angleStepsSonar = .5
 timeFrames = 4
-numbOfParallelEnvs = 4
+numbOfParallelEnvs = 6
 numbOfRobots = 4
 
 # taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
@@ -84,6 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('--numb_of_robots', type=int, default=numbOfRobots, help='Number of robots acting in one environment')
 
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
+    parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
     parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
 
     args = parser.parse_args(args)
@@ -118,11 +119,11 @@ if __name__ == '__main__':
         env_dim = (4, 9)
 
 
-    app = QApplication(sys.argv)
-    env = EnvironmentWithUI.Environment(app, args, env_dim[0], 3)
+    # app = QApplication(sys.argv)
+    # env = EnvironmentWithUI.Environment(app, args, env_dim[0], 0)
 
 
-    act_dim = np.asarray(env.get_actions()) #TODO bei kontinuierlichem 2 actions
+    act_dim = np.asarray(2)#env.get_actions()) #TODO bei kontinuierlichem 2 actions
 
     if args.alg == 'a2c':
         model = A2C_Multi(act_dim, env_dim, args)
@@ -133,8 +134,10 @@ if __name__ == '__main__':
     if args.training:
         if args.load_old:
             model.load_weights(args.path+filename+'.h5')
-        model.train(env)
+        model.train()
     elif not args.training:
+        app = QApplication(sys.argv)
+        env = EnvironmentWithUI.Environment(app, args, env_dim[0], 0)
         model.load_weights(args.path+filename+'.h5')
         model.execute(env, args)
 

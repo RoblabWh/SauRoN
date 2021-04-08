@@ -2,15 +2,33 @@ import ray
 import numpy as np
 from EnvironmentWithUI import Environment
 from algorithms.A2C_parallel.A2C_Network import A2C_Network
+import sys
+from PyQt5.QtWidgets import QApplication
+import os
+
 
 @ray.remote
 class A2C_MultiprocessingActor:
 
-    def __init__(self, act_dim, env_dim, args, weights):
+    def __init__(self, act_dim, env_dim, args, weights, master):
+
+        # Tensorflow-GPU: 2.2.0 muss installiert sein
+        # Dafür wird Cuda 10.1 benötigt
+        #     -> Hinweis dafür muss zusätzlich cuDNN für Cuda 10.1 installiert werden
+        #        (die dort enthaltenen Dateien in das Nvidia Toolkit über den Filebrowser einfügen)
+        #        https://medium.com/@sunnydhoke22/how-to-install-cuda-10-and-cudnn-for-tensorflow-gpu-on-windows-10-414c10eabc96
+
+        # Ray setzt die env Variable für die GPU selber (auf 0 bei einer GPU).
+        # Soll sie nicht verwendet werden muss sie manuell auf -1 gesetzt werden:
+        if not args.use_gpu:
+            os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
+
         self.args = args
+        app = None
+        if master: app = QApplication(sys.argv)
         self.network = A2C_Network(act_dim, env_dim, args)
-        self.network.setWeights(weights)
-        self.env = Environment(None, args, env_dim[0], 0) #None --> No UI
+        if weights != None: self.network.setWeights(weights)
+        self.env = Environment(app, args, env_dim[0], 0) #None --> No UI
         self.numbOfRobots = args.numb_of_robots
         self.timePenalty = args.time_penalty
         # self.av_meter = AverageMeter()
@@ -21,6 +39,12 @@ class A2C_MultiprocessingActor:
 
     def setWeights(self, weights):
         self.network.setWeights(weights)
+
+    def getWeights(self):
+        self.network.getWeights()
+
+    def saveWeights(self, path):
+        self.network.saveWeights(path)
 
     def getTargetList(self):
         return self.reachedTargetList
@@ -111,3 +135,7 @@ class A2C_MultiprocessingActor:
             return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]),
                                         np.array([velocity]))  # Liste mit [actions, value]
 
+
+    def trainNet(self, statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages):
+        self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
+        return self.network.getWeights()
