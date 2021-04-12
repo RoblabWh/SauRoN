@@ -10,7 +10,7 @@ import os
 @ray.remote
 class A2C_MultiprocessingActor:
 
-    def __init__(self, act_dim, env_dim, args, weights, master):
+    def __init__(self, act_dim, env_dim, args, weights, level, master):
 
         # Tensorflow-GPU: 2.2.0 muss installiert sein
         # Dafür wird Cuda 10.1 benötigt
@@ -33,8 +33,9 @@ class A2C_MultiprocessingActor:
         self.timePenalty = args.time_penalty
         # self.av_meter = AverageMeter()
         self.gamma = args.gamma
-        self.reachedTargetList = [False] *100 #TODO mit erfolgsliste aus main Process zusammenlegen
-        self.level = 0
+        self.reachedTargetList = [False] * 100
+        self.level = level
+        self.reset()
 
 
     def setWeights(self, weights):
@@ -115,6 +116,89 @@ class A2C_MultiprocessingActor:
             zeit += 1
         return robotsData
 
+    def trainSteps(self, numbrOfSteps):
+        stepsLeft , cumul_reward = numbrOfSteps, 0
+
+        if self.reset:
+            self.reset = False
+            # Reset episode
+            done = False
+
+            robotsData = []
+            robotsOldState = []
+
+            for i in range(self.numbOfRobots):
+                old_state = self.env.get_observation(i)
+                robotsOldState.append(np.expand_dims(old_state, axis=0))
+
+                actions, states, rewards, done, evaluation = [], [], [], [], []
+                robotsData.append((actions, states, rewards, done, evaluation))
+            # Robot 0 actions --> robotsData[0][0]
+            # Robot 0 states  --> robotsData[0][1]
+            # Robot 0 rewards --> robotsData[0][2]
+            # Robot 1 actions --> robotsData[1][0]
+            # ...
+        else:
+
+            robotsData = []
+            robotsOldState = self.robotsOldStateBackup
+
+            for robotDataBackup in self.robotsDataBackup:
+                actions, states, rewards, done, evaluation = robotDataBackup
+                robotsData.append(([actions[-1]],[states[-1]],[rewards[-1]], [done[-1]], [evaluation[-1]]))
+
+
+
+
+        while stepsLeft > 0 and not self.env.is_done():
+
+            # Actor picks an action (following the policy)
+            robotsActions = []  # actions of every Robot in the selected environment
+            for i in range(0, len(robotsData)):  # iterating over every robot
+                if not True in robotsData[i][3]:
+                    aTmp = self.policy_action(robotsOldState[i][0], (self.reachedTargetList).count(True) / 100)
+                    a = np.ndarray.tolist(aTmp[0])[0]
+                    c = np.ndarray.tolist(aTmp[1])[0]
+                else:
+                    a = [None, None]
+                robotsActions.append(a)
+
+                if not None in a:
+                    robotsData[i][0].append(a)  # action_onehot) #TODO Tupel mit 2 werten von je -1 bis 1
+                    robotsData[i][4].append(c)
+
+            # environment makes a step with selected actions
+            results = self.env.step(robotsActions)
+
+            for i, dataCurrentFrameSingleRobot in enumerate(
+                    results):  # results[1] hat id, die hierfür nicht mehr gebraucht wird
+
+                if not True in robotsData[i][3]:  # [environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
+                    # print("dataCurent Frame 0 of env",results[j][1], dataCurrentFrame[0])
+                    new_state = dataCurrentFrameSingleRobot[0]
+                    r = dataCurrentFrameSingleRobot[1]
+                    done = dataCurrentFrameSingleRobot[2]
+                    robotsData[i][1].append(robotsOldState[i][0])
+                    robotsData[i][2].append(r)
+                    robotsData[i][3].append(done)
+                    if (done):
+                        reachedPickup = dataCurrentFrameSingleRobot[3]
+                        self.reachedTargetList.pop(0)
+                        self.reachedTargetList.append(reachedPickup)
+                    # Update current state
+                    robotsOldState[i] = new_state
+                    cumul_reward += r
+            stepsLeft -= 1
+        self.robotsDataBackup = robotsData
+        self.robotsOldStateBackup = robotsOldState
+        return robotsData
+
+    def reset(self):
+        self.env.reset(self.level)
+        self.reset = True
+
+    def isActive(self):
+        return not self.env.is_done()
 
     def policy_action(self, s, successrate):  # TODO obs_timestep mit übergeben
         """ Use the actor to predict the next action to take, using the policy

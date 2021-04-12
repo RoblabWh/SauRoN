@@ -25,14 +25,14 @@ class A2C_Multi:
     def train(self):
         """ Main A2C Training Algorithm
         """
-        reachedTargetList = [False] * 80
+        # reachedTargetList = [False] * 100
         # countEnvs = len(envs)
+        envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
 
         ray.init()
-        multiActors = [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, None, True)]
+        multiActors = [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, None, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
-        multiActors += [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, False) for _ in range(self.numbOfParallelEnvs-1)]
-        envLevel = [4 for _ in range(self.numbOfParallelEnvs+1)]
+        multiActors += [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
         for i, actor in enumerate(multiActors):
             actor.setLevel.remote(envLevel[i])
         # env.setUISaveListener(self)
@@ -43,7 +43,31 @@ class A2C_Multi:
         for e in tqdm_e:
             self.curentEpisode = e
             #Start of episode for the parallel A2C actors with their own environment
-            futures = [actor.trainOneEpisode.remote() for actor in multiActors]
+            # HIer wird die gesamte Episode durchlaufen und dann erst trainiert
+            # futures = [actor.trainOneEpisode.remote() for actor in multiActors]
+
+
+            #Training bereits alle n=75 Episoden mit den zu dem Zeitounkt gesammelten Daten (nur für noch aktive Environments)
+
+            activeActors = multiActors
+            while len(activeActors) > 0:
+                futures = [actor.trainSteps.remote(75) for actor in activeActors]
+
+                allTrainingResults = ray.get(futures)
+                trainedWeights = self.train_models(allTrainingResults, multiActors[0])
+                for actor in multiActors[1:len(multiActors)]:
+                    actor.setWeights.remote(trainedWeights)
+
+                activeActors = []
+                for actor in multiActors:
+                    if ray.get(actor.isActive.remote()):
+                        activeActors.append(actor)
+                # activeActors = [actor for actor in multiActors if ray.get(actor.isActive.remote())]
+
+            for actor in multiActors:
+                actor.reset.remote()
+
+
 
 
             # Reset episode
@@ -51,74 +75,17 @@ class A2C_Multi:
             #TODO Werte für ausgabe aus Actorn ziehen
 
 
-            # env.reset(envLevel[0])# parameter is level
-            # robotsData = []
-            # robotsOldState = []
-            # saveCurrentWeights = False
-            #
-            # for i in range(self.numbOfRobots):
-            #
-            #     old_state = env.get_observation(i)
-            #     robotsOldState.append(np.expand_dims(old_state, axis=0))
-            #
-            #
-            #     actions, states, rewards, done, evaluation = [], [], [], [], []
-            #     robotsData.append((actions, states, rewards, done, evaluation))
-            # # Robot 0 actions --> robotsData[0][0]
-            # # Robot 0 states  --> robotsData[0][1]
-            # # Robot 0 rewards --> robotsData[0][2]
-            # # Robot 1 actions --> robotsData[1][0]
-            # # ...
-            #
-            # while not env.is_done():
-            #
-            #     # Actor picks an action (following the policy)
-            #     robotsActions = [] #actions of every Robot in the selected environment
-            #     for i in range(0, len(robotsData)): #iterating over every robot
-            #         if not True in robotsData[i][3]:
-            #             aTmp = self.policy_action(robotsOldState[i][0], (reachedTargetList).count(True)/100)
-            #             a = np.ndarray.tolist(aTmp[0])[0]
-            #             c = np.ndarray.tolist(aTmp[1])[0]
-            #         else:
-            #             a = [None, None]
-            #         robotsActions.append(a)
-            #
-            #         if not None in a:
-            #             robotsData[i][0].append(a)#action_onehot) #TODO Tupel mit 2 werten von je -1 bis 1
-            #             robotsData[i][4].append(c)
-            #
-            #     #environment makes a step with selected actions
-            #     results = env.step(robotsActions)
-            #
-            #
-            #     for i, dataCurrentFrameSingleRobot in enumerate(results):
-            #
-            #         if not True in robotsData[i][3]: #[environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
-            #             # print("dataCurent Frame 0 of env",results[j][1], dataCurrentFrame[0])
-            #             new_state = dataCurrentFrameSingleRobot[0]
-            #             r = dataCurrentFrameSingleRobot[1]
-            #             done = dataCurrentFrameSingleRobot[2]
-            #             robotsData[i][1].append(robotsOldState[i][0])
-            #             robotsData[i][2].append(r)
-            #             robotsData[i][3].append(done)
-            #             if(done):
-            #                 reachedPickup = dataCurrentFrameSingleRobot[3]
-            #                 reachedTargetList.pop(0)
-            #                 reachedTargetList.append(reachedPickup)
-            #             # Update current state
-            #             robotsOldState[i] = new_state
-            #             cumul_reward += r
-            #     zeit += 1
-
-            allTrainingResults = ray.get(futures)
-            # if(allTrainingResults )
+            #Benötigt für Durchlauf ganzer Episode mit Training am Ende
+            # allTrainingResults = ray.get(futures)
 
             if (e+1) % self.args.save_intervall == 0:
                 print('Saving')
                 self.save_weights(multiActors[0], self.args.path)
 
             #Checking current success and updating level if nessessary
-            allReachedTargetList = reachedTargetList.copy()
+            # allReachedTargetList = reachedTargetList.copy()
+
+            allReachedTargetList = []
 
             for actor in multiActors:
                 tmpTargetList = ray.get(actor.getTargetList.remote())
@@ -126,36 +93,33 @@ class A2C_Multi:
 
             # allTrainingResults.append(robotsData)
 
-            targetDivider = (self.numbOfParallelEnvs + 1) * 100  # Erfolg der letzten 100
+            targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
             successrate = allReachedTargetList.count(True) / targetDivider
 
-            if (successrate > 0.8):
-                lastindex = len(reachedTargetList)
-                if(reachedTargetList[lastindex-5:lastindex].count(True) == 4):
-                    currenthardest = envLevel[0]
-                    if currenthardest != 8:
-                        levelups = self.numbOfParallelEnvs - currenthardest
-                        if (self.numbOfParallelEnvs > 20):
-                            levelups = self.numbOfParallelEnvs - 2 * currenthardest
-                        for i in range(levelups):  # bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
-                            envLevel[i] = envLevel[i] + 1
+            if (successrate > 0.85):
+                lastindex = len(allReachedTargetList)
+                currenthardest = envLevel[0]
+                if currenthardest != 8:
+                    levelups = self.numbOfParallelEnvs - currenthardest+1
+                    if (self.numbOfParallelEnvs > 20):
+                        levelups = self.numbOfParallelEnvs - 2 * currenthardest+1
+                    for i in range(levelups):  # bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
+                        envLevel[i] = envLevel[i] + 1
 
-                        print(envLevel)
-                        self.save_weights(multiActors[0], self.args.path, "_endOfLevel-"+str(currenthardest))
-
-                        for _ in range(len(reachedTargetList)):
-                            reachedTargetList.pop(0)
-                            reachedTargetList.append(False)
-
-                        for i, actor in enumerate(multiActors):
-                            actor.setLevel.remote(envLevel[i + 1])
+                    print(envLevel)
+                    self.save_weights(multiActors[0], self.args.path, "_endOfLevel-"+str(currenthardest))
 
 
-            trainedWeights = self.train_models(allTrainingResults, multiActors[0])
+                    for i, actor in enumerate(multiActors):
+                        actor.setLevel.remote(envLevel[i])
+
+            #Benötigt für Durchlauf ganzer Episode mit Training am Ende
+            # trainedWeights = self.train_models(allTrainingResults, multiActors[0])
             # trainedWeights = self.network.getWeights()
 
-            for actor in multiActors[1:len(multiActors)]:
-                actor.setWeights.remote(trainedWeights)
+            #Benötigt für Durchlauf ganzer Episode mit Training am Ende
+            # for actor in multiActors[1:len(multiActors)]:
+            #     actor.setWeights.remote(trainedWeights)
 
             # Update Average Rewards
             self.av_meter.update(cumul_reward)
@@ -199,7 +163,6 @@ class A2C_Multi:
         statesConcatenatedD = np.array([])
         statesConcatenatedV = np.array([])
         statesConcatenatedT = np.array([])
-
         for robotsData in envsData:
             for data in robotsData:
                 actions, states, rewards, dones, evaluations = data
@@ -256,7 +219,7 @@ class A2C_Multi:
                 #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
                 # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
 
-        weights = masterEnv.trainNet.remote(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
+        weights = ray.get(masterEnv.trainNet.remote(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages))
         # self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
         return weights
 
