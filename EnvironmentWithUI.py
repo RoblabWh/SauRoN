@@ -322,4 +322,5 @@ class Environment:
         self.done = False
 
     def setUISaveListener(self, observer):
-        self.simulation.simulationWindow.setSaveListener(observer)
+        if self.simulation.hasUI:
+            self.simulation.simulationWindow.setSaveListener(observer)

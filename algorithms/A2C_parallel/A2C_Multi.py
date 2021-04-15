@@ -41,7 +41,7 @@ class A2C_Multi:
         tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
 
         for e in tqdm_e:
-            self.curentEpisode = e
+            self.currentEpisode = e
             #Start of episode for the parallel A2C actors with their own environment
             # HIer wird die gesamte Episode durchlaufen und dann erst trainiert
             # futures = [actor.trainOneEpisode.remote() for actor in multiActors]
@@ -96,11 +96,11 @@ class A2C_Multi:
             targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
             successrate = allReachedTargetList.count(True) / targetDivider
 
-            if (successrate > 0.85):
+            if (successrate > 0.83):
                 lastindex = len(allReachedTargetList)
                 currenthardest = envLevel[0]
                 if currenthardest != 8:
-                    levelups = self.numbOfParallelEnvs - currenthardest+1
+                    levelups = self.numbOfParallelEnvs - (currenthardest+1)
                     if (self.numbOfParallelEnvs > 20):
                         levelups = self.numbOfParallelEnvs - 2 * currenthardest+1
                     for i in range(levelups):  # bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
@@ -235,7 +235,7 @@ class A2C_Multi:
 
     def saveCurrentWeights(self):
         print('Saving individual')
-        self.save_weights(self.args.path, "_e" + str(self.curentEpisode))
+        self.save_weights(self.args.path, "_e" + str(self.currentEpisode))
 
     def save_weights(self, masterEnv, path, additional=""):
         path += 'A2C' + self.args.model_timestamp + additional

@@ -1,5 +1,7 @@
 import ray
 import numpy as np
+import yaml
+
 from EnvironmentWithUI import Environment
 from algorithms.A2C_parallel.A2C_Network import A2C_Network
 import sys
@@ -25,16 +27,20 @@ class A2C_MultiprocessingActor:
 
         self.args = args
         app = None
-        if master: app = QApplication(sys.argv)
+        if master:
+            app = QApplication(sys.argv)
         self.network = A2C_Network(act_dim, env_dim, args)
-        if weights != None: self.network.setWeights(weights)
+        if weights != None:
+            self.network.setWeights(weights)
         self.env = Environment(app, args, env_dim[0], 0) #None --> No UI
+        self.env.setUISaveListener(self)
         self.numbOfRobots = args.numb_of_robots
         self.timePenalty = args.time_penalty
         # self.av_meter = AverageMeter()
         self.gamma = args.gamma
         self.reachedTargetList = [False] * 100
         self.level = level
+        self.currentEpisode = -1
         self.reset()
 
 
@@ -46,6 +52,15 @@ class A2C_MultiprocessingActor:
 
     def saveWeights(self, path):
         self.network.saveWeights(path)
+
+    def saveCurrentWeights(self):
+        print('saving individual')
+        path = self.args.path + 'A2C' + self.args.model_timestamp + "_e" + str(self.currentEpisode)
+        self.saveWeights(path)
+
+        data = [self.args]
+        with open(path+'.yml', 'w') as outfile:
+            yaml.dump(data, outfile, default_flow_style=False)
 
     def getTargetList(self):
         return self.reachedTargetList
@@ -196,6 +211,7 @@ class A2C_MultiprocessingActor:
     def reset(self):
         self.env.reset(self.level)
         self.reset = True
+        self.currentEpisode +=1
 
     def isActive(self):
         return not self.env.is_done()
@@ -223,3 +239,5 @@ class A2C_MultiprocessingActor:
     def trainNet(self, statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages):
         self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
         return self.network.getWeights()
+
+
