@@ -23,6 +23,7 @@ gamma = 0.999
 lr = 0.0001
 num_episodes = 2000
 steps = 1000
+trainingInterval = 75 # number of steps after which the neural net is trained
 
 arenaWidth = 22   # m
 arenaLength = 10  # m
@@ -45,6 +46,8 @@ filename = 'A2C_21-03-11--14-24_e94'
 filename = 'A2C_21-03-11--15-07'
 filename = 'A2C_21-03-11--17-09_e634'
 filename = 'A2C_21-03-25--15-21_e1279'
+filename = 'A2C_21-04-15--13-16_e1639' #ZEIGEN (ist nicht der hammer aber schon ganz ok für die ersten Level
+
 
 
 
@@ -60,6 +63,7 @@ if __name__ == '__main__':
     parser.add_argument('-lr', '--learningrate', type=float, default=lr, help='Learning Rate')
     parser.add_argument('--gamma', type=float, default=gamma, help='Gamma')
     parser.add_argument('--steps', type=int, default=steps, help='Steps in Environment per Episode')
+    parser.add_argument('--train_interval', type=int, default=trainingInterval, help='The number of steps after which the neural net is trained.')
     # FOR DQN
     parser.add_argument('--target_update', type=int, default=target_update, help='How often is the Agent updated')
     parser.add_argument('--batchsize', type=int, default=batch_size, help='batch_size')
@@ -130,12 +134,13 @@ if __name__ == '__main__':
 
     if args.training:
         if args.load_old:
-            model.load_weights(args.path+filename+'.h5')
+            model.train(args.path+filename+'.h5')
         model.train()
+        # model.trainA3C()
     elif not args.training:
         app = QApplication(sys.argv)
         env = EnvironmentWithUI.Environment(app, args, env_dim[0], 0)
-        model.load_weights(args.path+filename+'.h5')
+        model.load_net(args.path+filename+'.h5')
         model.execute(env, args)
 
 

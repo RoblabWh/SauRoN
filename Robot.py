@@ -590,7 +590,7 @@ class Robot:
         circleR = [r[2] for r in roboterList]
 
 
-        rayCol = FastCollisionRay2([self.getPosX(), self.getPosY()], int(360/alpha), dir) #TODO int(360/alpha) kann beriets als Konstante im Konstruktor erzeugt werden
+        rayCol = FastCollisionRay2([self.getPosX(), self.getPosY()], int(360/alpha), dir, self.radius) #TODO int(360/alpha) kann beriets als Konstante im Konstruktor erzeugt werden
         rayHit = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, np.array([circleX, circleY]), circleR))
         distances = (rayHit[0])
         radarHits = (rayHit[1])
@@ -655,14 +655,14 @@ class Robot:
 
 import numpy as np
 class FastCollisionRay2:
-    def __init__(self, rayOrigin, rayCount, startAngle):
+    def __init__(self, rayOrigin, rayCount, startAngle, radius):
         self.rayOrigin = rayOrigin #np.array([[rayOrigin[0]],[rayOrigin[1]]], dtype=np.float)
         # für die dauer von raycount mache
         stepSize = 2*math.pi/rayCount
         steps = np.array([startAngle+i*stepSize for i in range(rayCount)])
         self.rayDirX = np.array([math.cos(step) for step in steps])
         self.rayDirY = np.array([math.sin(step) for step in steps])
-
+        self.ownRadius = radius
 
     def lineRayIntersectionPoint(self, points1, points2, pointsRobots, radius):
         """
@@ -746,8 +746,10 @@ class FastCollisionRay2:
 
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
 
+        t1NearestHit = t1NearestHit - self.ownRadius
 
 
+        #TODO radius abziehen
         collisionPoints = np.swapaxes(collisionPoints, 0, 1)#für Rückgabe in x,y-Paaren
         return [t1NearestHit, collisionPoints]
 

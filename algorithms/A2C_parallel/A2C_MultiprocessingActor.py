@@ -41,7 +41,7 @@ class A2C_MultiprocessingActor:
         self.reachedTargetList = [False] * 100
         self.level = level
         self.currentEpisode = -1
-        self.reset()
+        self.resetActor()
 
 
     def setWeights(self, weights):
@@ -208,7 +208,8 @@ class A2C_MultiprocessingActor:
         self.robotsOldStateBackup = robotsOldState
         return robotsData
 
-    def reset(self):
+
+    def resetActor(self):
         self.env.reset(self.level)
         self.reset = True
         self.currentEpisode +=1
@@ -240,4 +241,70 @@ class A2C_MultiprocessingActor:
         self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
         return self.network.getWeights()
 
+    ######################################################################################################
+    #####Folgende Methoden werden bei der VErwendung eines zentralen Netzes im Hauptptozess benötigt #####
+    ######################################################################################################
+    #Das Netz aus dem Konstruktor wird dann nicht benötigt (kann auskommentiert werden)
+
+    def doSingleStep(self, robotsActions, robotsCritics):
+
+        robotsData = self.robotsData
+        robotsOldState = self.robotsOldStateBackup
+
+        for i, action in enumerate(robotsActions):
+            if not None in action:
+                robotsData[i][0].append(robotsActions[i])  # action
+                robotsData[i][4].append(robotsCritics[i])  # critic value
+
+        # environment makes a step with selected actions
+        results = self.env.step(robotsActions)
+
+        for i, dataCurrentFrameSingleRobot in enumerate(results):  # results[1] hat id, die hierfür nicht mehr gebraucht wird
+
+            if not True in robotsData[i][3]:  # [environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
+                # print("dataCurent Frame 0 of env",results[j][1], dataCurrentFrame[0])
+                new_state = dataCurrentFrameSingleRobot[0]
+                r = dataCurrentFrameSingleRobot[1]
+                done = dataCurrentFrameSingleRobot[2]
+                robotsData[i][1].append(robotsOldState[i][0])
+                robotsData[i][2].append(r)
+                robotsData[i][3].append(done)
+                if (done):
+                    reachedPickup = dataCurrentFrameSingleRobot[3]
+                    self.reachedTargetList.pop(0)
+                    self.reachedTargetList.append(reachedPickup)
+                # Update current state
+                robotsOldState[i] = new_state
+
+        self.robotsOldStateBackup = robotsOldState
+        self.robotsData = robotsData
+
+        return (self.robotsData, robotsOldState)
+
+    def getRobotDataAndReset(self):
+        self.robotsDataBackup = self.robotsData.copy()
+
+        robotsData = []
+        for robotDataBackup in self.robotsDataBackup:
+            actions, states, rewards, done, evaluation = robotDataBackup
+            robotsData.append(([actions[-1]], [states[-1]], [rewards[-1]], [done[-1]], [evaluation[-1]]))
+        self.robotsData = robotsData
+
+        return self.robotsDataBackup
+
+    def getInitialObservation(self):
+        self.resetActor()
+        robotsData = []
+        robotsOldState = []
+
+        for i in range(self.numbOfRobots):
+            old_state = self.env.get_observation(i)
+            robotsOldState.append(np.expand_dims(old_state, axis=0))
+
+            actions, states, rewards, done, evaluation = [], [], [], [], []
+            robotsData.append((actions, states, rewards, done, evaluation))
+
+        self.robotsData = robotsData
+        self.robotsOldStateBackup = robotsOldState
+        return (robotsData, robotsOldState)
 

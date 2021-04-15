@@ -22,11 +22,14 @@ class A2C_Multi:
         self.av_meter = AverageMeter()
         self.gamma = args.gamma
 
-    def train(self):
+    def train(self, loadWeightsPath = ""):
         """ Main A2C Training Algorithm
         """
         # reachedTargetList = [False] * 100
         # countEnvs = len(envs)
+
+        if loadWeightsPath != "":
+            print("Todo Gewichte für actor laden")
         envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
 
         ray.init()
@@ -47,11 +50,10 @@ class A2C_Multi:
             # futures = [actor.trainOneEpisode.remote() for actor in multiActors]
 
 
-            #Training bereits alle n=75 Episoden mit den zu dem Zeitounkt gesammelten Daten (nur für noch aktive Environments)
-
+            #Training bereits alle n=75 steps mit den zu dem Zeitounkt gesammelten Daten (nur für noch aktive Environments)
             activeActors = multiActors
             while len(activeActors) > 0:
-                futures = [actor.trainSteps.remote(75) for actor in activeActors]
+                futures = [actor.trainSteps.remote(self.args.train_interval) for actor in activeActors]
 
                 allTrainingResults = ray.get(futures)
                 trainedWeights = self.train_models(allTrainingResults, multiActors[0])
@@ -65,7 +67,7 @@ class A2C_Multi:
                 # activeActors = [actor for actor in multiActors if ray.get(actor.isActive.remote())]
 
             for actor in multiActors:
-                actor.reset.remote()
+                actor.resetActor.remote()
 
 
 
@@ -130,6 +132,112 @@ class A2C_Multi:
             tqdm_e.set_description("Epi r: " + str(cumul_reward) + " -- Avr r: " + str(self.av_meter.avg) + " Avr Reached Target (25 epi): " + str(successrate))
             tqdm_e.refresh()
 
+    def trainA3C(self):
+        """ Main A2C Training Algorithm
+        """
+        # reachedTargetList = [False] * 100
+        # countEnvs = len(envs)
+        self.network = A2C_Network(self.act_dim, self.env_dim, self.args)
+
+        envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
+
+        ray.init()
+        multiActors = [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, None, envLevel[0], True)]
+        multiActors += [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, None, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
+        for i, actor in enumerate(multiActors):
+            actor.setLevel.remote(envLevel[i])
+        # env.setUISaveListener(self)
+
+        # Main Loop
+        tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
+
+        for e in tqdm_e:
+            self.currentEpisode = e
+            activeActors = multiActors
+            futures = [actor.getInitialObservation.remote() for actor in multiActors]
+
+            while len(activeActors) > 0:
+
+                #TODO stepsLeft (Trainingsintervall) über Main steuern
+                stepsLeft = self.args.train_interval
+
+                while stepsLeft > 0:
+                    actions = []
+                    critics = []
+                    futureValues = ray.get(futures)
+                    for futureRobotData in futureValues:
+                        robotsActions = []  # actions of every Robot in the selected environment
+                        robotsCritics = []  # Critic values of every Robot in the selected environment
+                        for i in range(0, len(futureRobotData[0])):  # iterating over every robot
+                            if not True in futureRobotData[0][i][3]:
+                                aTmp = self.policy_action(futureRobotData[1][i][0], 0) #futureRobotData[1] ist old state
+                                a = np.ndarray.tolist(aTmp[0])[0]
+                                c = np.ndarray.tolist(aTmp[1])[0]
+                            else:
+                                a = [None, None]
+                            robotsActions.append(a)
+                            robotsCritics.append(c)
+
+
+                        actions.append(robotsActions)
+                        critics.append(robotsCritics)
+
+                    futures = [actor.doSingleStep.remote(actions[i], critics[i]) for i, actor in enumerate(activeActors)]
+                    stepsLeft -= 1
+
+                allTrainingResults = [ray.get(actor.getRobotDataAndReset.remote()) for actor in multiActors]
+                self.train_models(allTrainingResults)
+
+                activeActors = []
+                for actor in multiActors:
+                    if ray.get(actor.isActive.remote()):
+                        activeActors.append(actor)
+
+            for actor in multiActors:
+                actor.resetActor.remote()
+
+
+
+
+            # Reset episode
+            zeit, cumul_reward, done = 0, 0, False
+            #TODO Werte für ausgabe aus Actorn ziehen
+
+
+            if (e+1) % self.args.save_intervall == 0:
+                print('Saving')
+                self.save_weights(multiActors[0], self.args.path)
+
+            allReachedTargetList = []
+            for actor in multiActors:
+                tmpTargetList = ray.get(actor.getTargetList.remote())
+                allReachedTargetList += tmpTargetList
+
+            targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
+            successrate = allReachedTargetList.count(True) / targetDivider
+
+            if (successrate > 0.83):
+                lastindex = len(allReachedTargetList)
+                currenthardest = envLevel[0]
+                if currenthardest != 8:
+                    levelups = self.numbOfParallelEnvs - (currenthardest+1)
+                    if (self.numbOfParallelEnvs > 20):
+                        levelups = self.numbOfParallelEnvs - 2 * currenthardest+1
+                    for i in range(levelups):  # bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
+                        envLevel[i] = envLevel[i] + 1
+
+                    print(envLevel)
+                    self.save_weights(multiActors[0], self.args.path, "_endOfLevel-"+str(currenthardest))
+
+
+                    for i, actor in enumerate(multiActors):
+                        actor.setLevel.remote(envLevel[i])
+
+            self.av_meter.update(cumul_reward)
+
+            tqdm_e.set_description("Epi r: " + str(cumul_reward) + " -- Avr r: " + str(self.av_meter.avg) + " Avr Reached Target (25 epi): " + str(successrate))
+            tqdm_e.refresh()
+
 
     def policy_action(self, s, successrate):#TODO obs_timestep mit übergeben
         """ Use the actor to predict the next action to take, using the policy
@@ -149,7 +257,7 @@ class A2C_Multi:
         else:
             return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])) #Liste mit [actions, value]
 
-    def train_models(self, envsData, masterEnv):#, states, actions, rewards): 1 0 2
+    def train_models(self, envsData, masterEnv = None):#, states, actions, rewards): 1 0 2
         """ Update actor and critic networks from experience
         """
         # Compute discounted rewards and Advantage (TD. Error)
@@ -219,8 +327,11 @@ class A2C_Multi:
                 #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
                 # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
 
-        weights = ray.get(masterEnv.trainNet.remote(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages))
-        # self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
+        if masterEnv == None:
+            self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
+            weights = self.network.getWeights()
+        else:
+            weights = ray.get(masterEnv.trainNet.remote(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages))
         return weights
 
     def discount(self, r):
@@ -251,7 +362,8 @@ class A2C_Multi:
     def loadWeights(self, path):
         self.network.load
 
-    def load_weights(self, path):
+    def load_net(self, path):
+        self.network = A2C_Network(self.act_dim, self.env_dim, self.args)
         self.network.load_weights(path)
 
         # def load_weights(self, path_actor, path_critic):
@@ -259,6 +371,7 @@ class A2C_Multi:
         #     self.actor.load_weights(path_actor)
 
     def execute(self, env, args):
+
         robotsCount = self.numbOfRobots
 
         for e in range(18):
