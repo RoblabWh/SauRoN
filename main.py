@@ -31,7 +31,7 @@ arenaLength = 10  # m
 scaleFactor = 65
 angleStepsSonar = 1
 timeFrames = 4
-numbOfParallelEnvs = 6
+numbOfParallelEnvs = 4*7
 numbOfRobots = 4
 
 # taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
@@ -47,7 +47,12 @@ filename = 'A2C_21-03-11--15-07'
 filename = 'A2C_21-03-11--17-09_e634'
 filename = 'A2C_21-03-25--15-21_e1279'
 filename = 'A2C_21-04-15--13-16_e1639' #ZEIGEN (ist nicht der hammer aber schon ganz ok für die ersten Level
-
+filename = 'A2C_21-04-19--14-52'
+filename = 'A2C_21-04-19--22-50'
+filename = 'A2C_21-04-20--08-57_e513'
+filename = 'A2C_21-04-20--17-27'
+filename = 'A2C_21-04-22--13-04_e237'
+filename = 'A2C_21-04-22--14-05_e77'
 
 
 
@@ -78,6 +83,7 @@ if __name__ == '__main__':
     parser.add_argument('--scale_factor', type=int, default=scaleFactor, help='Scale Factor for visualisation')
 
     parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  # Global oder Sonar einstellbar
+    parser.add_argument('--collide_other_targets', type=str2bool, default=False, help='Determines whether the robot collides with targets of other robots (or passes through them)')  # Global oder Sonar einstellbar
     parser.add_argument('--time_penalty', type=str2bool, default='False', help='Reward function with time step penalty')
     parser.add_argument('--angle_steps', type=int, default=angleStepsSonar, help='Angle Steps for sonar training')
     parser.add_argument('--time_frames', type=int, default=timeFrames, help='Number of Timeframes which will be analyzed by neural net')
@@ -98,7 +104,7 @@ if __name__ == '__main__':
 
     if args.manually:
         args.steps = 1000000
-        args.parallel_envs = 0
+        args.parallel_envs = 1
 
     if args.load_old or not args.training:
         # Read YAML file

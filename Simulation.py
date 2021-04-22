@@ -122,14 +122,14 @@ class Simulation:
                                (self.arenaWidth /2 +5, self.arenaLength /2)]
 
         noWalls = self.walls
-        level03b_walls = self.walls + [CollidorLine(self.arenaWidth / 15 * 2, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 2,self.arenaLength / 2 + .5),
-                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 15 * 13, self.arenaLength / 2 + .5),
-                                        CollidorLine(self.arenaWidth / 15 * 2, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 - .2),
-                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 - 0.2, self.arenaWidth / 15 * 13, self.arenaLength / 2 - .2),
-                                        CollidorLine(self.arenaWidth / 15 * 2, self.arenaLength / 2 + 0.5, self.arenaWidth / 15 * 2, self.arenaLength / 2 -.2),
+        level03b_walls = self.walls + [CollidorLine(self.arenaWidth / 4, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 2,self.arenaLength / 2 + .5),
+                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 4 * 3, self.arenaLength / 2 + .5),
+                                        CollidorLine(self.arenaWidth / 4, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 - .2),
+                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 - 0.2, self.arenaWidth / 4 * 3, self.arenaLength / 2 - .2),
+                                        CollidorLine(self.arenaWidth / 4, self.arenaLength / 2 + 0.5, self.arenaWidth / 4, self.arenaLength / 2 -.2),
                                         CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 3, self.arenaLength / 2  -.2),
                                         CollidorLine(self.arenaWidth / 5 * 2, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 + .5),
-                                        CollidorLine(self.arenaWidth / 15 * 13, self.arenaLength / 2 - 0.2, self.arenaWidth / 15 * 13, self.arenaLength / 2 + .5)]
+                                        CollidorLine(self.arenaWidth / 4 * 3, self.arenaLength / 2 - 0.2, self.arenaWidth / 4 * 3, self.arenaLength / 2 + .5)]
 
 
         level06_walls = self.walls + [CollidorLine(0,self.arenaLength/3, self.arenaWidth/24 *6, self.arenaLength/3),
@@ -153,12 +153,12 @@ class Simulation:
                                     CollidorLine(centerW+1, centerL+1 , centerW+1, self.arenaLength)]
 
         self.noiseStrength = [0.1, 0.2, 0.33, 0.4, 0.15, 0.4, 0.2, 0.5, 0.15]
-        self.level = [(level00_robotPos,level00_robotOrient,level00_stationsPos, noWalls),
+        self.level = [#(level00_robotPos,level00_robotOrient,level00_stationsPos, noWalls),
                       (level01_robotPos,level01_robotOrient,level01_stationsPos, noWalls),
                       (level02_robotPos,level02_robotOrient,level02_stationsPos, noWalls),
                       (level03_robotPos,level03_robotOrient,level03_stationsPos, noWalls),
                       (level03b_robotPos,level03b_robotOrient,level03b_stationsPos, level03b_walls),
-                      (level04_robotPos,level04_robotOrient,level04_stationsPos, noWalls),
+                      # (level04_robotPos,level04_robotOrient,level04_stationsPos, noWalls),
                       (level05_robotPos,level05_robotOrient,level05_stationsPos, noWalls),
                       (level06_robotPos,level06_robotOrient,level06_stationsPos, level06_walls),
                       (level07_robotPos,level07_robotOrient,level07_stationsPos, level07_walls)]

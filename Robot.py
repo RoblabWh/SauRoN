@@ -244,15 +244,14 @@ class Robot:
             if robotA is not self:
                 circleCollisionPos.append((robotA.getPosX(), robotA.getPosY(), robotA.getRadius()))
 
-
-        circleCollisionPos = circleCollisionPos  + self.collidorStationsCircles
+        if(self.args.collide_other_targets):
+            circleCollisionPos = circleCollisionPos  + self.collidorStationsCircles
         self.lookAround(self.args.angle_steps, colliders, circleCollisionPos)
 
         # frame_sonar = []
         target = (self.station.posX, self.station.posY)
         # target = (self.station.posX + (self.station.width / 2), self.station.posY + (self.station.length/2))
         distance = math.sqrt((self.getPosX() - target[0]) ** 2 + (self.getPosY() - target[1]) ** 2)
-        #TODO (performance) das kann im KOnstruktor berechnet werden (Konstante)
 
         oriRobotV = (self.getDirectionX(), self.getDirectionY())
         oriTargetV = ((self.getPosX() - target[0]),(self.getPosY() - target[1]))

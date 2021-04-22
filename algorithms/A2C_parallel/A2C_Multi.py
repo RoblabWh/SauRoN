@@ -30,8 +30,7 @@ class A2C_Multi:
 
         if loadWeightsPath != "":
             print("Todo Gewichte für actor laden")
-        envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
-
+        envLevel = [(i+3)%7 for i in range(self.numbOfParallelEnvs)]
         ray.init()
         multiActors = [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, None, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
@@ -66,15 +65,9 @@ class A2C_Multi:
                         activeActors.append(actor)
                 # activeActors = [actor for actor in multiActors if ray.get(actor.isActive.remote())]
 
-            for actor in multiActors:
-                actor.resetActor.remote()
-
-
-
 
             # Reset episode
             zeit, cumul_reward, done = 0, 0, False
-            #TODO Werte für ausgabe aus Actorn ziehen
 
 
             #Benötigt für Durchlauf ganzer Episode mit Training am Ende
@@ -115,6 +108,11 @@ class A2C_Multi:
                     for i, actor in enumerate(multiActors):
                         actor.setLevel.remote(envLevel[i])
 
+            for actor in multiActors:
+                (cumRewardActor, steps) = ray.get(actor.resetActor.remote())
+                self.av_meter.update(cumRewardActor, steps)
+                cumul_reward += cumRewardActor
+            cumul_reward = cumul_reward / self.args.parallel_envs
             #Benötigt für Durchlauf ganzer Episode mit Training am Ende
             # trainedWeights = self.train_models(allTrainingResults, multiActors[0])
             # trainedWeights = self.network.getWeights()
@@ -124,12 +122,12 @@ class A2C_Multi:
             #     actor.setWeights.remote(trainedWeights)
 
             # Update Average Rewards
-            self.av_meter.update(cumul_reward)
+
 
             # Display score
 
 
-            tqdm_e.set_description("Epi r: " + str(cumul_reward) + " -- Avr r: " + str(self.av_meter.avg) + " Avr Reached Target (25 epi): " + str(successrate))
+            tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " -- R avr all e : " + str(self.av_meter.avg) + " Avr Reached Target (25 epi): " + str(successrate))
             tqdm_e.refresh()
 
     def trainA3C(self):
@@ -200,8 +198,9 @@ class A2C_Multi:
 
 
             # Reset episode
-            zeit, cumul_reward, done = 0, 0, False
-            #TODO Werte für ausgabe aus Actorn ziehen
+            zeit, done = 0, False
+
+            cumul_reward = 0
 
 
             if (e+1) % self.args.save_intervall == 0:
@@ -328,6 +327,8 @@ class A2C_Multi:
                 # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
 
         if masterEnv == None:
+            # for i in len(statesConcatenatedL):
+            #     self.network.train_net(statesConcatenatedL[i], statesConcatenatedO[i], statesConcatenatedD[i],statesConcatenatedV[i], statesConcatenatedT[i],discounted_rewards[i], actionsConcatenated[i],advantages[i])
             self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
             weights = self.network.getWeights()
         else:

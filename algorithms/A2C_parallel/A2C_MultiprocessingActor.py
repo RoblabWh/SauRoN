@@ -41,6 +41,8 @@ class A2C_MultiprocessingActor:
         self.reachedTargetList = [False] * 100
         self.level = level
         self.currentEpisode = -1
+        self.cumul_reward = 0
+        self.steps = 0
         self.resetActor()
 
 
@@ -204,8 +206,10 @@ class A2C_MultiprocessingActor:
                     robotsOldState[i] = new_state
                     cumul_reward += r
             stepsLeft -= 1
+            self.steps += 1
         self.robotsDataBackup = robotsData
         self.robotsOldStateBackup = robotsOldState
+        self.cumul_reward += cumul_reward
         return robotsData
 
 
@@ -213,6 +217,11 @@ class A2C_MultiprocessingActor:
         self.env.reset(self.level)
         self.reset = True
         self.currentEpisode +=1
+        returnCumulReward, returnSteps = self.cumul_reward/4, self.steps
+        self.cumul_reward = 0
+        self.steps = 0
+
+        return (returnCumulReward, returnSteps)
 
     def isActive(self):
         return not self.env.is_done()

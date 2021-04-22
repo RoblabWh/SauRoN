@@ -267,8 +267,9 @@ class Environment:
         distNeg = 0.008  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
         oriPos = 0.001
         oriNeg = 0.0008
-        # lastDistPos = 0.05
+        lastDistPos = 0.05
         # rotatingNeg = -0.01
+        unblViewPos = 0.0003
 
         deltaDist = dist_old - dist_new
 
@@ -284,13 +285,18 @@ class Environment:
         else:
             rewardOrient = angularDeviation * oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
-        # lastBestDistance = robot.bestDistToGoal
-        # distGoal = dist_new
-        # rewardLastDist = 0
-        #
-        # if distGoal < lastBestDistance:
-        #     rewardLastDist = (lastBestDistance - distGoal) * lastDistPos
-        #     robot.bestDistToGoal = distGoal
+        # unblockedViewDistance = robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact * unblViewPos
+        unblockedViewDistance = (-0.1 / (robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact) ) * unblViewPos
+
+
+
+        lastBestDistance = robot.bestDistToGoal
+        distGoal = dist_new
+        rewardLastDist = 0
+
+        if distGoal < lastBestDistance:
+            rewardLastDist = (lastBestDistance - distGoal) * lastDistPos
+            robot.bestDistToGoal = distGoal
 
         #The robot is punished if it rotates for more than 3 frames at max rot vel
         #rewardLongDurationRotation = 0
@@ -310,8 +316,8 @@ class Environment:
         elif reachedPickup:
             reward = 1
         else:
-            reward = rewardDist + rewardOrient #+ rewardLastDist + rewardLongDurationRotation
-
+            reward = rewardDist + rewardOrient + rewardLastDist +  unblockedViewDistance # + rewardLongDurationRotation
+        # print(reward, unblockedViewDistance)
         return reward
 
 
