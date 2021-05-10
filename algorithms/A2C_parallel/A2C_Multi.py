@@ -244,10 +244,10 @@ class A2C_Multi:
         # std = ((1-successrate)**2)*0.55
 
 
-        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))])
-        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))])
-        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
-        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
+        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
+        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
+        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
         timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
         # print(laser.shape, orientation.shape, distance.shape, velocity.shape)
         if(self.timePenalty):
@@ -286,11 +286,12 @@ class A2C_Multi:
                 usedTimeSteps = []
 
                 for s in states:
-                    laser = np.array([np.array(s[i][0]) for i in range(0, len(s))])
-                    orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))])
-                    distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
-                    velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
+                    laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
+                    orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
+                    distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
+                    velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
                     usedTimeStep = np.array([np.array(s[i][4]) for i in range(0, len(s))])
+
                     lasers.append(laser)
                     orientations.append(orientation)
                     distances.append(distance)
@@ -377,7 +378,7 @@ class A2C_Multi:
 
         for e in range(18):
 
-            env.reset(e%9)
+            env.reset(e%8)
             # TODO nach erstem Mal auf trainiertem env sowas wie environment.randomizeForTesting() einbauen (alternativ hier ein fester Testsatz)
             # robotsOldState = [env.get_observation(i) for i in range(0, robotsCount)]
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]

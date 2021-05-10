@@ -62,6 +62,7 @@ class Robot:
         self.XYnormFact = [1/args.arena_width, 1/args.arena_length]
         self.directionnom = [-1, 1]#2 * math.pi]
         self.maxDistFact = 1/math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[1] ** 2)
+        # self.maxDistFact = 1/20 #FÜR CHRISTIANS SIMULATION
 
         self.manuell = args.manually
         self.args = args
@@ -288,6 +289,7 @@ class Robot:
         # frame_sonar.append(self.getAngularVelocityNorm())
 
         distancesNorm = self.distances* self.maxDistFact
+        # distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)  # FÜR CHRISTIANS SIM
         distancesNorm = distancesNorm.tolist()
         # for i in range(len(self.distances)):
         #     distancesNorm.append(self.distances[i] / maxDist)
@@ -524,6 +526,12 @@ class Robot:
         self.active = False
 
     def getDirectionAngle(self, last=False):
+        """
+
+        :param last:
+        :return: Current forward Dir in Range of 0 to 2Pi
+        """
+
 
         if not last:
             return self.state_raw[self.time_steps - 1][9]
@@ -580,7 +588,8 @@ class Robot:
     def lookAround(self, alpha, collisionLines, roboterList = []):
 
 
-        dir = (self.getDirectionAngle() + (math.pi)) % (2*math.pi)   #offsets the first Collision Line by 90 degrees to avoid edge errors during a convolution in neural net
+        dir = (self.getDirectionAngle() + (0.75 * math.pi)) % (2*math.pi)   #offsets the first Collision Line by 90 degrees to avoid edge errors during a convolution in neural net
+        # dir = (self.getDirectionAngle() - (0.75*math.pi)) % (2*math.pi)   #FÜR CHRISTIANS NETZ GEWICHTE
 
         colLinesStartPoints= np.swapaxes(np.array([cl.getStart() for cl in collisionLines]),0,1) #[[x,x,x,x],[y,y,y,y]]
         colLinesEndPoints = np.swapaxes(np.array([cl.getEnd() for cl in collisionLines]),0,1)
@@ -589,7 +598,8 @@ class Robot:
         circleR = [r[2] for r in roboterList]
 
 
-        rayCol = FastCollisionRay2([self.getPosX(), self.getPosY()], int(360/alpha), dir, self.radius) #TODO int(360/alpha) kann beriets als Konstante im Konstruktor erzeugt werden
+        rayCol = FastCollisionRay2([self.getPosX(), self.getPosY()], int(360/alpha), dir, self.radius)
+        # rayCol = FastCollisionRay2([self.getPosX(), self.getPosY()], 1081, dir, self.radius)   #FÜR CHRISTIANS NETZ GEWICHTE
         rayHit = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, np.array([circleX, circleY]), circleR))
         distances = (rayHit[0])
         radarHits = (rayHit[1])
@@ -658,6 +668,7 @@ class FastCollisionRay2:
         self.rayOrigin = rayOrigin #np.array([[rayOrigin[0]],[rayOrigin[1]]], dtype=np.float)
         # für die dauer von raycount mache
         stepSize = 2*math.pi/rayCount
+        # stepSize = 1.5*math.pi/1081 #FÜR CHRISTIANS NETZ GEWICHTE
         steps = np.array([startAngle+i*stepSize for i in range(rayCount)])
         self.rayDirX = np.array([math.cos(step) for step in steps])
         self.rayDirY = np.array([math.sin(step) for step in steps])
@@ -745,98 +756,9 @@ class FastCollisionRay2:
 
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
 
-        t1NearestHit = t1NearestHit - self.ownRadius
+        t1NearestHit = t1NearestHit - self.ownRadius #AUSKOMMENTIEREN FÜR CHRISTIANS NETZ
 
 
-        #TODO radius abziehen
         collisionPoints = np.swapaxes(collisionPoints, 0, 1)#für Rückgabe in x,y-Paaren
         return [t1NearestHit, collisionPoints]
-
-
-
-
-class Ray:
-    def __init__(self, x, y, angle):
-        self.pos = [x, y]
-        self.dir = [math.cos(angle), math.sin(angle)]
-
-    def getVector(self):
-        x = (self.dir[0])
-        y = (self.dir[1])
-        return (x,y)
-
-    def cast(self, line):
-        # start point
-        x1 = line.a[0]
-        y1 = line.a[1]
-        # end point
-        x2 = line.b[0]
-        y2 = line.b[1]
-
-        # position of the ray
-        x3 = self.pos[0]
-        y3 = self.pos[1]
-        x4 = self.pos[0] + self.dir[0]
-        y4 = self.pos[1] + self.dir[1]
-
-        # denominator
-        den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
-        # numerator
-        num = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)
-        if den == 0:
-            return None
-
-        # formulars
-        t = num / den
-        u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den
-
-        if t > 0 and t < 1 and u > 0:
-            # Px, Py
-            x = x1 + t * (x2 - x1)
-            y = y1 + t * (y2 - y1)
-            pot = [x, y]
-            # return pot
-            return [u,pot]
-
-
-
-    def castOnCircle(self, circle_center, circle_radius, pt1, pt2, full_line=False, tangent_tol=1e-9):
-        """ Find the points at which a circle intersects a line-segment.  This can happen at 0, 1, or 2 points.
-
-        :param circle_center: The (x, y) location of the circle center
-        :param circle_radius: The radius of the circle
-        :param pt1: The (x, y) location of the first point of the segment
-        :param pt2: The (x, y) location of the second point of the segment
-        :param full_line: True to find intersections along full line - not just in the segment.  False will just return intersections within the segment.
-        :param tangent_tol: Numerical tolerance at which we decide the intersections are close enough to consider it a tangent
-        :return Sequence[Tuple[float, float]]: A list of length 0, 1, or 2, where each element is a point at which the circle intercepts a line segment.
-
-        Note: We follow: http://mathworld.wolfram.com/Circle-LineIntersection.html
-        """
-
-        (p1x, p1y), (p2x, p2y), (cx, cy) = pt1, pt2, circle_center # p1 = roboter pos | p2 = aktueller nächster kollisionspunkt | circle_center trivial
-        (x1, y1), (x2, y2) = (p1x - cx, p1y - cy), (p2x - cx, p2y - cy) #Vektor con Kreismitte zu P1 und Kreismitte zu P2
-        dx, dy = (x2 - x1), (y2 - y1) #Vektor von P1 zu P2
-        dr = (dx ** 2 + dy ** 2)**.5 #Betrag
-        big_d = x1 * y2 - x2 * y1
-        discriminant = circle_radius ** 2 * dr ** 2 - big_d ** 2
-
-        if discriminant < 0:  # No intersection between circle and line
-            return []
-        else:  # There may be 0, 1, or 2 intersections with the segment
-            if dr != 0:
-                intersections = [
-                    (cx + (big_d * dy + sign * (-1 if dy < 0 else 1) * dx * discriminant**.5) / dr ** 2,
-                     cy + (-big_d * dx + sign * abs(dy) * discriminant**.5) / dr ** 2)
-                    for sign in ((1, -1) if dy < 0 else (-1, 1))]  # This makes sure the order along the segment is correct
-                if not full_line:  # If only considering the segment, filter out intersections that do not fall within the segment
-                    fraction_along_segment = [(xi - p1x) / dx if abs(dx) > abs(dy) else (yi - p1y) / dy for xi, yi in intersections]
-                    intersections = [pt for pt, frac in zip(intersections, fraction_along_segment) if 0 <= frac <= 1]
-                if len(intersections) == 2 and abs(discriminant) <= tangent_tol:  # If line is tangent to circle, return just one point (as both intersections have same location)
-                    return [intersections[0]]
-                else:
-                    return intersections
-            else:
-                return []
-
 

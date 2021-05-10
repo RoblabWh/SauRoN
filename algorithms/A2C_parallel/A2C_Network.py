@@ -29,19 +29,45 @@ class A2C_Network:
 
         self._input_laser = Input(shape=(env_dim[0], self.rays), dtype='float32', name='input_laser')
         # Orientation input
-        self._input_orientation = Input(shape=(env_dim[0], 2,), dtype='float32', name='input_orientation')
+        self._input_orientation = Input(shape=(2, env_dim[0], ), dtype='float32', name='input_orientation')
         # Distance input
-        self._input_distance = Input(shape=(env_dim[0], 1,), dtype='float32', name='input_distance')
+        self._input_distance = Input(shape=(1, env_dim[0],), dtype='float32', name='input_distance')
         # Velocity input
-        self._input_velocity = Input(shape=(env_dim[0], 2,), dtype='float32', name='input_velocity')
+        self._input_velocity = Input(shape=(2, env_dim[0],), dtype='float32', name='input_velocity')
         # Passed Time input
-        self._input_timestep = Input(shape=(env_dim[0], 1,), dtype='float32', name='input_Timestep')
+        self._input_timestep = Input(shape=(1, env_dim[0],), dtype='float32', name='input_Timestep')
 
         # Create actor and critic networks
         self.buildNetWithOpti()
 
 
+    def buildMainNet(self, tag = 'shared'):
+        # Laser input und convolutions
+        x_laser = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu',
+                         name=tag + '_conv1d_laser_1')(self._input_laser)
+        x_laser = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu',
+                         name=tag + '_conv1d_laser_2')(x_laser)
+        x_laser = Flatten()(x_laser)
 
+        x_laser = Dense(units=256, activation='relu', name=tag + '_dense_laser')(x_laser)
+
+        # Orientation input
+        x_orientation = Flatten()(self._input_orientation)
+        x_orientation = Dense(units=32, activation='relu', name=tag + '_dense_orientation')(x_orientation)
+
+        # Distance input
+        x_distance = Flatten()(self._input_distance)
+        x_distance = Dense(units=16, activation='relu', name=tag + '_dense_distance')(x_distance)
+
+        # Velocity input
+        x_velocity = Flatten()(self._input_velocity)
+        x_velocity = Dense(units=32, activation='relu', name=tag + '_dense_velocity')(x_velocity)
+
+        # Fully connect
+        fully_connect = concatenate([x_laser, x_orientation, x_distance, x_velocity])
+        fully_connect = Dense(units=384, activation='relu', name=tag + '_dense_fully_connect')(fully_connect)
+
+        return fully_connect
 
     def buildNetWithOpti(self):
         self._ADVANTAGE = placeholder(shape=(None,), name='ADVANTAGE')
@@ -55,36 +81,36 @@ class A2C_Network:
         # x_laser = Flatten()(x_laser)
         #
         # x_laser = Dense(units=192, activation='relu', name='shared' + '_dense_laser')(x_laser)
-        x_laser = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu',
-                         name='shared' + '_conv1d_laser_1')(self._input_laser)
-        x_laser = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu',
-                         name='shared' + '_conv1d_laser_2')(x_laser)
-        x_laser = Flatten()(x_laser)
-
-        x_laser = Dense(units=256, activation='relu', name='shared' + '_dense_laser')(x_laser)
-
-        # Orientation input
-        x_orientation = Flatten()(self._input_orientation)
-
-        # Distance input
-        x_distance = Flatten()(self._input_distance)
-
-        # Velocity input
-        x_velocity = Flatten()(self._input_velocity)
-
-        # (passed) Timestep input
-        x_timestep = Flatten()(self._input_timestep)
-
-        if self.timePenalty:
-            concated0 = concatenate([x_orientation, x_distance, x_velocity, x_timestep])
-        else:
-            concated0 = concatenate([x_orientation, x_distance, x_velocity])
-
-        concated = Dense(units=64, activation='relu', name='shared' + '_dense_concated')(concated0)
-
-        # Fully connect
-        fully_connect = concatenate([x_laser, concated])
-        fully_connect = Dense(units=384, activation='relu', name='shared' + '_dense_fully_connect')(fully_connect)
+        # x_laser = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu',
+        #                  name='shared' + '_conv1d_laser_1')(self._input_laser)
+        # x_laser = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu',
+        #                  name='shared' + '_conv1d_laser_2')(x_laser)
+        # x_laser = Flatten()(x_laser)
+        #
+        # x_laser = Dense(units=256, activation='relu', name='shared' + '_dense_laser')(x_laser)
+        #
+        # # Orientation input
+        # x_orientation = Flatten()(self._input_orientation)
+        #
+        # # Distance input
+        # x_distance = Flatten()(self._input_distance)
+        #
+        # # Velocity input
+        # x_velocity = Flatten()(self._input_velocity)
+        #
+        # # (passed) Timestep input
+        # x_timestep = Flatten()(self._input_timestep)
+        #
+        # if self.timePenalty:
+        #     concated0 = concatenate([x_orientation, x_distance, x_velocity, x_timestep])
+        # else:
+        #     concated0 = concatenate([x_orientation, x_distance, x_velocity])
+        #
+        # concated = Dense(units=64, activation='relu', name='shared' + '_dense_concated')(concated0)
+        #
+        # # Fully connect
+        # fully_connect = concatenate([x_laser, concated])
+        fully_connect = self.buildMainNet('Policy') #Dense(units=384, activation='relu', name='shared' + '_dense_fully_connect')(fully_connect)
 
 
         self._mu_var = ContinuousLayer()(fully_connect)
@@ -98,7 +124,7 @@ class A2C_Network:
 
 
         #critic
-        self._value = Dense(units=1, activation='linear', name='value')(fully_connect)
+        self._value = Dense(units=1, activation='linear', name='value')( self.buildMainNet('Value') )
 
         value_loss = mean_squared_error(squeeze(self._value, axis=-1), self._REWARD) * 0.5
 
@@ -143,7 +169,6 @@ class A2C_Network:
                 [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity], [self._mu])
 
     def select_action_continuous_clip(self, mu, var):
-        print(var)
         return clip(mu + exp(var) * random_normal(shape(mu)), -1.0, 1.0)
 
     def neglog_continuous(self, action, mu, var):
@@ -191,10 +216,10 @@ class A2C_Network:
         """
         # std = ((1-successrate)**2)*0.55
 
-        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))])
-        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))])
-        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
-        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
+        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
+        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
+        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
         # timesteps = np.array([np.array(0) for i in range(0, len(s))])
         timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
         if (self.timePenalty):

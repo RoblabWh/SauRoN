@@ -158,7 +158,7 @@ class Simulation:
                       (level02_robotPos,level02_robotOrient,level02_stationsPos, noWalls),
                       (level03_robotPos,level03_robotOrient,level03_stationsPos, noWalls),
                       (level03b_robotPos,level03b_robotOrient,level03b_stationsPos, level03b_walls),
-                      # (level04_robotPos,level04_robotOrient,level04_stationsPos, noWalls),
+                      (level04_robotPos,level04_robotOrient,level04_stationsPos, noWalls),
                       (level05_robotPos,level05_robotOrient,level05_stationsPos, noWalls),
                       (level06_robotPos,level06_robotOrient,level06_stationsPos, level06_walls),
                       (level07_robotPos,level07_robotOrient,level07_stationsPos, level07_walls)]
@@ -174,7 +174,8 @@ class Simulation:
 
 
         self.simTime = 0  # s
-        self.simTimestep = 0.1  # s
+        self.simTimestep = args.sim_time_step  # s
+        # self.simTimestep = 0.25  # FÜR CHRISTIANS NETZ
 
 
 
@@ -302,36 +303,14 @@ class Simulation:
                     runOutOfTime = True
 
 
-                # # nicht rechts oder links aus dem Fenster gehen
-                # if (robot.getPosX() + robot.width) > self.arenaWidth \
-                #         or (robot.getPosX()) < 0:
-                #     collision = True
-                #
-                # # nicht oben oder unten aus dem Fenster gehen
-                # if (robot.getPosY() + robot.length) > self.arenaLength or \
-                #         (robot.getPosY()) < 0:
-                #     collision = True
 
-                # for dist in robot.distances:
-                #     if dist<robot.getRadius()+0.05:
-                #         collision = True
                 if(np.min(robot.distances)<=0.05):
+                # if(np.min(robot.distances)<=0.3): # FÜR CHRISTIANS NETZ
                     collision = True
-                # if any(d <= robot.getRadius()+0.05 for d in robot.distances):
-                #     collision = True
 
-                # Wenn der Roboter mit der PickUpStation kollidiert und sie als Ziel hat wird ein neues Ziel generiert
-                # und reachedPickUp auf True gesetzt, ansonsten bleibt das alte Ziel
-                #if robot.hasGoal(self.pickUp):
                 if robot.collideWithTargetStationCircular():
                     reachedPickUp = True
-                #     goal = (self.delivery.getPosX(), self.delivery.getPosY())
-                # else:
-                #     goal = (self.pickUp.getPosX(), self.pickUp.getPosY())
-                # else:
-                #     goal = (self.delivery.getPosX(), self.delivery.getPosY())
-                #     if robot.collideWithStation(self.delivery):
-                #         reachedDelivery = True
+
 
                 if collision or reachedPickUp or runOutOfTime:
                     robot.deactivate()

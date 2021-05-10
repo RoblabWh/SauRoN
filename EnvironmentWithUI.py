@@ -83,7 +83,7 @@ class Environment:
             tarLinVel, tarAngVel = action #self.get_velocity(action)
             robotsTarVels.append((tarLinVel, tarAngVel))
 
-        robotsTermination = self.simulation.update(robotsTarVels, self.steps_left)
+        robotsTermination = self.simulation.update(robotsTarVels, self.steps_left) # KANN MAN HIER NICHT DIREKT DIE ACTIONS ÜBERGEBEN???
         robotsDataCurrentFrame = []
         for i, termination in enumerate(robotsTermination):
             if termination != (None, None, None):
@@ -263,13 +263,13 @@ class Environment:
         return (reward-timePenalty)/2
 
     def createReward04(self, robot, dist_new, dist_old, reachedPickup, collision):
-        distPos = 0.03
-        distNeg = 0.008  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
-        oriPos = 0.001
-        oriNeg = 0.0008
+        distPos = 0.01
+        distNeg = 0.002  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
+        oriPos = 0.0003
+        oriNeg = 0.00002
         lastDistPos = 0.05
         # rotatingNeg = -0.01
-        unblViewPos = 0.0003
+        # unblViewPos = 0.001
 
         deltaDist = dist_old - dist_new
 
@@ -286,7 +286,7 @@ class Environment:
             rewardOrient = angularDeviation * oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
         # unblockedViewDistance = robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact * unblViewPos
-        unblockedViewDistance = (-0.1 / (robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact) ) * unblViewPos
+        #unblockedViewDistance = (-0.1 / (robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact) ) * unblViewPos
 
 
 
@@ -314,9 +314,9 @@ class Environment:
         if collision:
             reward = -1
         elif reachedPickup:
-            reward = 1
+            reward = 1 + rewardDist + rewardOrient + rewardLastDist
         else:
-            reward = rewardDist + rewardOrient + rewardLastDist +  unblockedViewDistance # + rewardLongDurationRotation
+            reward = rewardDist + rewardOrient + rewardLastDist #+  unblockedViewDistance # + rewardLongDurationRotation
         # print(reward, unblockedViewDistance)
         return reward
 
