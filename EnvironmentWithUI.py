@@ -269,7 +269,7 @@ class Environment:
         oriNeg = 0.00002
         lastDistPos = 0.05
         # rotatingNeg = -0.01
-        # unblViewPos = 0.001
+        unblViewPos = 0.001
 
         deltaDist = dist_old - dist_new
 
@@ -286,7 +286,7 @@ class Environment:
             rewardOrient = angularDeviation * oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
         # unblockedViewDistance = robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact * unblViewPos
-        #unblockedViewDistance = (-0.1 / (robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact) ) * unblViewPos
+        unblockedViewDistance = (-0.1 / (robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact) ) * unblViewPos
 
 
 
@@ -314,9 +314,9 @@ class Environment:
         if collision:
             reward = -1
         elif reachedPickup:
-            reward = 1 + rewardDist + rewardOrient + rewardLastDist
+            reward = 1 + rewardDist + rewardOrient + unblockedViewDistance # + rewardLastDist
         else:
-            reward = rewardDist + rewardOrient + rewardLastDist #+  unblockedViewDistance # + rewardLongDurationRotation
+            reward = rewardDist + rewardOrient + unblockedViewDistance #+ rewardLastDist #+  unblockedViewDistance # + rewardLongDurationRotation
         # print(reward, unblockedViewDistance)
         return reward
 

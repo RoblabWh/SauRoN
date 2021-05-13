@@ -231,10 +231,10 @@ class A2C_MultiprocessingActor:
         """
         # std = ((1-successrate)**2)*0.55
 
-        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))])
-        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))])
-        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
-        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))])
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
+        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
+        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
+        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
         timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
         # print(laser.shape, orientation.shape, distance.shape, velocity.shape)
         if (self.timePenalty):

@@ -6,7 +6,7 @@ import math, random
 import numpy as np
 import time
 from old.PlotterWindow import PlotterWindow
-from Borders import CollidorLine
+from Borders import CollidorLine, SquareWall
 
 class Simulation:
 
@@ -122,14 +122,14 @@ class Simulation:
                                (self.arenaWidth /2 +5, self.arenaLength /2)]
 
         noWalls = self.walls
-        level03b_walls = self.walls + [CollidorLine(self.arenaWidth / 4, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 2,self.arenaLength / 2 + .5),
-                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 4 * 3, self.arenaLength / 2 + .5),
-                                        CollidorLine(self.arenaWidth / 4, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 - .2),
-                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 - 0.2, self.arenaWidth / 4 * 3, self.arenaLength / 2 - .2),
-                                        CollidorLine(self.arenaWidth / 4, self.arenaLength / 2 + 0.5, self.arenaWidth / 4, self.arenaLength / 2 -.2),
+        level03b_walls = self.walls + [CollidorLine(self.arenaWidth / 16, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 2,self.arenaLength / 2 + .5),
+                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 16 * 15, self.arenaLength / 2 + .5),
+                                        CollidorLine(self.arenaWidth / 16, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 - .2),
+                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 - 0.2, self.arenaWidth / 16 * 15, self.arenaLength / 2 - .2),
+                                        CollidorLine(self.arenaWidth / 16, self.arenaLength / 2 + 0.5, self.arenaWidth / 16, self.arenaLength / 2 -.2),
                                         CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 3, self.arenaLength / 2  -.2),
                                         CollidorLine(self.arenaWidth / 5 * 2, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 + .5),
-                                        CollidorLine(self.arenaWidth / 4 * 3, self.arenaLength / 2 - 0.2, self.arenaWidth / 4 * 3, self.arenaLength / 2 + .5)]
+                                        CollidorLine(self.arenaWidth / 16 * 15, self.arenaLength / 2 - 0.2, self.arenaWidth / 16 * 15, self.arenaLength / 2 + .5)]
 
 
         level06_walls = self.walls + [CollidorLine(0,self.arenaLength/3, self.arenaWidth/24 *6, self.arenaLength/3),
@@ -159,9 +159,22 @@ class Simulation:
                       (level03_robotPos,level03_robotOrient,level03_stationsPos, noWalls),
                       (level03b_robotPos,level03b_robotOrient,level03b_stationsPos, level03b_walls),
                       (level04_robotPos,level04_robotOrient,level04_stationsPos, noWalls),
-                      (level05_robotPos,level05_robotOrient,level05_stationsPos, noWalls),
+                      # (level05_robotPos,level05_robotOrient,level05_stationsPos, noWalls),
                       (level06_robotPos,level06_robotOrient,level06_stationsPos, level06_walls),
                       (level07_robotPos,level07_robotOrient,level07_stationsPos, level07_walls)]
+
+        # testlevel01 = ([(18,0.5),(19,0.666),(19.5,1.16), (18.3,1.4)],[2,1.8,1.9,2.2],[(1,9),(7.75,5.5),(9,6.5),(8,9)], SquareWall(9, 5, 3.8, 0.55, 40, True).getBorders() + noWalls)
+        # testlevel02 = ([(3,0.5),(2,0.666),(2.5,1.16), (3.3,1.4)],[1,0.8,0.9,1.2],[(19,9),(13.5,5),(12,6.5),(13,9)], SquareWall(12, 5, 3.8, 0.55, 130, True).getBorders() + noWalls)
+        testlevel03 = ([(3,0.5),(2,0.666),(2.5,1.16), (3.3,1.4)],[1,0.8,0.9,1.2],[(18,0.5),(19,2),(19.5,1.16), (20,2.6)], SquareWall(10, 1.6, 4, 0.55, 90, True).getBorders() + noWalls)
+        testlevel04 = ([(18,0.5),(19,0.666),(19.5,1.16), (18.3,1.4)],[1,0.8,0.9,1.2],[(3,0.5),(2,2),(2.5,1.16), (1,2.6)], SquareWall(10, 1.6, 4, 0.55, 90, True).getBorders() + noWalls)
+        # self.level[0] = testlevel01
+        # self.level[1] = testlevel02
+        # self.level[2] = testlevel03
+        # self.level[4] = testlevel04
+        self.level.append(testlevel03)
+        self.level.append(testlevel04)
+
+
         self.simulationWindow = None
 
 

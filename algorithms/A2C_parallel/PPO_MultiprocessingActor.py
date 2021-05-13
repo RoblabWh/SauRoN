@@ -117,7 +117,7 @@ class PPO_MultiprocessingActor:
                     aTmp = self.policy_action(robotsOldState[i][0], (self.reachedTargetList).count(True) / 100)
                     a = np.ndarray.tolist(aTmp[0])[0]
                     c = np.ndarray.tolist(aTmp[1])[0]
-                    negL = np.ndarray.tolist(aTmp[2])[0]
+                    negL = np.ndarray.tolist(aTmp[2])
                     # print(aTmp, a, c, neglog)
                 else:
                     a = [None, None]

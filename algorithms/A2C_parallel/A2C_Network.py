@@ -27,7 +27,10 @@ class A2C_Network:
         self.rays = int(360/args.angle_steps)
         self.timePenalty = args.time_penalty
 
-        self._input_laser = Input(shape=(env_dim[0], self.rays), dtype='float32', name='input_laser')
+        self._network_size = args.net_size
+        self._shared = args.shared
+
+        self._input_laser = Input(shape=(self.rays, env_dim[0]), dtype='float32', name='input_laser')
         # Orientation input
         self._input_orientation = Input(shape=(2, env_dim[0], ), dtype='float32', name='input_orientation')
         # Distance input
@@ -41,76 +44,100 @@ class A2C_Network:
         self.buildNetWithOpti()
 
 
-    def buildMainNet(self, tag = 'shared'):
-        # Laser input und convolutions
-        x_laser = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu',
-                         name=tag + '_conv1d_laser_1')(self._input_laser)
-        x_laser = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu',
-                         name=tag + '_conv1d_laser_2')(x_laser)
-        x_laser = Flatten()(x_laser)
+    def buildMainNet(self, tag = 'shared', type = 'big'):
 
-        x_laser = Dense(units=256, activation='relu', name=tag + '_dense_laser')(x_laser)
+        if type == 'big':
+            # Laser input und convolutions
+            x_laser = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu',
+                             name=tag + '_conv1d_laser_1')(self._input_laser)
+            x_laser = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu',
+                             name=tag + '_conv1d_laser_2')(x_laser)
+            x_laser = Flatten()(x_laser)
 
-        # Orientation input
-        x_orientation = Flatten()(self._input_orientation)
-        x_orientation = Dense(units=32, activation='relu', name=tag + '_dense_orientation')(x_orientation)
+            x_laser = Dense(units=256, activation='relu', name=tag + '_dense_laser')(x_laser)
 
-        # Distance input
-        x_distance = Flatten()(self._input_distance)
-        x_distance = Dense(units=16, activation='relu', name=tag + '_dense_distance')(x_distance)
+            # Orientation input
+            x_orientation = Flatten()(self._input_orientation)
+            x_orientation = Dense(units=32, activation='relu', name=tag + '_dense_orientation')(x_orientation)
 
-        # Velocity input
-        x_velocity = Flatten()(self._input_velocity)
-        x_velocity = Dense(units=32, activation='relu', name=tag + '_dense_velocity')(x_velocity)
+            # Distance input
+            x_distance = Flatten()(self._input_distance)
+            x_distance = Dense(units=16, activation='relu', name=tag + '_dense_distance')(x_distance)
 
-        # Fully connect
-        fully_connect = concatenate([x_laser, x_orientation, x_distance, x_velocity])
-        fully_connect = Dense(units=384, activation='relu', name=tag + '_dense_fully_connect')(fully_connect)
+            # Velocity input
+            x_velocity = Flatten()(self._input_velocity)
+            x_velocity = Dense(units=32, activation='relu', name=tag + '_dense_velocity')(x_velocity)
 
-        return fully_connect
+            # Fully connect
+            fully_connect = concatenate([x_laser, x_orientation, x_distance, x_velocity])
+            fully_connect = Dense(units=384, activation='relu', name=tag + '_dense_fully_connect')(fully_connect)
+
+            return fully_connect
+
+        elif type == 'medium':
+            # Laser input und convolutions
+            x_laser = Conv1D(filters=12, kernel_size=7, strides=3, padding='same', activation='relu',
+                             name=tag + '_conv1d_laser_1')(self._input_laser)
+            x_laser = Conv1D(filters=24, kernel_size=5, strides=2, padding='same', activation='relu',
+                             name=tag + '_conv1d_laser_2')(x_laser)
+            x_laser = Flatten()(x_laser)
+
+            x_laser = Dense(units=192, activation='relu', name=tag + '_dense_laser')(x_laser)
+
+            # Orientation input
+            x_orientation = Flatten()(self._input_orientation)
+
+            # Distance input
+            x_distance = Flatten()(self._input_distance)
+
+            # Velocity input
+            x_velocity = Flatten()(self._input_velocity)
+
+            concated = concatenate([x_orientation, x_distance, x_velocity])
+            concated = Dense(units=64, activation='relu', name=tag + '_dense_concated')(concated)
+
+            # Fully connect
+            fully_connect = concatenate([x_laser, concated])
+            fully_connect = Dense(units=384, activation='relu', name=tag + '_dense_fully_connect')(fully_connect)
+
+            return fully_connect
+
+        elif type == 'small':
+            # Laser input und convolutions
+            x_laser = Conv1D(filters=8, kernel_size=7, strides=3, padding='same', activation='relu',
+                             name=tag + '_conv1d_laser_1')(self._input_laser)
+            x_laser = Conv1D(filters=16, kernel_size=5, strides=2, padding='same', activation='relu',
+                             name=tag + '_conv1d_laser_2')(x_laser)
+            x_laser = Flatten()(x_laser)
+
+            x_laser = Dense(units=128, activation='relu', name=tag + '_dense_laser')(x_laser)
+
+            # Orientation input
+            x_orientation = Flatten()(self._input_orientation)
+
+            # Distance input
+            x_distance = Flatten()(self._input_distance)
+
+            # Velocity input
+            x_velocity = Flatten()(self._input_velocity)
+
+            # Fully connect
+            fully_connect = concatenate([x_laser, x_orientation, x_distance, x_velocity])
+            fully_connect = Dense(units=128, activation='relu', name=tag + '_dense_fully_connect')(fully_connect)
+
+            return fully_connect
+
+        else:
+            print("Network type ", str(type), " is unknown! select from: small, medium or big!")
+            exit(1)
+
 
     def buildNetWithOpti(self):
         self._ADVANTAGE = placeholder(shape=(None,), name='ADVANTAGE')
         self._REWARD = placeholder(shape=(None,), name='REWARD')
         self._ACTION = placeholder(shape=(None, 2), name='ACTION')
 
-        # x_laser = Conv1D(filters=12, kernel_size=7, strides=3, padding='same', activation='relu',
-        #                  name='shared' + '_conv1d_laser_1')(self._input_laser)
-        # x_laser = Conv1D(filters=24, kernel_size=5, strides=2, padding='same', activation='relu',
-        #                  name='shared' + '_conv1d_laser_2')(x_laser)
-        # x_laser = Flatten()(x_laser)
-        #
-        # x_laser = Dense(units=192, activation='relu', name='shared' + '_dense_laser')(x_laser)
-        # x_laser = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu',
-        #                  name='shared' + '_conv1d_laser_1')(self._input_laser)
-        # x_laser = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu',
-        #                  name='shared' + '_conv1d_laser_2')(x_laser)
-        # x_laser = Flatten()(x_laser)
-        #
-        # x_laser = Dense(units=256, activation='relu', name='shared' + '_dense_laser')(x_laser)
-        #
-        # # Orientation input
-        # x_orientation = Flatten()(self._input_orientation)
-        #
-        # # Distance input
-        # x_distance = Flatten()(self._input_distance)
-        #
-        # # Velocity input
-        # x_velocity = Flatten()(self._input_velocity)
-        #
-        # # (passed) Timestep input
-        # x_timestep = Flatten()(self._input_timestep)
-        #
-        # if self.timePenalty:
-        #     concated0 = concatenate([x_orientation, x_distance, x_velocity, x_timestep])
-        # else:
-        #     concated0 = concatenate([x_orientation, x_distance, x_velocity])
-        #
-        # concated = Dense(units=64, activation='relu', name='shared' + '_dense_concated')(concated0)
-        #
-        # # Fully connect
-        # fully_connect = concatenate([x_laser, concated])
-        fully_connect = self.buildMainNet('Policy') #Dense(units=384, activation='relu', name='shared' + '_dense_fully_connect')(fully_connect)
+        fully_connect = self.buildMainNet('Policy', self._network_size) #Dense(units=384, activation='relu', name='shared' + '_dense_fully_connect')(fully_connect)
 
 
         self._mu_var = ContinuousLayer()(fully_connect)
@@ -124,7 +151,10 @@ class A2C_Network:
 
 
         #critic
-        self._value = Dense(units=1, activation='linear', name='value')( self.buildMainNet('Value') )
+        if self._shared: # ACHTUNG bei letztem Training hatte ich hier ein not vergessen
+            self._value = Dense(units=1, activation='linear', name='value')(fully_connect)
+        else:
+            self._value = Dense(units=1, activation='linear', name='value')( self.buildMainNet('Value', self._network_size) )
 
         value_loss = mean_squared_error(squeeze(self._value, axis=-1), self._REWARD) * 0.5
 

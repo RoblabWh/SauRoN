@@ -6,6 +6,7 @@ from algorithms.A2C_parallel.PPO_MultiprocessingActor import PPO_Multiprocessing
 from tqdm import tqdm
 import ray
 import yaml
+import keras
 
 
 
@@ -27,15 +28,18 @@ class PPO_Multi:
         """
         # reachedTargetList = [False] * 100
         # countEnvs = len(envs)
-
+        loadedWeights = None
         if loadWeightsPath != "":
-            print("Todo Gewichte für actor laden")
+            self.load_net(loadWeightsPath)
+            loadedWeights = self.network.getWeights()
+            keras.backend.clear_session()
+
 
         #Create parallel workers with own environment
-        # envLevel = [(i+3)%8 for i in range(self.numbOfParallelEnvs)]
-        envLevel = [3 for _ in range(self.numbOfParallelEnvs)]
+        envLevel = [(i+3)%8 for i in range(self.numbOfParallelEnvs)]
+        #envLevel = [3 for _ in range(self.numbOfParallelEnvs)]
         ray.init()
-        multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, None, envLevel[0], True)]
+        multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
         multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
         for i, actor in enumerate(multiActors):

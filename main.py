@@ -25,16 +25,16 @@ memory_size = 10000
 gamma = 0.999
 lr = 0.0003 #laut christians config für ppo (und a3c)
 num_episodes = 2500
-steps = 550
+steps = 600
 trainingInterval = 75 # number of steps after which the neural net is trained
 
 arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 65
-angleStepsSonar = 1
+angleStepsSonar = 0.75
 timeFrames = 4
-numbOfParallelEnvs = 2#3*8
+numbOfParallelEnvs = 2*9
 numbOfRobots = 4
 simTimeStep = 0.1
 
@@ -55,6 +55,9 @@ filename = 'ppo_small_continuous_noshared_2020-10-29_12 46_0000010062'
 # filename = 'PPO_21-05-06--16-59_e846' #den auch small, shared
 # filename = 'PPO_21-05-06--22-51' #medium shared 0.1
 filename = 'PPO_21-05-07--12-26_e580'
+filename = 'PPO_21-05-10--14-58'
+# filename = 'PPO_21-05-11--22-06'
+# filename = 'PPO_21-05-13--09-48'
 
 
 if __name__ == '__main__':
@@ -65,12 +68,12 @@ if __name__ == '__main__':
     parser.add_argument('--save_intervall', type=int, default=50, help='Save Intervall')
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
     parser.add_argument('--model_timestamp', type=str, default=startTime, help='Timestamp from when the model was created')
-    parser.add_argument('--alg', type=str, default='ppo', choices=['a2c', 'dqn', 'ppo'], help='Reinforcement Learning Algorithm')
+    parser.add_argument('--alg', type=str, default='a2c', choices=['a2c', 'dqn', 'ppo'], help='Reinforcement Learning Algorithm')
     parser.add_argument('-lr', '--learningrate', type=float, default=lr, help='Learning Rate')
     parser.add_argument('--gamma', type=float, default=gamma, help='Gamma')
     parser.add_argument('--steps', type=int, default=steps, help='Steps in Environment per Episode')
     parser.add_argument('--train_interval', type=int, default=trainingInterval, help='The number of steps after which the neural net is trained.')
-    parser.add_argument('--net_size', type=str, default='medium', choices=['small', 'medium', 'big'], help='Determines the number of filters in the convolutional layers, the overall amount of neurons and the number of layers.')
+    parser.add_argument('--net_size', type=str, default='big', choices=['small', 'medium', 'big'], help='Determines the number of filters in the convolutional layers, the overall amount of neurons and the number of layers.')
     parser.add_argument('--shared', type=str2bool, default='False', help='Determines whether actor and aritic share their main network weights.')
 
     # FOR DQN

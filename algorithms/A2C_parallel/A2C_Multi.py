@@ -30,7 +30,7 @@ class A2C_Multi:
 
         if loadWeightsPath != "":
             print("Todo Gewichte für actor laden")
-        envLevel = [(i+3)%7 for i in range(self.numbOfParallelEnvs)]
+        envLevel = [(i+3)%8 for i in range(self.numbOfParallelEnvs)]
         ray.init()
         multiActors = [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, None, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
