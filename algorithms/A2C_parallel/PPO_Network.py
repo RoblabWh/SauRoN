@@ -48,6 +48,13 @@ class PPO_Network:
         self.buildNetWithOpti()
 
     def buildMainNet(self, tag = 'shared', type = 'big'):
+        """
+        builds the part of the neural network, that  processes all input values into one fully connected layer
+        with a variety of processing depending on the chosen type.
+        :param tag: String - Is used to name the layers for easier identification when using something like summary().
+        :param type: String - Choose ["small", "medium", "big"] to determine the amount of layers and convolutions used.
+        :return: returns the final layer of the created network which can be used as a new input
+        """
 
         if type == 'big':
             # Laser input und convolutions
@@ -135,6 +142,9 @@ class PPO_Network:
             exit(1)
 
     def buildNetWithOpti(self):
+        """
+        constructs the neural network and defines the optimizer with its loss function
+        """
         self._ADVANTAGE = placeholder(shape=(None,), name='ADVANTAGE')
         self._REWARD = placeholder(shape=(None,), name='REWARD')
         self._ACTION = placeholder(shape=(None, 2), name='ACTION')
@@ -160,7 +170,7 @@ class PPO_Network:
         pg_loss = mean(maximum(pg_loss1, pg_loss2))
 
         # critic
-        if self._shared: # ACHTUNG bei letztem Training hatte ich hier ein not vergessen
+        if self._shared:
             fully_connect2 = fully_connect
         else:
             fully_connect2 = self.buildMainNet('value', self._network_size)
@@ -197,10 +207,6 @@ class PPO_Network:
             [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity], self._mu)
 
 
-    def load(self, path):
-        self._model.load_weights(path)
-
-
     def select_action_continuous_clip(self, mu, var):
         return clip(mu + exp(var) * random_normal(shape(mu)), -1.0, 1.0)
 
@@ -214,6 +220,11 @@ class PPO_Network:
 
     def printSummary(self):
         self._model.summary()
+
+    def load(self, path):
+        self._model.load_weights(path)
+
+
 
     def train_net(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, obs_timestep, rewards, actions, advantage=None, neglog=None):
 
@@ -240,11 +251,12 @@ class PPO_Network:
         self._model.load_weights(path)
 
 
-    def policy_action_certain(self, s):  # TODO obs_timestep mit übergeben
-        """ Use the actor to predict the next action to take, using the policy
+    def policy_action_certain(self, s):
         """
-        # std = ((1-successrate)**2)*0.55
-
+        Use the actor to predict the next action to take, using the policy
+        :param s: state of a single robot
+        :return: [actions]
+        """
         laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)

@@ -32,13 +32,12 @@ arenaWidth = 22   # m
 arenaLength = 10  # m
 
 scaleFactor = 65
-angleStepsSonar = 0.75
+angleStepsSonar = 0.5
 timeFrames = 4
-numbOfParallelEnvs = 2*9
+numbOfParallelEnvs = 3*8
 numbOfRobots = 4
-simTimeStep = 0.1
+simTimeStep = 0.15
 
-# taktischeZeit = datetime.datetime.now().strftime("%d%H%M%b%y")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
 
 
@@ -58,6 +57,8 @@ filename = 'PPO_21-05-07--12-26_e580'
 filename = 'PPO_21-05-10--14-58'
 # filename = 'PPO_21-05-11--22-06'
 # filename = 'PPO_21-05-13--09-48'
+# filename = 'PPO_21-05-13--11-07'
+# filename = 'PPO_21-05-14--10-10'
 
 
 if __name__ == '__main__':
@@ -68,7 +69,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_intervall', type=int, default=50, help='Save Intervall')
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
     parser.add_argument('--model_timestamp', type=str, default=startTime, help='Timestamp from when the model was created')
-    parser.add_argument('--alg', type=str, default='a2c', choices=['a2c', 'dqn', 'ppo'], help='Reinforcement Learning Algorithm')
+    parser.add_argument('--alg', type=str, default='ppo', choices=['a2c', 'dqn', 'ppo'], help='Reinforcement Learning Algorithm')
     parser.add_argument('-lr', '--learningrate', type=float, default=lr, help='Learning Rate')
     parser.add_argument('--gamma', type=float, default=gamma, help='Gamma')
     parser.add_argument('--steps', type=int, default=steps, help='Steps in Environment per Episode')
@@ -100,7 +101,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
-    parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
+    parser.add_argument('--load_old', type=bool, default=True, help='Improve existing net (by loading pretrained weights and continuing with training)')
 
     args = parser.parse_args(args)
 
@@ -118,13 +119,14 @@ if __name__ == '__main__':
         # Read YAML file
         with open(args.path + filename + ".yml", 'r') as stream:
             data_loaded = yaml.load(stream, Loader=yaml.UnsafeLoader)
-            loadedArgs =  data_loaded[0]
+            loadedArgs = data_loaded[0]
             args.steps = loadedArgs.steps
             args.time_frames = loadedArgs.time_frames
             args.time_penalty = loadedArgs.time_penalty
             args.angle_steps = loadedArgs.angle_steps
             args.net_size = loadedArgs.net_size
             args.shared = loadedArgs.shared
+            #args.sim_time_step=loadedArgs.sim_time_step
 
 
 
@@ -144,8 +146,8 @@ if __name__ == '__main__':
     act_dim = np.asarray(2)#env.get_actions()) #TODO bei kontinuierlichem 2 actions
 
     if args.alg == 'a2c':
-        # model = A2C_Multi(act_dim, env_dim, args)
-        model = PPO_Multi(act_dim, env_dim, args)
+        model = A2C_Multi(act_dim, env_dim, args)
+        # model = PPO_Multi(act_dim, env_dim, args)
         # model = A2C(act_dim, env_dim, args)
     elif args.alg == 'dqn':
         model = DQN(act_dim, env_dim, args)
@@ -159,7 +161,7 @@ if __name__ == '__main__':
         # model.trainA3C()
     elif not args.training:
         app = QApplication(sys.argv)
-        env = EnvironmentWithUI.Environment(app, args, env_dim[0], 0)
+        env = EnvironmentWithUI.Environment(app, args, env_dim[0])
         model.load_net(args.path+filename+'.h5')
         model.execute(env, args)
 

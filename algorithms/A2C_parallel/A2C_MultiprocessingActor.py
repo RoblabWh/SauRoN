@@ -11,8 +11,26 @@ import os
 
 @ray.remote
 class A2C_MultiprocessingActor:
+    """
+    The MultiprocessingActor is used during training to create and manage an own environment and simulation.
+    Multiple Actors can be executed in parallel to create more training data for the neural net.
+    To accomplish this the Multiprocessing Actor has an own copy of the trained neural net to calculate
+    the actions for the robots in its simulation.
+    After all observations are collected one (master) actor trains his network
+    and the new weights are distributed to all remaining actors.
+    """
 
     def __init__(self, act_dim, env_dim, args, weights, level, master):
+        """
+        Creates a multiprocessing actor
+        :param act_dim: the number of continuous action dimensions (e.g. 2 for linear and angular velocity)
+        :param env_dim: the number of input values for the neural net send by the environment
+        :param args:
+        :param weights: weights for the neural network. Only needed if the actor is not the master actor
+        :param level: int - selected map level
+        :param master: boolean - the master actor is used for training of the network weights and sets the initial weights
+        """
+
 
         # Tensorflow-GPU: 2.2.0 muss installiert sein
         # Dafür wird Cuda 10.1 benötigt
@@ -25,6 +43,7 @@ class A2C_MultiprocessingActor:
         if not args.use_gpu:
             os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 
+
         self.args = args
         app = None
         if master:
@@ -32,7 +51,7 @@ class A2C_MultiprocessingActor:
         self.network = A2C_Network(act_dim, env_dim, args)
         if weights != None:
             self.network.setWeights(weights)
-        self.env = Environment(app, args, env_dim[0], 0) #None --> No UI
+        self.env = Environment(app, args, env_dim[0]) #None --> No UI
         self.env.setUISaveListener(self)
         self.numbOfRobots = args.numb_of_robots
         self.timePenalty = args.time_penalty
@@ -99,7 +118,7 @@ class A2C_MultiprocessingActor:
             robotsActions = []  # actions of every Robot in the selected environment
             for i in range(0, len(robotsData)):  # iterating over every robot
                 if not True in robotsData[i][3]:
-                    aTmp = self.policy_action(robotsOldState[i][0], (self.reachedTargetList).count(True) / 100)
+                    aTmp = self.policy_action(robotsOldState[i][0])
                     a = np.ndarray.tolist(aTmp[0])[0]
                     c = np.ndarray.tolist(aTmp[1])[0]
                 else:
@@ -173,7 +192,7 @@ class A2C_MultiprocessingActor:
             robotsActions = []  # actions of every Robot in the selected environment
             for i in range(0, len(robotsData)):  # iterating over every robot
                 if not True in robotsData[i][3]:
-                    aTmp = self.policy_action(robotsOldState[i][0], (self.reachedTargetList).count(True) / 100)
+                    aTmp = self.policy_action(robotsOldState[i][0])
                     a = np.ndarray.tolist(aTmp[0])[0]
                     c = np.ndarray.tolist(aTmp[1])[0]
                 else:
@@ -181,7 +200,7 @@ class A2C_MultiprocessingActor:
                 robotsActions.append(a)
 
                 if not None in a:
-                    robotsData[i][0].append(a)  # action_onehot) #TODO Tupel mit 2 werten von je -1 bis 1
+                    robotsData[i][0].append(a)
                     robotsData[i][4].append(c)
 
             # environment makes a step with selected actions
@@ -226,10 +245,12 @@ class A2C_MultiprocessingActor:
     def isActive(self):
         return not self.env.is_done()
 
-    def policy_action(self, s, successrate):  # TODO obs_timestep mit übergeben
-        """ Use the actor to predict the next action to take, using the policy
+    def policy_action(self, s):  # TODO obs_timestep mit übergeben
         """
-        # std = ((1-successrate)**2)*0.55
+        Use the actor to predict the next action to take, using the policy
+        :param s: current state of a single robot
+        :return: [actions, critic]
+        """
 
         laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)

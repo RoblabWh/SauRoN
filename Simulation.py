@@ -1,18 +1,19 @@
-from PyQt5.QtCore import QTimer
 import Robot
 from Station import Station
 import SimulationWindow
 import math, random
 import numpy as np
-import time
 from old.PlotterWindow import PlotterWindow
-from Borders import CollidorLine, SquareWall
+from Borders import ColliderLine, SquareWall
 
 class Simulation:
+    """
+    Defines the simulation with different levels for the robots to train in
+    """
 
     def __init__(self, app, args, timeframes):
         """
-        Creates a simulation containing the robots, stations and simulation window
+        Creates a simulation containing the robots, stations, levels and simulation window
         :param app: PyQt5.QtWidgets.QApplication
         :param args:
             args defined in main
@@ -29,21 +30,19 @@ class Simulation:
         self.arenaWidth = args.arena_width
         self.arenaLength = args.arena_length
 
+        #Wände der Simulation
         self.walls = []
-        self.walls.append(CollidorLine(0,0,self.arenaWidth, 0))
-        self.walls.append(CollidorLine(self.arenaWidth, 0, self.arenaWidth, self.arenaLength))
-        self.walls.append(CollidorLine(self.arenaWidth, self.arenaLength, 0, self.arenaLength))
-        self.walls.append(CollidorLine(0,self.arenaLength, 0, 0))
-
-        #TODO mehrere Robots mit eigenen Pickup stationen erstellen
+        self.walls.append(ColliderLine(0, 0, self.arenaWidth, 0))
+        self.walls.append(ColliderLine(self.arenaWidth, 0, self.arenaWidth, self.arenaLength))
+        self.walls.append(ColliderLine(self.arenaWidth, self.arenaLength, 0, self.arenaLength))
+        self.walls.append(ColliderLine(0, self.arenaLength, 0, 0))
 
         # Erstelle Stationen und Roboter
         self.pickUp = Station(5, 1.2, 1, 0, self.scaleFactor)
         self.pickUp2 = Station(1.15, 1.25, 1, 1, self.scaleFactor)
-        self.pickUp3 = Station(9, 0.8, 1, 2, self.scaleFactor) #12, 4.1 gute ergebnisse mit trainierte Netz vom 19Jan  #2, 5.1 geht für das neuste
+        self.pickUp3 = Station(9, 0.8, 1, 2, self.scaleFactor)
         self.pickUp4 = Station(13, 1.3, 1, 3, self.scaleFactor)
         self.stations = [self.pickUp, self.pickUp2, self.pickUp3, self.pickUp4]
-
 
         self.robot = Robot.Robot((10.5, 8.8), 3.2*math.pi/2, self.pickUp, args, timeframes, self.walls, self.stations)
         self.robot2 = Robot.Robot((4, 8.6), 2.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
@@ -54,6 +53,7 @@ class Simulation:
         if args.numb_of_robots<= 4:
             self.robots = self.robots[:args.numb_of_robots]
 
+        #Level bestehend aus Positionen für Stationen und Robotern, deren Ausrichtung und Wänden werden erstellt
         level00_robotPos = [(self.arenaWidth / 5, self.arenaLength - 3.5),
                              (self.arenaWidth / 5 * 2, self.arenaLength - 3.5),
                              (self.arenaWidth / 5 * 3, self.arenaLength - 3.5),
@@ -66,10 +66,10 @@ class Simulation:
                             (self.arenaWidth -1.5, 1.5),
                             (self.arenaWidth -1.5, self.arenaLength -1.5),
                             (1.5,  self.arenaLength -1.5)]
-        level03b_robotPos = [(self.arenaWidth / 4, self.arenaLength - 1.5),
+        level03b_robotPos = [(self.arenaWidth / 16 * 5, self.arenaLength - 1.5),
                             (self.arenaWidth / 5 * 2, self.arenaLength - 1.5),
                             (self.arenaWidth / 5 * 3, self.arenaLength - 1.5),
-                            (self.arenaWidth / 4 * 3, self.arenaLength - 1.5)]
+                            (self.arenaWidth / 16 * 11, self.arenaLength - 1.5)]
         level03_robotPos = [(self.arenaWidth / 5 *2, 1),
                             (self.arenaWidth / 5   , 1),
                             (self.arenaWidth / 5 *4, self.arenaLength -1),
@@ -81,6 +81,9 @@ class Simulation:
                             (self.arenaWidth /2 +3.5, self.arenaLength /2),
                             (self.arenaWidth /2, self.arenaLength / 2 + 3.5),
                             (self.arenaWidth /2 -3.5, self.arenaLength / 2)]
+        lvl_narrowWayWithBays_robPos = [(2,4),(2,7),(20,4),(20,7)]
+        lvl_narrowWayEasy_robPos = [(20,5.5),(2,5.5),(20,4),(20,7)]
+
 
         level00_robotOrient = [math.pi/2*3 for _ in range(4)]
         level01_robotOrient = [math.pi/4 *7, math.pi/2 *3, math.pi/2 *3, math.pi/4 *5]
@@ -91,6 +94,8 @@ class Simulation:
         level05_robotOrient = level02_robotOrient
         level06_robotOrient = level03_robotOrient
         level07_robotOrient = [math.pi/2 , math.pi, math.pi/2 *3, 0]
+        lvl_narrowWayWithBays_robOrient = [0,0,math.pi, math.pi]
+        lvl_narrowWayEasy_robOrient = [math.pi,0,math.pi, math.pi]
 
 
         level00_stationsPos = [(self.arenaWidth / 5, 3.5),
@@ -120,37 +125,58 @@ class Simulation:
                                (self.arenaWidth /2 -5, self.arenaLength / 2),
                                (self.arenaWidth /2, self.arenaLength /2 - 5),
                                (self.arenaWidth /2 +5, self.arenaLength /2)]
+        lvl_narrowWayWithBays_statPos = [(21,4),(21,7),(1,4),(1,7)]
+        lvl_narrowWayEasy_statPos = [(1,5.5),(21,5.5),(1,4),(1,7)]
 
         noWalls = self.walls
-        level03b_walls = self.walls + [CollidorLine(self.arenaWidth / 16, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 2,self.arenaLength / 2 + .5),
-                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 16 * 15, self.arenaLength / 2 + .5),
-                                        CollidorLine(self.arenaWidth / 16, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 - .2),
-                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 - 0.2, self.arenaWidth / 16 * 15, self.arenaLength / 2 - .2),
-                                        CollidorLine(self.arenaWidth / 16, self.arenaLength / 2 + 0.5, self.arenaWidth / 16, self.arenaLength / 2 -.2),
-                                        CollidorLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 3, self.arenaLength / 2  -.2),
-                                        CollidorLine(self.arenaWidth / 5 * 2, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 + .5),
-                                        CollidorLine(self.arenaWidth / 16 * 15, self.arenaLength / 2 - 0.2, self.arenaWidth / 16 * 15, self.arenaLength / 2 + .5)]
+        level03b_walls = self.walls + [ColliderLine(self.arenaWidth / 16, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 2, self.arenaLength / 2 + .5),
+                                       ColliderLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 16 * 15, self.arenaLength / 2 + .5),
+                                       ColliderLine(self.arenaWidth / 16, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 - .2),
+                                       ColliderLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 - 0.2, self.arenaWidth / 16 * 15, self.arenaLength / 2 - .2),
+                                       ColliderLine(self.arenaWidth / 16, self.arenaLength / 2 + 0.5, self.arenaWidth / 16, self.arenaLength / 2 - .2),
+                                       ColliderLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 3, self.arenaLength / 2 - .2),
+                                       ColliderLine(self.arenaWidth / 5 * 2, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 + .5),
+                                       ColliderLine(self.arenaWidth / 16 * 15, self.arenaLength / 2 - 0.2, self.arenaWidth / 16 * 15, self.arenaLength / 2 + .5)]
 
 
-        level06_walls = self.walls + [CollidorLine(0,self.arenaLength/3, self.arenaWidth/24 *6, self.arenaLength/3),
-                                      CollidorLine(self.arenaWidth/24 *6, self.arenaLength/3,self.arenaWidth/24 *6, self.arenaLength/3*2),
-                                      CollidorLine(self.arenaWidth/24 *9, self.arenaLength/3, self.arenaWidth/24 *9, self.arenaLength/3 *2),
-                                      CollidorLine(self.arenaWidth/24 *9, self.arenaLength/3, self.arenaWidth/24 *12, self.arenaLength/3),
-                                      CollidorLine(self.arenaWidth/2, 0, self.arenaWidth/2, self.arenaLength),
-                                      CollidorLine(self.arenaWidth/24 *12, self.arenaLength/3*2, self.arenaWidth/24 *15, self.arenaLength/3 *2),
-                                      CollidorLine(self.arenaWidth/24 *15, self.arenaLength/3, self.arenaWidth/24 *15, self.arenaLength/3 *2),
-                                      CollidorLine(self.arenaWidth/24 *18,self.arenaLength/3,self.arenaWidth/24 *18, self.arenaLength/3*2),
-                                      CollidorLine(self.arenaWidth/24 * 18,self.arenaLength/3 * 2,self.arenaWidth, self.arenaLength/3 * 2)]
+        level06_walls = self.walls + [ColliderLine(0, self.arenaLength / 3, self.arenaWidth / 24 * 6, self.arenaLength / 3),
+                                      ColliderLine(self.arenaWidth / 24 * 6, self.arenaLength / 3, self.arenaWidth / 24 * 6, self.arenaLength / 3 * 2),
+                                      ColliderLine(self.arenaWidth / 24 * 9, self.arenaLength / 3, self.arenaWidth / 24 * 9, self.arenaLength / 3 * 2),
+                                      ColliderLine(self.arenaWidth / 24 * 9, self.arenaLength / 3, self.arenaWidth / 24 * 12, self.arenaLength / 3),
+                                      ColliderLine(self.arenaWidth / 2, 0, self.arenaWidth / 2, self.arenaLength),
+                                      ColliderLine(self.arenaWidth / 24 * 12, self.arenaLength / 3 * 2, self.arenaWidth / 24 * 15, self.arenaLength / 3 * 2),
+                                      ColliderLine(self.arenaWidth / 24 * 15, self.arenaLength / 3, self.arenaWidth / 24 * 15, self.arenaLength / 3 * 2),
+                                      ColliderLine(self.arenaWidth / 24 * 18, self.arenaLength / 3, self.arenaWidth / 24 * 18, self.arenaLength / 3 * 2),
+                                      ColliderLine(self.arenaWidth / 24 * 18, self.arenaLength / 3 * 2, self.arenaWidth, self.arenaLength / 3 * 2)]
         centerW = self.arenaWidth/2
         centerL = self.arenaLength/2
-        level07_walls = self.walls+[CollidorLine(0, centerL-1, centerW-1, centerL-1),
-                                    CollidorLine(0, centerL+1, centerW-1, centerL+1),
-                                    CollidorLine(centerW+1, centerL - 1, self.arenaWidth, centerL - 1),
-                                    CollidorLine(centerW+1, centerL + 1, self.arenaWidth, centerL + 1),
-                                    CollidorLine(centerW-1, 0 , centerW-1, centerL-1),
-                                    CollidorLine(centerW+1, 0 , centerW+1, centerL-1),
-                                    CollidorLine(centerW-1, centerL+1 , centerW-1, self.arenaLength),
-                                    CollidorLine(centerW+1, centerL+1 , centerW+1, self.arenaLength)]
+        level07_walls = self.walls+[ColliderLine(0, centerL - 1, centerW - 1, centerL - 1),
+                                    ColliderLine(0, centerL + 1, centerW - 1, centerL + 1),
+                                    ColliderLine(centerW + 1, centerL - 1, self.arenaWidth, centerL - 1),
+                                    ColliderLine(centerW + 1, centerL + 1, self.arenaWidth, centerL + 1),
+                                    ColliderLine(centerW - 1, 0, centerW - 1, centerL - 1),
+                                    ColliderLine(centerW + 1, 0, centerW + 1, centerL - 1),
+                                    ColliderLine(centerW - 1, centerL + 1, centerW - 1, self.arenaLength),
+                                    ColliderLine(centerW + 1, centerL + 1, centerW + 1, self.arenaLength)]
+
+        lvl_narrowWayWithBays_walls = [ColliderLine(0, 3.6, 5, 3.6),
+                                        ColliderLine(5, 3.6, 5.25, 3),
+                                        ColliderLine(6.25, 3, 6.5, 3.6),
+                                        ColliderLine(6.5, 3.6, 15.5, 3.6),
+                                        ColliderLine(15.5, 3.6, 15.75, 3),
+                                        ColliderLine(16.75, 3, 17, 3.6),
+                                        ColliderLine(17, 3.6, 22, 3.6),
+                                        ColliderLine(0, 7.4, 5, 7.4),
+                                        ColliderLine(5, 7.4, 5.25, 8),
+                                        ColliderLine(6.25, 8, 6.5, 7.4),
+                                        ColliderLine(6.5, 7.4, 15.5, 7.4),
+                                        ColliderLine(15.5, 7.4, 15.75, 8),
+                                        ColliderLine(16.75, 8, 17, 7.4),
+                                        ColliderLine(17, 7.4, 22, 7.4)] + \
+                                      SquareWall(11, 3.8, 22, 1.6, 0).getBorders() + \
+                                      SquareWall(11, 7.2, 22, 1.6, 0).getBorders()
+        lvl_narrowWayEasy_walls = lvl_narrowWayWithBays_walls + \
+                                  [ColliderLine(0, 4.4, 0, 6.6), ColliderLine(22, 4.4, 22, 6.6)]
 
         self.noiseStrength = [0.1, 0.2, 0.33, 0.4, 0.15, 0.4, 0.2, 0.5, 0.15]
         self.level = [#(level00_robotPos,level00_robotOrient,level00_stationsPos, noWalls),
@@ -167,16 +193,16 @@ class Simulation:
         # testlevel02 = ([(3,0.5),(2,0.666),(2.5,1.16), (3.3,1.4)],[1,0.8,0.9,1.2],[(19,9),(13.5,5),(12,6.5),(13,9)], SquareWall(12, 5, 3.8, 0.55, 130, True).getBorders() + noWalls)
         testlevel03 = ([(3,0.5),(2,0.666),(2.5,1.16), (3.3,1.4)],[1,0.8,0.9,1.2],[(18,0.5),(19,2),(19.5,1.16), (20,2.6)], SquareWall(10, 1.6, 4, 0.55, 90, True).getBorders() + noWalls)
         testlevel04 = ([(18,0.5),(19,0.666),(19.5,1.16), (18.3,1.4)],[1,0.8,0.9,1.2],[(3,0.5),(2,2),(2.5,1.16), (1,2.6)], SquareWall(10, 1.6, 4, 0.55, 90, True).getBorders() + noWalls)
-        # self.level[0] = testlevel01
-        # self.level[1] = testlevel02
+        narrowWayWithBays = [lvl_narrowWayWithBays_robPos, lvl_narrowWayWithBays_robOrient, lvl_narrowWayWithBays_statPos, lvl_narrowWayWithBays_walls]
+        narrowWayEasy = [lvl_narrowWayEasy_robPos, lvl_narrowWayEasy_robOrient, lvl_narrowWayEasy_statPos, lvl_narrowWayEasy_walls]
+        self.level[0] = narrowWayWithBays
+        self.level[1] = narrowWayEasy
         # self.level[2] = testlevel03
         # self.level[4] = testlevel04
         self.level.append(testlevel03)
         self.level.append(testlevel04)
 
-
         self.simulationWindow = None
-
 
         self.reset(0)
 
@@ -184,17 +210,17 @@ class Simulation:
             self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls)
             self.simulationWindow.show()
 
-
-
         self.simTime = 0  # s
         self.simTimestep = args.sim_time_step  # s
         # self.simTimestep = 0.25  # FÜR CHRISTIANS NETZ
-
-
-
         # self.plotterWindow = PlotterWindow(app)
 
+
     def reset(self, level):
+        """
+        Resets the simulation after each epoch
+        :param level: int - defines the reset level
+        """
         randomSim = False
         robotsPositions = []
         orientations = []
@@ -251,47 +277,56 @@ class Simulation:
 
 
     def isFarEnoughApart(self, stationPositions, randPos, minDist):
+        """
+        Checks whether random placed stations are far enough apart so the stations don't overlap
+        and there is enough space for the robots to pass between them
 
+        :param stationPositions: (float, float) random X, random Y in the limits of the width and height of the ai-arena
+        :param randPos: (float, float) another random X, random Y in the limits of the width and height of the ai-arena to check whether
+        that position is far enough apart from the first one
+        :param minDist: the minimum distance between the two stations
+        :return: returns True if the distance between the two positions is greater than the minDist
+
+        """
         for pos in stationPositions:
             dist = math.sqrt((pos[0]-randPos[0])**2+(pos[1]-randPos[1])**2)
             if(dist<minDist):
                 return False
-
         return True
 
-    def getRobot(self):
-        return self.robot
-
-    def getPickUpStation(self):
-        return self.pickUp
-
-    def getDeliveryStation(self):
-        return self.delivery
 
     def getGoalWidth(self):
+        """
+        only for rectangular Stations
+        :return: float station width in meter
+        """
         goalWidth = self.pickUp.getWidth()
         return goalWidth
 
+
     def getGoalLength(self):
+        """
+        only for rectangular Stations
+        :return: float station length in meter
+        """
         goalLength = self.pickUp.getLength()
         return goalLength
+
 
     def update(self, robotsTarVels, stepsLeft):
         """
         updates the robots and checks the exit conditions of the current epoch
-        :param tarLinVel: int/ float -
-            target linear velocity
-        :param tarAngVel: int/ float -
-            target angular velocity
-        :return: tuple -
-            (Boolean - out of area, Boolean - reached pickup, Boolean - reached Delivery)
+        :param robotsTarVels: List of tuples of target linear and angular velocity for each robot
+        :param stepsLeft: steps left in current epoch
+        :return: list of tuples for each robot -
+            (Boolean collision with walls or other robots, Boolean reached PickUp, Boolean runOutOfTime)
         """
+
         # self.plotterWindow.plot(self.robot.getLinearVelocity(), self.simTime)
         # self.plotterWindow.plot(self.robot.getAngularVelocity(), self.simTime)
-        # time.sleep(0.1)
         self.simTime += self.simTimestep
 
-        for i, robot in enumerate(self.robots): #TODO überall die action Liste iterieren nicht die robeoter
+        for i, robot in enumerate(self.robots):
             if robot.isActive() == True:
                 tarLinVel, tarAngVel = robotsTarVels[i]
                 self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
@@ -300,9 +335,6 @@ class Simulation:
             for i, robot in enumerate(self.robots):
                 if robotsTarVels[i] != (None, None):
                     robot.sonarReading(self.robots, stepsLeft, self.steps)
-        saveWeights = False
-
-
 
 
         robotsTerminations = []
@@ -315,8 +347,6 @@ class Simulation:
                 if stepsLeft <= 0:
                     runOutOfTime = True
 
-
-
                 if(np.min(robot.distances)<=0.05):
                 # if(np.min(robot.distances)<=0.3): # FÜR CHRISTIANS NETZ
                     collision = True
@@ -324,16 +354,16 @@ class Simulation:
                 if robot.collideWithTargetStationCircular():
                     reachedPickUp = True
 
-
                 if collision or reachedPickUp or runOutOfTime:
                     robot.deactivate()
+
                 robotsTerminations.append((collision, reachedPickUp, runOutOfTime))
+
             else:
                 robotsTerminations.append((None, None, None))
 
-
         if self.hasUI:
-            if self.simulationWindow != 0:
+            if self.simulationWindow != None:
                 for i, robot in enumerate(self.robots):
                     self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
 

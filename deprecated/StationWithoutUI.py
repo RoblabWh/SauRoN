@@ -1,4 +1,4 @@
-from Borders import CollidorLine
+from Borders import ColliderLine
 
 
 class Station:
@@ -11,10 +11,10 @@ class Station:
         self.length = length
 
 
-        self.borders = [CollidorLine(posX+width, posY, posX, posY),
-                        CollidorLine(posX, posY, posX, posY+length),
-                        CollidorLine(posX, posY+length, posX+width, posY+length),
-                        CollidorLine(posX+width, posY+length, posX+width, posY)]
+        self.borders = [ColliderLine(posX + width, posY, posX, posY),
+                        ColliderLine(posX, posY, posX, posY + length),
+                        ColliderLine(posX, posY + length, posX + width, posY + length),
+                        ColliderLine(posX + width, posY + length, posX + width, posY)]
 
 
     def getPosX(self):

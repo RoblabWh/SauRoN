@@ -1,19 +1,28 @@
 import numpy as np
 
-
+from BucketRenderer import BucketRenderer
 from algorithms.A2C_parallel.A2C_Network import A2C_Network
 from algorithms.A2C_parallel.A2C_MultiprocessingActor import A2C_MultiprocessingActor
 from tqdm import tqdm
 import ray
 import yaml
+import keras
 
 
 
 class A2C_Multi:
+    """
+    Defines an Advantage Actor Critic learning algorithm for neural nets
+    """
 
     def __init__(self, act_dim, env_dim, args):
+        """
+        :param act_dim: number of available actions
+        :param env_dim: (number of past states (including the current one), size of a state) -
+            their product determines the number input neurons
+        :param args:
+        """
         self.args = args
-        # self.network = A2C_Network(act_dim, env_dim, args)
         self.act_dim = act_dim
         self.env_dim = env_dim
         self.numbOfParallelEnvs = args.parallel_envs
@@ -23,21 +32,28 @@ class A2C_Multi:
         self.gamma = args.gamma
 
     def train(self, loadWeightsPath = ""):
-        """ Main A2C Training Algorithm
         """
-        # reachedTargetList = [False] * 100
-        # countEnvs = len(envs)
+        Main A2C Training Algorithm
+        :param loadWeightsPath: The path to the .h5 file containing the pretrained weights.
+         Only required if a pretrained net is used.
+        """
 
+
+        loadedWeights = None
         if loadWeightsPath != "":
-            print("Todo Gewichte für actor laden")
-        envLevel = [(i+3)%8 for i in range(self.numbOfParallelEnvs)]
+            self.load_net(loadWeightsPath)
+            loadedWeights = self.network.getWeights()
+            keras.backend.clear_session()
+
+
+        #Create parallel workers with own environment
+        envLevel = [i%9 for i in range(self.numbOfParallelEnvs)]
         ray.init()
         multiActors = [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, None, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
         multiActors += [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
         for i, actor in enumerate(multiActors):
             actor.setLevel.remote(envLevel[i])
-        # env.setUISaveListener(self)
 
         # Main Loop
         tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
@@ -46,8 +62,6 @@ class A2C_Multi:
             self.currentEpisode = e
             #Start of episode for the parallel A2C actors with their own environment
             # HIer wird die gesamte Episode durchlaufen und dann erst trainiert
-            # futures = [actor.trainOneEpisode.remote() for actor in multiActors]
-
 
             #Training bereits alle n=75 steps mit den zu dem Zeitounkt gesammelten Daten (nur für noch aktive Environments)
             activeActors = multiActors
@@ -63,22 +77,14 @@ class A2C_Multi:
                 for actor in multiActors:
                     if ray.get(actor.isActive.remote()):
                         activeActors.append(actor)
-                # activeActors = [actor for actor in multiActors if ray.get(actor.isActive.remote())]
 
 
             # Reset episode
             zeit, cumul_reward, done = 0, 0, False
 
-
-            #Benötigt für Durchlauf ganzer Episode mit Training am Ende
-            # allTrainingResults = ray.get(futures)
-
             if (e+1) % self.args.save_intervall == 0:
                 print('Saving')
                 self.save_weights(multiActors[0], self.args.path)
-
-            #Checking current success and updating level if nessessary
-            # allReachedTargetList = reachedTargetList.copy()
 
             allReachedTargetList = []
 
@@ -87,179 +93,30 @@ class A2C_Multi:
                 allReachedTargetList += tmpTargetList
 
             # allTrainingResults.append(robotsData)
-
             targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
             successrate = allReachedTargetList.count(True) / targetDivider
 
-            if (successrate > 0.83):
-                lastindex = len(allReachedTargetList)
-                currenthardest = envLevel[0]
-                if currenthardest != 8:
-                    levelups = self.numbOfParallelEnvs - (currenthardest+1)
-                    if (self.numbOfParallelEnvs > 20):
-                        levelups = self.numbOfParallelEnvs - 2 * currenthardest+1
-                    for i in range(levelups):  # bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
-                        envLevel[i] = envLevel[i] + 1
-
-                    print(envLevel)
-                    self.save_weights(multiActors[0], self.args.path, "_endOfLevel-"+str(currenthardest))
-
-
-                    for i, actor in enumerate(multiActors):
-                        actor.setLevel.remote(envLevel[i])
 
             for actor in multiActors:
                 (cumRewardActor, steps) = ray.get(actor.resetActor.remote())
                 self.av_meter.update(cumRewardActor, steps)
                 cumul_reward += cumRewardActor
             cumul_reward = cumul_reward / self.args.parallel_envs
-            #Benötigt für Durchlauf ganzer Episode mit Training am Ende
-            # trainedWeights = self.train_models(allTrainingResults, multiActors[0])
-            # trainedWeights = self.network.getWeights()
-
-            #Benötigt für Durchlauf ganzer Episode mit Training am Ende
-            # for actor in multiActors[1:len(multiActors)]:
-            #     actor.setWeights.remote(trainedWeights)
-
-            # Update Average Rewards
 
 
             # Display score
-
-
             tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " -- R avr all e : " + str(self.av_meter.avg) + " Avr Reached Target (25 epi): " + str(successrate))
             tqdm_e.refresh()
 
-    def trainA3C(self):
-        """ Main A2C Training Algorithm
-        """
-        # reachedTargetList = [False] * 100
-        # countEnvs = len(envs)
-        self.network = A2C_Network(self.act_dim, self.env_dim, self.args)
-
-        envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
-
-        ray.init()
-        multiActors = [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, None, envLevel[0], True)]
-        multiActors += [A2C_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, None, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
-        for i, actor in enumerate(multiActors):
-            actor.setLevel.remote(envLevel[i])
-        # env.setUISaveListener(self)
-
-        # Main Loop
-        tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
-
-        for e in tqdm_e:
-            self.currentEpisode = e
-            activeActors = multiActors
-            futures = [actor.getInitialObservation.remote() for actor in multiActors]
-
-            while len(activeActors) > 0:
-
-                #TODO stepsLeft (Trainingsintervall) über Main steuern
-                stepsLeft = self.args.train_interval
-
-                while stepsLeft > 0:
-                    actions = []
-                    critics = []
-                    futureValues = ray.get(futures)
-                    for futureRobotData in futureValues:
-                        robotsActions = []  # actions of every Robot in the selected environment
-                        robotsCritics = []  # Critic values of every Robot in the selected environment
-                        for i in range(0, len(futureRobotData[0])):  # iterating over every robot
-                            if not True in futureRobotData[0][i][3]:
-                                aTmp = self.policy_action(futureRobotData[1][i][0], 0) #futureRobotData[1] ist old state
-                                a = np.ndarray.tolist(aTmp[0])[0]
-                                c = np.ndarray.tolist(aTmp[1])[0]
-                            else:
-                                a = [None, None]
-                            robotsActions.append(a)
-                            robotsCritics.append(c)
-
-
-                        actions.append(robotsActions)
-                        critics.append(robotsCritics)
-
-                    futures = [actor.doSingleStep.remote(actions[i], critics[i]) for i, actor in enumerate(activeActors)]
-                    stepsLeft -= 1
-
-                allTrainingResults = [ray.get(actor.getRobotDataAndReset.remote()) for actor in multiActors]
-                self.train_models(allTrainingResults)
-
-                activeActors = []
-                for actor in multiActors:
-                    if ray.get(actor.isActive.remote()):
-                        activeActors.append(actor)
-
-            for actor in multiActors:
-                actor.resetActor.remote()
-
-
-
-
-            # Reset episode
-            zeit, done = 0, False
-
-            cumul_reward = 0
-
-
-            if (e+1) % self.args.save_intervall == 0:
-                print('Saving')
-                self.save_weights(multiActors[0], self.args.path)
-
-            allReachedTargetList = []
-            for actor in multiActors:
-                tmpTargetList = ray.get(actor.getTargetList.remote())
-                allReachedTargetList += tmpTargetList
-
-            targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
-            successrate = allReachedTargetList.count(True) / targetDivider
-
-            if (successrate > 0.83):
-                lastindex = len(allReachedTargetList)
-                currenthardest = envLevel[0]
-                if currenthardest != 8:
-                    levelups = self.numbOfParallelEnvs - (currenthardest+1)
-                    if (self.numbOfParallelEnvs > 20):
-                        levelups = self.numbOfParallelEnvs - 2 * currenthardest+1
-                    for i in range(levelups):  # bei jedem neuen/ schwerern level belibt ein altes level hinten im array aktiv
-                        envLevel[i] = envLevel[i] + 1
-
-                    print(envLevel)
-                    self.save_weights(multiActors[0], self.args.path, "_endOfLevel-"+str(currenthardest))
-
-
-                    for i, actor in enumerate(multiActors):
-                        actor.setLevel.remote(envLevel[i])
-
-            self.av_meter.update(cumul_reward)
-
-            tqdm_e.set_description("Epi r: " + str(cumul_reward) + " -- Avr r: " + str(self.av_meter.avg) + " Avr Reached Target (25 epi): " + str(successrate))
-            tqdm_e.refresh()
-
-
-    def policy_action(self, s, successrate):#TODO obs_timestep mit übergeben
-        """ Use the actor to predict the next action to take, using the policy
-        """
-        # std = ((1-successrate)**2)*0.55
-
-
-        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
-        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
-        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
-        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
-        timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
-        # print(laser.shape, orientation.shape, distance.shape, velocity.shape)
-        if(self.timePenalty):
-            #Hier breaken um zu gucken, ob auch wirklich 4 timeframes hier eingegeben werden oder was genau das kommt
-            return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]), np.array([timesteps])) #Liste mit [actions, value]
-        else:
-            return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])) #Liste mit [actions, value]
 
     def train_models(self, envsData, masterEnv = None):#, states, actions, rewards): 1 0 2
-        """ Update actor and critic networks from experience
         """
-        # Compute discounted rewards and Advantage (TD. Error)
+        Update actor and critic networks from experience
+        :param envsData: Collected states of all robots from all used parallel environments. Collected over the last n time steps
+        :param masterEnv: The environment which is used to train the network. all other networks will receive a copy
+        of its weights after the training process.
+        :return: trained weights of the master environments network
+        """
 
         discounted_rewards = np.array([])
         state_values = np.array([])
@@ -323,13 +180,7 @@ class A2C_Multi:
                 advantages = np.concatenate((advantages, advantagesTmp))
 
 
-                # print("discounted_rewards", discounted_rewards.shape, "state_values", state_values.shape, "advantages",
-                #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
-                # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
-
         if masterEnv == None:
-            # for i in len(statesConcatenatedL):
-            #     self.network.train_net(statesConcatenatedL[i], statesConcatenatedO[i], statesConcatenatedD[i],statesConcatenatedV[i], statesConcatenatedT[i],discounted_rewards[i], actionsConcatenated[i],advantages[i])
             self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages)
             weights = self.network.getWeights()
         else:
@@ -337,7 +188,8 @@ class A2C_Multi:
         return weights
 
     def discount(self, r):
-        """ Compute the gamma-discounted rewards over an episode
+        """
+        Compute the gamma-discounted rewards over a training batch
         """
         discounted_r = np.zeros_like(r, dtype=float)
         cumul_r = 0
@@ -347,6 +199,9 @@ class A2C_Multi:
         return discounted_r
 
     def saveCurrentWeights(self):
+        """
+        saves weights at current epoch
+        """
         print('Saving individual')
         self.save_weights(self.args.path, "_e" + str(self.currentEpisode))
 
@@ -354,33 +209,31 @@ class A2C_Multi:
         path += 'A2C' + self.args.model_timestamp + additional
 
         masterEnv.saveWeights.remote(path)
-
         data = [self.args]
         with open(path+'.yml', 'w') as outfile:
             yaml.dump(data, outfile, default_flow_style=False)
-
-
-
-    def loadWeights(self, path):
-        self.network.load
 
     def load_net(self, path):
         self.network = A2C_Network(self.act_dim, self.env_dim, self.args)
         self.network.load_weights(path)
 
-        # def load_weights(self, path_actor, path_critic):
-        #     self.critic.load_weights(path_critic)
-        #     self.actor.load_weights(path_actor)
-
     def execute(self, env, args):
+        """
+        executes a trained net (without using the standard deviation in the action selection)
+        :param env: EnvironmentWithUI.Environment
+        :param args: args defined in main
+        """
+        # visualization of chosen actions
+        histogramm = BucketRenderer(20, 0)
+        histogramm.show()
+        liveHistogramRobot = 0
 
         robotsCount = self.numbOfRobots
 
+
         for e in range(18):
 
-            env.reset(e%8)
-            # TODO nach erstem Mal auf trainiertem env sowas wie environment.randomizeForTesting() einbauen (alternativ hier ein fester Testsatz)
-            # robotsOldState = [env.get_observation(i) for i in range(0, robotsCount)]
+            env.reset(e%9)
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
             robotsDone = [False for i in range(0, robotsCount)]
 
@@ -391,9 +244,14 @@ class A2C_Multi:
                 for i in range(0, robotsCount):
 
                     if not robotsDone[i]:
-                        aTmp = self.network.policy_action_certain(
-                            robotsOldState[i][0])  # , (rechedTargetList).count(True) / 100)
+                        aTmp = self.network.policy_action_certain(robotsOldState[i][0])
                         a = np.ndarray.tolist(aTmp[0])[0]
+
+                        # visualization of chosen actions
+                        if i == liveHistogramRobot:
+                            histogramm.add_action(a)
+                            histogramm.show()
+
                     else:
                         a = [None, None]
 
@@ -408,18 +266,12 @@ class A2C_Multi:
                     rewards += (str(i) + ': ' + str(stateData[1]) + '   ')
                     done = stateData[2]
 
-                    # if (done):
-                    #     reachedPickup = stateData[3]
-                    #     rechedTargetList.pop(0)
-                    #     rechedTargetList.append(reachedPickup)
-
                     robotsOldState[i] = new_state
                     if not robotsDone[i]:
                         robotsDone[i] = done
-                # print(rewards)
 
 
-# Bug beim Importieren -> deswegen AverageMeter hierdrin kopiert
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):

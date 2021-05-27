@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel
 from PyQt5 import QtWidgets
 import RobotRepresentation
 from Station import Station
-from Borders import CollidorLine
+from Borders import ColliderLine
 import DistanceGraph
 
 
@@ -153,12 +153,13 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         self.painter.begin(self)
 
-        for wall in self.walls:
-            wall.paint(self.painter, self.scaleFactor)
+
         for station in self.stations:
             station.paint(self.painter)
         for robot in self.robotRepresentations:
             robot.paint(self.painter, self.sonarShowing)
+        for wall in self.walls:
+            wall.paint(self.painter, self.scaleFactor)
 
         self.painter.end()
 

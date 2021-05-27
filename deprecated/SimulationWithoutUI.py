@@ -3,7 +3,7 @@ from deprecated.StationWithoutUI import Station
 
 import math
 
-from Borders import CollidorLine
+from Borders import ColliderLine
 
 class Simulation:
 
@@ -24,10 +24,10 @@ class Simulation:
         self.arenaLength = args.arena_length
 
         self.walls = []
-        self.walls.append(CollidorLine(0,0,self.arenaWidth, 0))
-        self.walls.append(CollidorLine(self.arenaWidth, 0, self.arenaWidth, self.arenaLength))
-        self.walls.append(CollidorLine(self.arenaWidth, self.arenaLength, 0, self.arenaLength))
-        self.walls.append(CollidorLine(0,self.arenaLength, 0, 0))
+        self.walls.append(ColliderLine(0, 0, self.arenaWidth, 0))
+        self.walls.append(ColliderLine(self.arenaWidth, 0, self.arenaWidth, self.arenaLength))
+        self.walls.append(ColliderLine(self.arenaWidth, self.arenaLength, 0, self.arenaLength))
+        self.walls.append(ColliderLine(0, self.arenaLength, 0, 0))
 
         #TODO mehrere Robots mit eigenen Pickup stationen erstellen
 

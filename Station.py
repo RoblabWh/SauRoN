@@ -1,6 +1,6 @@
 from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtCore import Qt
-from Borders import CollidorLine
+from Borders import ColliderLine
 
 
 class Station:
@@ -61,10 +61,10 @@ class Station:
     #     self.lineStyle = Qt.SolidLine
     #     self.brushStyle = Qt.SolidPattern
     #
-    #     self.borders = [CollidorLine(posX+width, posY, posX, posY),
-    #                     CollidorLine(posX, posY, posX, posY+length),
-    #                     CollidorLine(posX, posY+length, posX+width, posY+length),
-    #                     CollidorLine(posX+width, posY+length, posX+width, posY)]
+    #     self.borders = [ColliderLine(posX+width, posY, posX, posY),
+    #                     ColliderLine(posX, posY, posX, posY+length),
+    #                     ColliderLine(posX, posY+length, posX+width, posY+length),
+    #                     ColliderLine(posX+width, posY+length, posX+width, posY)]
 
 
     def paint(self, painter):
@@ -83,17 +83,21 @@ class Station:
         return self.posY
 
     def getWidth(self):
+        """
+        only for rectangular Stations
+        :return: float station width in meter
+        """
         return self.width
 
     def getLength(self):
+        """
+        only for rectangular Stations
+        :return: float station length in meter
+        """
         return self.length
 
     def getRadius(self):
         return self.radius
-
-    def reposition(self, posX, posY):
-        self.posX = posX
-        self.posY = posY
 
     def updateScale(self, scaleFactor):
         self.scaleFactor = scaleFactor

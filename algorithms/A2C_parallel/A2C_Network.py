@@ -45,6 +45,13 @@ class A2C_Network:
 
 
     def buildMainNet(self, tag = 'shared', type = 'big'):
+        '''
+        builds the part of the neural network, that  processes all Input values into one fully connected layer
+        with a variety of processing depending on the chosen type.
+        :param tag: String - is used to name the layers for easier identification when using something like summary()
+        :param type: String - Choose ["small", "medium", "big"] to determine the amount of layers and convolutions used
+        :return: returns the final layer of the created network which can be used as a new input
+        '''
 
         if type == 'big':
             # Laser input und convolutions
@@ -133,6 +140,9 @@ class A2C_Network:
 
 
     def buildNetWithOpti(self):
+        """
+        constructs the neural network and defines the optimizer with its loss function
+        """
         self._ADVANTAGE = placeholder(shape=(None,), name='ADVANTAGE')
         self._REWARD = placeholder(shape=(None,), name='REWARD')
         self._ACTION = placeholder(shape=(None, 2), name='ACTION')

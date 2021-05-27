@@ -1,5 +1,6 @@
 import numpy as np
 
+from BucketRenderer import BucketRenderer
 from algorithms.A2C_parallel.A2C_Multi import AverageMeter
 from algorithms.A2C_parallel.PPO_Network import PPO_Network
 from algorithms.A2C_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
@@ -11,8 +12,17 @@ import keras
 
 
 class PPO_Multi:
+    """
+    Defines an Proximal Policy Optimization learning algorithm for neural nets
+    """
 
     def __init__(self, act_dim, env_dim, args):
+        """
+        :param act_dim: number of available actions
+        :param env_dim: (number of past states (including the current one), size of a state) -
+            their product determines the number input neurons
+        :param args:
+        """
         self.args = args
         # self.network = PPO_Network(act_dim, env_dim, args)
         self.act_dim = act_dim
@@ -25,9 +35,10 @@ class PPO_Multi:
 
     def train(self, loadWeightsPath = ""):
         """ Main PPO Training Algorithm
+        :param loadWeightsPath: The path to the .h5 file containing the pretrained weights.
+         Only required if a pretrained net is used.
         """
-        # reachedTargetList = [False] * 100
-        # countEnvs = len(envs)
+
         loadedWeights = None
         if loadWeightsPath != "":
             self.load_net(loadWeightsPath)
@@ -36,7 +47,7 @@ class PPO_Multi:
 
 
         #Create parallel workers with own environment
-        envLevel = [(i+3)%8 for i in range(self.numbOfParallelEnvs)]
+        envLevel = [(i+1)%2 for i in range(self.numbOfParallelEnvs)]
         #envLevel = [3 for _ in range(self.numbOfParallelEnvs)]
         ray.init()
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
@@ -98,9 +109,13 @@ class PPO_Multi:
             tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(successrate) + " --var: " + str(var[0]))
             tqdm_e.refresh()
 
-
     def train_models(self, envsData, masterEnv = None):#, states, actions, rewards): 1 0 2
-        """ Update actor and critic networks from experience
+        """
+        Update actor and critic networks from experience
+        :param envsData: Collected states of all robots from all used parallel environments. Collected over the last n time steps
+        :param masterEnv: The environment which is used to train the network. all other networks will receive a copy
+        of its weights after the training process.
+        :return: trained weights of the master environments network
         """
         # Compute discounted rewards and Advantage (TD. Error)
 
@@ -185,9 +200,9 @@ class PPO_Multi:
             weights, var = ray.get(masterEnv.trainNet.remote(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogsConcatinated))
         return weights , var
 
-
     def discount(self, r):
-        """ Compute the gamma-discounted rewards over an episode
+        """
+        Compute the gamma-discounted rewards over an episode
         """
         discounted_r = np.zeros_like(r, dtype=float)
         cumul_r = 0
@@ -197,6 +212,9 @@ class PPO_Multi:
         return discounted_r
 
     def saveCurrentWeights(self):
+        """
+        saves weights at current epoch
+        """
         print('Saving individual')
         self.save_weights(self.args.path, "_e" + str(self.currentEpisode))
 
@@ -204,47 +222,49 @@ class PPO_Multi:
         path += 'PPO' + self.args.model_timestamp + additional
 
         masterEnv.saveWeights.remote(path)
-
         data = [self.args]
         with open(path+'.yml', 'w') as outfile:
             yaml.dump(data, outfile, default_flow_style=False)
-
-
-
-    def loadWeights(self, path):
-        self.network.load
 
     def load_net(self, path):
         self.network = PPO_Network(self.act_dim, self.env_dim, self.args)
         self.network.load_weights(path)
 
     def execute(self, env, args):
+        """
+        executes a trained net (without using the standard deviation in the action selection)
+        :param env: EnvironmentWithUI.Environment
+        :param args: args defined in main
+        """
+
+        # visualization of chosen actions
+        histogramm = BucketRenderer(20, 0)
+        histogramm.show()
+        liveHistogramRobot = 0
 
         robotsCount = self.numbOfRobots
 
         for e in range(18):
-
-            env.reset(e % 8)
-            # TODO nach erstem Mal auf trainiertem env sowas wie environment.randomizeForTesting() einbauen (alternativ hier ein fester Testsatz)
-            # robotsOldState = [env.get_observation(i) for i in range(0, robotsCount)]
+            env.reset(e % 9)
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
             robotsDone = [False for i in range(0, robotsCount)]
 
             while not env.is_done():
-
                 robotsActions = []
                 # Actor picks an action (following the policy)
                 for i in range(0, robotsCount):
-
                     if not robotsDone[i]:
-                        aTmp = self.network.policy_action_certain(
-                            robotsOldState[i][0])  # , (rechedTargetList).count(True) / 100)
+                        aTmp = self.network.policy_action_certain(robotsOldState[i][0])
                         a = np.ndarray.tolist(aTmp[0])
+
+                        #visualization of chosen actions
+                        if i == liveHistogramRobot:
+                            histogramm.add_action(a)
+                            histogramm.show()
+
                     else:
                         a = [None, None]
-
                     robotsActions.append(a)
-
                 robotsStates = env.step(robotsActions)
 
                 rewards = ''
@@ -252,13 +272,6 @@ class PPO_Multi:
                     new_state = stateData[0]
                     rewards += (str(i) + ': ' + str(stateData[1]) + '   ')
                     done = stateData[2]
-
-                    # if (done):
-                    #     reachedPickup = stateData[3]
-                    #     rechedTargetList.pop(0)
-                    #     rechedTargetList.append(reachedPickup)
-
                     robotsOldState[i] = new_state
                     if not robotsDone[i]:
                         robotsDone[i] = done
-                # print(rewards)

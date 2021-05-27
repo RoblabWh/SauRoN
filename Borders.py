@@ -1,7 +1,7 @@
 from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtCore import Qt
 
-class CollidorLine:
+class ColliderLine:
     def __init__(self,x1, y1, x2, y2, xn = 0, yn = 0):
         self.a = (x1, y1)
         self.b = (x2, y2)
@@ -28,6 +28,7 @@ class CollidorLine:
 import math
 
 class SquareWall:
+
     def __init__(self, xPos, yPos, width, height, rotation, degree = False):
         halfW = width/2
         halfH = height/2
@@ -69,10 +70,10 @@ class SquareWall:
         y3 = rot10 * xa + rot11 * yb +yPos
 
 
-        c1 = CollidorLine(x0,y0,x1,y1)
-        c2 = CollidorLine(x1,y1,x2,y2)
-        c3 = CollidorLine(x2,y2,x3,y3)
-        c4 = CollidorLine(x3,y3,x0,y0)
+        c1 = ColliderLine(x0, y0, x1, y1)
+        c2 = ColliderLine(x1, y1, x2, y2)
+        c3 = ColliderLine(x2, y2, x3, y3)
+        c4 = ColliderLine(x3, y3, x0, y0)
         self.borders = [c1, c2, c3, c4]
 
 
