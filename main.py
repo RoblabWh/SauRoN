@@ -22,42 +22,28 @@ eps_decay = 0.0001
 target_update = 10
 memory_size = 10000
 
-gamma = 0.999
-lr = 0.0003 #laut christians config für ppo (und a3c)
-num_episodes = 2500
-steps = 600
-trainingInterval = 75 # number of steps after which the neural net is trained
+gamma = 0.999               # discount factor for calculating the discounted reward
+lr = 0.0003                 # learning rate
+num_episodes = 2500         # the number of epochs (/episodes) that are simulated
+steps = 600                 # number of steps per epoch (/episode)
+trainingInterval = 75       # number of steps after which the neural net is trained
 
-arenaWidth = 22   # m
-arenaLength = 10  # m
+arenaWidth = 22             # in meter
+arenaLength = 10            # in meter
+simTimeStep = 0.15          # simulated time between two steps in the simulation
 
-scaleFactor = 65
-angleStepsSonar = 0.5
-timeFrames = 4
-numbOfParallelEnvs = 3*8
-numbOfRobots = 4
-simTimeStep = 0.15
+angleStepsSonar = 0.5       # spacing between two light rays (for distance calculation) in degrees
+timeFrames = 4              # number of past states used as an Input for the neural net
+numbOfRobots = 4            # only change if set to manual do not use more than 4
+numbOfParallelEnvs = 3*8    # parallel instances are used to create more and diverse training experiences
 
-startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Zeitstempel beim Start des trainings für das gespeicherte Modell
+scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
+startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
 
-
-
-filename = 'A2C_21-04-22--15-21'
-filename = 'A2C_21-04-23--12-05_e771'
-filename = 'PPO_21-04-29--15-38_e49'
-filename = 'A2C_21-05-01--17-51'
-filename = 'ppo_small_continuous_noshared_2020-10-29_12 46_0000010062'
-# filename = 'PPO_21-05-06--14-39' # kann man zeigen
-# filename = 'PPO_21-05-06--14-39_e662' #den auch
-# filename = 'PPO_21-05-06--16-59_e885' #den auch
-# filename = 'PPO_21-05-06--16-59_e846' #den auch small, shared
-# filename = 'PPO_21-05-06--22-51' #medium shared 0.1
+filename = "" # enter the filename from the models folder (without .h5 or .yml)
 filename = 'PPO_21-05-07--12-26_e580'
 filename = 'PPO_21-05-10--14-58'
-# filename = 'PPO_21-05-11--22-06'
-# filename = 'PPO_21-05-13--09-48'
-# filename = 'PPO_21-05-13--11-07'
 # filename = 'PPO_21-05-14--10-10'
 
 
