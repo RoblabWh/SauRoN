@@ -31,7 +31,7 @@ class A2C_Multi:
         self.av_meter = AverageMeter()
         self.gamma = args.gamma
 
-    def train(self, loadWeightsPath="", unused = False):
+    def train(self, loadWeightsPath=""):
         """
         Main A2C Training Algorithm
 
