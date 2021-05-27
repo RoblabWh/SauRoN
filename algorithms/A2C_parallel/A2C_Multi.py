@@ -31,7 +31,7 @@ class A2C_Multi:
         self.av_meter = AverageMeter()
         self.gamma = args.gamma
 
-    def train(self, loadWeightsPath = ""):
+    def train(self, loadWeightsPath = "", foo =""):
         """
         Main A2C Training Algorithm
         :param loadWeightsPath: The path to the .h5 file containing the pretrained weights.
