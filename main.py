@@ -29,7 +29,7 @@ steps = 600                 # number of steps per epoch (/episode)
 trainingInterval = 75       # number of steps after which the neural net is trained
 
 arenaWidth = 22             # Width (X Direction) of the Arena in Meter
-arenaLength = 10            # Length (Y direction) of the Arena in meter
+arenaLength = 10            # Length (Y direction) of the Arena in Meter
 simTimeStep = 0.15          # simulated time between two steps in the simulation
 
 angleStepsSonar = 0.5       # spacing between two light rays (for distance calculation) in degrees
