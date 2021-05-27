@@ -31,13 +31,26 @@ class A2C_Multi:
         self.av_meter = AverageMeter()
         self.gamma = args.gamma
 
-    def train(self, loadWeightsPath = "", foo =""):
+    def train(self, loadWeightsPath="", unused = False):
         """
         Main A2C Training Algorithm
+
+        This implementation of an A2C uses the MultiprocessingActor class to parallelize the simulations.
+        Therefore the "Ray" API is used. In the beginning of the training process a number of ray workers (in form of the
+        MultiprocessingActors are created) and receive their initial weights and a level that determines the level layout.
+
+        In each episode the actors collect experiences for all of their robots for n steps (defined in the main).
+        These experiences are then used to train the network of one MultiprocessingActor (the master-actor).
+        After that the new weights get distributed to the other actors in order to update their weights for the next training.
+        This process will repeat as long as there are active MultiprocessingActors. An actor object is active until its
+        environment becomes inactive (which happens after all robots crashed/ reached their goal or the number of total steps
+        per episode is consumed).
+
+
+
         :param loadWeightsPath: The path to the .h5 file containing the pretrained weights.
          Only required if a pretrained net is used.
         """
-
 
         loadedWeights = None
         if loadWeightsPath != "":

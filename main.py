@@ -35,7 +35,7 @@ simTimeStep = 0.15          # simulated time between two steps in the simulation
 angleStepsSonar = 0.5       # spacing between two light rays (for distance calculation) in degrees
 timeFrames = 4              # number of past states used as an Input for the neural net
 numbOfRobots = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 3*8    # parallel instances are used to create more and diverse training experiences
+numbOfParallelEnvs = 3*8    # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
