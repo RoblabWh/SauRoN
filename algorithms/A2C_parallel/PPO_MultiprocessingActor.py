@@ -214,3 +214,6 @@ class PPO_MultiprocessingActor:
         data = self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs)
 
         return (self.network.getWeights(), data[4])
+
+    def killActor(self):
+        ray.actor.exit_actor()

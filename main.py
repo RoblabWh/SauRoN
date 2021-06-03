@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
-    parser.add_argument('--load_old', type=bool, default=True, help='Improve existing net (by loading pretrained weights and continuing with training)')
+    parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
 
     args = parser.parse_args(args)
 
