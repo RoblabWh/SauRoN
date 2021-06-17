@@ -19,6 +19,10 @@ class RobotRepresentation:
         self.radiusUnscaled = self.width / 2
         self.radius = self.radiusUnscaled
 
+        self.hasPieSlice = True
+        self.pieSliceBorders = None
+        self.sensorPos = None
+
         self.posX = x * self.scale
         self.posY = y * self.scale
         self.dirV = [0,0]
@@ -51,14 +55,26 @@ class RobotRepresentation:
         #     self.showSimulation = False
         if self.mode == 'sonar' and self.isActive:
             if sonarShowing:
+
+                if self.hasPieSlice and self.sensorPos != None:
+                    posX, posY = self.sensorPos
+                    posX = posX * self.scale
+                    posY = posY * self.scale
+                else:
+                    posX = self.posX
+                    posY = self.posY
+
                 painter.setPen(QPen(self.lineColor, 1.5, Qt.DotLine))
                 painter.setBrush(QBrush(self.lineColor, self.brushStyle))
                 for i in range(0, len(self.radarHits)):
-                    painter.drawLine(self.posX,
-                                     self.posY,
+                    painter.drawLine(posX,
+                                     posY,
                                      self.radarHits[i][0] * self.scale,
                                      self.radarHits[i][1] * self.scale)
                     painter.drawEllipse(self.radarHits[i][0] * self.scale - 3, self.radarHits[i][1] * self.scale - 3, 6, 6)
+
+
+
 
 
         painter.setPen(QPen(self.lineColor, self.thickness, Qt.DotLine))
@@ -87,10 +103,14 @@ class RobotRepresentation:
         painter.setPen(QPen(Qt.red, self.thickness, self.lineStyle))
         painter.drawEllipse(self.posX-1, self.posY-1, 2, 2)
 
+        if self.hasPieSlice and self.pieSliceBorders != None:
+            for border in self.pieSliceBorders:
+                border.paint(painter, self.scale)
 
 
 
-    def update(self, x, y, direction, radarHits, simShowing, isActive, dirV):
+
+    def update(self, x, y, direction, radarHits, simShowing, isActive, dirV, pieSliceBorders = None, sensorPos = None):
         if simShowing:
             self.posX = x * self.scale
             self.posY = y * self.scale
@@ -98,6 +118,8 @@ class RobotRepresentation:
             self.radarHits = radarHits
             self.isActive = isActive
             self.dirV = dirV
+            self.pieSliceBorders = pieSliceBorders
+            self.sensorPos = sensorPos
 
 
     def updateScale(self, scaleFactor):

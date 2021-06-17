@@ -11,7 +11,7 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    def __init__(self, app, args, timeframes):
+    def __init__(self, app, args, timeframes, level):
         """
         Creates a simulation containing the robots, stations, levels and simulation window
         :param app: PyQt5.QtWidgets.QApplication
@@ -81,6 +81,10 @@ class Simulation:
                             (self.arenaWidth /2 +3.5, self.arenaLength /2),
                             (self.arenaWidth /2, self.arenaLength / 2 + 3.5),
                             (self.arenaWidth /2 -3.5, self.arenaLength / 2)]
+        lvl_funnle_robPos = [(self.arenaWidth / 5, self.arenaLength - 2),
+                            (self.arenaWidth / 5 * 2, self.arenaLength - 1.5),
+                            (self.arenaWidth / 5 * 3, self.arenaLength - 1.5),
+                            (self.arenaWidth / 5 * 4, self.arenaLength - 2)]
         lvl_narrowWayWithBays_robPos = [(2,4),(2,7),(20,4),(20,7)]
         lvl_narrowWayEasy_robPos = [(20,5.5),(2,5.5),(20,4),(20,7)]
 
@@ -96,6 +100,7 @@ class Simulation:
         level07_robotOrient = [math.pi/2 , math.pi, math.pi/2 *3, 0]
         lvl_narrowWayWithBays_robOrient = [0,0,math.pi, math.pi]
         lvl_narrowWayEasy_robOrient = [math.pi,0,math.pi, math.pi]
+        lvl_funnle_robotOrient = [math.pi/4 *7, math.pi/2 *3, math.pi/2 *3, math.pi/4 *5]
 
 
         level00_stationsPos = [(self.arenaWidth / 5, 3.5),
@@ -125,6 +130,10 @@ class Simulation:
                                (self.arenaWidth /2 -5, self.arenaLength / 2),
                                (self.arenaWidth /2, self.arenaLength /2 - 5),
                                (self.arenaWidth /2 +5, self.arenaLength /2)]
+        lvl_funnle_stationsPos = [(self.arenaWidth / 2 - 3, 2.2),
+                               (self.arenaWidth / 2 -1.15, 1.8),
+                               (self.arenaWidth / 2 +1.15, 1.8),
+                               (self.arenaWidth / 2 + 3, 2.2)]
         lvl_narrowWayWithBays_statPos = [(21,4),(21,7),(1,4),(1,7)]
         lvl_narrowWayEasy_statPos = [(1,5.5),(21,5.5),(1,4),(1,7)]
 
@@ -158,12 +167,13 @@ class Simulation:
                                     ColliderLine(centerW + 1, 0, centerW + 1, centerL - 1),
                                     ColliderLine(centerW - 1, centerL + 1, centerW - 1, self.arenaLength),
                                     ColliderLine(centerW + 1, centerL + 1, centerW + 1, self.arenaLength)]
+        lvl_funnle_walls = self.walls + [ColliderLine(1, 8.5, 8, 4), ColliderLine(21, 8.5 , 14, 4)]
 
         lvl_narrowWayWithBays_walls = [ColliderLine(0, 3.6, 5, 3.6),
                                         ColliderLine(5, 3.6, 5.25, 3),
-                                        ColliderLine(6.25, 3, 6.5, 3.6),
-                                        ColliderLine(6.5, 3.6, 15.5, 3.6),
-                                        ColliderLine(15.5, 3.6, 15.75, 3),
+                                        ColliderLine(6.75, 3, 7.25, 3.6),
+                                        ColliderLine(7.25, 3.6, 14.75, 3.6),
+                                        ColliderLine(14.75, 3.6, 15.25, 3),
                                         ColliderLine(16.75, 3, 17, 3.6),
                                         ColliderLine(17, 3.6, 22, 3.6),
                                         ColliderLine(0, 7.4, 5, 7.4),
@@ -173,8 +183,8 @@ class Simulation:
                                         ColliderLine(15.5, 7.4, 15.75, 8),
                                         ColliderLine(16.75, 8, 17, 7.4),
                                         ColliderLine(17, 7.4, 22, 7.4)] + \
-                                      SquareWall(11, 3.8, 22, 1.6, 0).getBorders() + \
-                                      SquareWall(11, 7.2, 22, 1.6, 0).getBorders()
+                                      SquareWall(11, 3.85, 22, 1.7, 0).getBorders() + \
+                                      SquareWall(11, 7.15, 22, 1.7, 0).getBorders()
         lvl_narrowWayEasy_walls = lvl_narrowWayWithBays_walls + \
                                   [ColliderLine(0, 4.4, 0, 6.6), ColliderLine(22, 4.4, 22, 6.6)]
 
@@ -193,10 +203,12 @@ class Simulation:
         # testlevel02 = ([(3,0.5),(2,0.666),(2.5,1.16), (3.3,1.4)],[1,0.8,0.9,1.2],[(19,9),(13.5,5),(12,6.5),(13,9)], SquareWall(12, 5, 3.8, 0.55, 130, True).getBorders() + noWalls)
         testlevel03 = ([(3,0.5),(2,0.666),(2.5,1.16), (3.3,1.4)],[1,0.8,0.9,1.2],[(18,0.5),(19,2),(19.5,1.16), (20,2.6)], SquareWall(10, 1.6, 4, 0.55, 90, True).getBorders() + noWalls)
         testlevel04 = ([(18,0.5),(19,0.666),(19.5,1.16), (18.3,1.4)],[1,0.8,0.9,1.2],[(3,0.5),(2,2),(2.5,1.16), (1,2.6)], SquareWall(10, 1.6, 4, 0.55, 90, True).getBorders() + noWalls)
+        funnle = (lvl_funnle_robPos, lvl_funnle_robotOrient, lvl_funnle_stationsPos,lvl_funnle_walls)
         narrowWayWithBays = [lvl_narrowWayWithBays_robPos, lvl_narrowWayWithBays_robOrient, lvl_narrowWayWithBays_statPos, lvl_narrowWayWithBays_walls]
         narrowWayEasy = [lvl_narrowWayEasy_robPos, lvl_narrowWayEasy_robOrient, lvl_narrowWayEasy_statPos, lvl_narrowWayEasy_walls]
-        self.level[0] = narrowWayWithBays
-        self.level[1] = narrowWayEasy
+        # self.level[1] = narrowWayWithBays
+        # self.level[2] = narrowWayEasy
+        self.level[0] = funnle
         # self.level[2] = testlevel03
         # self.level[4] = testlevel04
         self.level.append(testlevel03)
@@ -204,7 +216,7 @@ class Simulation:
 
         self.simulationWindow = None
 
-        self.reset(0)
+        self.reset(level)
 
         if self.hasUI:
             self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls)
@@ -262,7 +274,6 @@ class Simulation:
             orientations = [random.uniform(0, math.pi*2) for _ in range(len(self.robots))]
             for i, r in enumerate(self.robots):
                 r.reset(self.stations, robotsPositions[i], orientations[i])
-
 
         else:
             for i, s in enumerate(self.stations):
@@ -347,7 +358,7 @@ class Simulation:
                 if stepsLeft <= 0:
                     runOutOfTime = True
 
-                if(np.min(robot.distances)<=0.05):
+                if(np.min(robot.collisionDistances) <= robot.radius + 0.05 ):
                 # if(np.min(robot.distances)<=0.3): # FÜR CHRISTIANS NETZ
                     collision = True
 

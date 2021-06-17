@@ -1,5 +1,9 @@
 import math, random, time
 
+from tensorflow.python.framework.test_ops import old
+
+from Borders import ColliderLine
+
 
 # import keyboard
 from pynput.keyboard import Key, Listener
@@ -31,8 +35,8 @@ class Robot:
             target stations of the other robots can be used as a collider
         """
         self.startposX, self.startposY = position
-        self.startDirectionX = math.cos((startOrientation))
-        self.startDirectionY = math.sin((startOrientation))
+        self.startDirectionX = math.cos(startOrientation)
+        self.startDirectionY = math.sin(startOrientation)
         self.startOrientation = startOrientation
         self.goalX, self.goalY = station.getPosX(), station.getPosY()
 
@@ -44,6 +48,7 @@ class Robot:
         self.netOutput = (0,0)
         self.distances = []
         self.radarHits = []
+        self.collisionDistances = []
         self.angularDeviation = 0
 
         # Robot Hardware Params
@@ -75,6 +80,17 @@ class Robot:
         self.station = station
         self.walls = walls
 
+        self.hasPieSlice = args.has_pie_slice
+        self.pieSlicePoints = []
+        self.pieSliceWalls = []
+        if self.hasPieSlice:
+            self.pieSliceWalls = [ColliderLine(0,0,1,1), ColliderLine(0,0,1,1), ColliderLine(0,0,1,1), ColliderLine(0,0,1,1), ColliderLine(0,0,1,1)]
+        self.posSensor = []
+        self.robotsPieSliceWalls = []
+        self.offsetSensorDist = 0.16
+        normFac = 1 / self.radius
+        self.offsetAngle = 2/3 * np.arccos((np.sqrt(2-(self.offsetSensorDist* normFac)**2)-(self.offsetSensorDist* normFac)) / 2)
+
 
         #only use with rectangular targets
         self.collidorStationsWalls = []
@@ -91,6 +107,9 @@ class Robot:
             self.listener.start()
             self.linTast = 0
             self.angTast = 0
+
+
+
 
 
     def reset(self, allStations, pos = None, orientation = None, walls = None):
@@ -123,10 +142,12 @@ class Robot:
         if(orientation != None):
             self.startDirectionX = math.cos(orientation)
             self.startDirectionY = math.sin(orientation)
+            self.startOrientation = orientation
         else:
             orientation = self.startOrientation
         directionX = self.startDirectionX
         directionY = self.startDirectionY
+
 
         if walls != None:
             self.walls = walls
@@ -135,6 +156,7 @@ class Robot:
         for station in allStations:
             if not station is self.station:
                 self.collidorStationsCircles.append((station.getPosX(), station.getPosY(), station.getRadius()))
+
 
         self.active = True
         linVel = 0
@@ -148,19 +170,35 @@ class Robot:
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
         frame = [posX, posY, directionX, directionY, linVel, angVel, self.goalX, self.goalY, goalDist, orientation]
 
+
         for _ in range(self.time_steps):
             self.push_frame(frame)
 
 
         self.stateSonar = []
+
+
         self.distances = []
+        self.collisionDistances = []
         self.radarHits = []
         self.netOutput = (0, 0)
 
         self.bestDistToGoal = goalDist
 
+        if self.hasPieSlice:
+            self.posSensor = [posX + self.offsetSensorDist * directionX, posY + self.offsetSensorDist * directionY]
+            self.calculatePieSlice((directionX,directionY))
+        else:
+            self.posSensor = [posX, posY]
+
     def resetSonar(self, robots):
         if self.args.mode == 'sonar':
+            if self.hasPieSlice:
+                self.robotsPieSliceWalls = []
+                for robot in robots:
+                    if robot is not self:
+                        self.robotsPieSliceWalls += robot.getPieSliceWalls()
+
             for _ in range(self.time_steps):
                 self.sonarReading(robots, self.args.steps,self.args.steps)
 
@@ -245,13 +283,70 @@ class Robot:
             angVel = self.angTast
 
         goalDist = math.sqrt((posX-goalX)**2+(posY-goalY)**2)
+        oldDir = self.getDirectionAngle()
         direction = (self.getDirectionAngle() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
-        posX += math.cos(direction) * linVel * dt
-        posY += math.sin(direction) * linVel * dt
         directionVector = self.directionVectorFromAngle(direction)
+        deltaDir = direction - oldDir
+
+        deltaPosX = directionVector[0] * linVel * dt #math.cos(direction) * linVel * dt
+        deltaPosY = directionVector[1] * linVel * dt #math.sin(direction) * linVel * dt
+        posX += deltaPosX
+        posY += deltaPosY
+
         frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist, direction]
         self.push_frame(frame)
+        if self.hasPieSlice:
+            self.updatePieSlice(deltaDir, (deltaPosX, deltaPosY))
+        else:
+            self.posSensor = [posX, posY]
 
+    def calculatePieSlice(self, dirV):
+        offsetSensorDist = self.offsetSensorDist
+        posX, posY = self.getPosX(), self.getPosY()
+        dirVx, dirVy = dirV
+        rearX, rearY = -self.radius * dirVx, -self.radius * dirVy
+        angle = self.offsetAngle
+        offsets = [angle * 1.5, angle * .5, angle * -.5, angle * -1.5]
+
+        p0x, p0y = posX + dirVx * offsetSensorDist, posY + dirVy * offsetSensorDist
+        points = [(p0x, p0y)]
+
+        o = np.atleast_2d([posX, posY])
+        for offsetsAngle in offsets:
+            R = np.array([[np.cos(offsetsAngle), -np.sin(offsetsAngle)],
+                          [np.sin(offsetsAngle), np.cos(offsetsAngle)]])
+            p = np.atleast_2d(np.asarray([rearX, rearY]))
+            points += [np.squeeze((R @ (p.T) + o.T ).T).tolist()]
+
+        self.posSensor = points[0]
+        self.pieSlicePoints = points
+
+        walls = self.pieSliceWalls
+        for i, w in enumerate(walls):
+            w.updatePos(points[i], points[(i+1)%len(walls)])
+
+
+
+    def updatePieSlice(self, deltaAngle, deltaPos):
+        points = self.pieSlicePoints
+        posX, posY = self.getPosX(), self.getPosY()
+        deltaX, deltaY = deltaPos
+
+        oldPos = np.atleast_2d([posX-deltaX, posY-deltaY])
+        newPos = np.atleast_2d([posX, posY])
+        R = np.array([[np.cos(deltaAngle), -np.sin(deltaAngle)],
+                      [np.sin(deltaAngle), np.cos(deltaAngle)]])
+        p = np.atleast_2d(np.asarray(points))
+        points = np.squeeze((R @ (p.T - oldPos.T) + newPos.T).T).tolist()
+
+
+
+        walls = self.pieSliceWalls
+        for i, w in enumerate(walls):
+            w.updatePos(points[i], points[(i + 1) % len(walls)])
+
+        self.posSensor = points[0]
+        self.pieSlicePoints = points
 
     def sonarReading(self, robots, stepsLeft, steps):
         """
@@ -269,16 +364,59 @@ class Robot:
         :param stepsLeft: remaining steps of current epoch
         :param steps: number of steps in one epoch
         """
-        colliders = self.walls + self.collidorStationsWalls
 
-        circleCollisionPos = []
+        dir = (self.getDirectionAngle() - (self.args.field_of_view / 2)) % (2 * math.pi)
+
+        colliderLines = self.walls + self.collidorStationsWalls + self.robotsPieSliceWalls
+        collidorCirclePosWithoutRobots = []
+        collidorCirclePosOnlyRobots = []
+        collidorCircleAllForTerminations = []
+
         for robotA in robots:
             if robotA is not self:
-                circleCollisionPos.append((robotA.getPosX(), robotA.getPosY(), robotA.getRadius()))
+                collidorCirclePosOnlyRobots.append((robotA.getPosX(), robotA.getPosY(), robotA.getRadius()))
 
-        if(self.args.collide_other_targets):
-            circleCollisionPos = circleCollisionPos  + self.collidorStationsCircles
-        self.lookAround(self.args.angle_steps, colliders, circleCollisionPos)
+        if self.args.collide_other_targets:
+            collidorCirclePosWithoutRobots = self.collidorStationsCircles
+
+
+
+        colLinesStartPoints = np.swapaxes(np.array([cl.getStart() for cl in colliderLines]), 0, 1)  # [[x,x,x,x],[y,y,y,y]]
+        colLinesEndPoints = np.swapaxes(np.array([cl.getEnd() for cl in colliderLines]), 0, 1)
+
+        collidorCircleAllForTerminations = collidorCirclePosWithoutRobots + collidorCirclePosOnlyRobots
+
+        if self.hasPieSlice:
+            position = self.posSensor
+            usedCircleCollider = collidorCirclePosWithoutRobots
+        else:
+            position = [self.getPosX(), self.getPosY()]
+            usedCircleCollider = collidorCircleAllForTerminations
+
+
+        circleX = [r[0] for r in usedCircleCollider]
+        circleY = [r[1] for r in usedCircleCollider]
+        circleR = [r[2] for r in usedCircleCollider]
+
+        circlesPositions = np.array([circleX, circleY])
+
+        rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.args.field_of_view)
+        distances, radarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, circlesPositions, circleR))
+
+
+        circleX = [r[0] for r in collidorCircleAllForTerminations]
+        circleY = [r[1] for r in collidorCircleAllForTerminations]
+        circleR = [r[2] for r in collidorCircleAllForTerminations]
+        circlesPositionsAll = np.array([circleX, circleY])
+        self.collisionDistances = rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colliderLines, circlesPositionsAll, circleR)
+
+
+
+
+
+        self.radarHits = (radarHits)
+        self.distances = (distances)
+
 
         # frame_sonar = []
         target = (self.station.posX, self.station.posY)
@@ -330,37 +468,6 @@ class Robot:
         else:
             self.stateSonar.append(frame_sonar)
 
-
-    def lookAround(self, alpha, collisionLines, robotsList = []):
-        """
-        computes the laser scan (distances and hit positions)
-
-        :param alpha: float - the angle between 2 light rays (in degrees)
-        :param collisionLines: list of Border.CollidorLine objects -
-            all straight line objects in the current level that are used for collision detection
-        :param robotsList: list of Robot.Robot objects
-            will be used to calculate collisions with different Robots if not empty
-        :return: no return value but th method sets the robots radarHits and distances
-        """
-
-        dir = (self.getDirectionAngle() + (0.75 * math.pi)) % (2*math.pi)   #offsets the first Collision Line by 90 degrees to avoid edge errors during a convolution in neural net
-        # dir = (self.getDirectionAngle() - (0.75*math.pi)) % (2*math.pi)   #FÜR CHRISTIANS NETZ GEWICHTE
-
-        colLinesStartPoints= np.swapaxes(np.array([cl.getStart() for cl in collisionLines]),0,1) #[[x,x,x,x],[y,y,y,y]]
-        colLinesEndPoints = np.swapaxes(np.array([cl.getEnd() for cl in collisionLines]),0,1)
-        circleX = [r[0] for r in robotsList]
-        circleY = [r[1] for r in robotsList]
-        circleR = [r[2] for r in robotsList]
-
-
-        rayCol = FastCollisionRay([self.getPosX(), self.getPosY()], int(360 / alpha), dir, self.radius)
-        # rayCol = FastCollisionRay([self.getPosX(), self.getPosY()], 1081, dir, self.radius)   #FÜR CHRISTIANS NETZ GEWICHTE
-        rayHit = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, np.array([circleX, circleY]), circleR))
-        distances = (rayHit[0])
-        radarHits = (rayHit[1])
-
-        self.radarHits = radarHits
-        self.distances = distances
 
 
     def compute_next_velocity(self, dt, linVel, angVel, tarLinVel, tarAngVel):
@@ -502,7 +609,7 @@ class Robot:
         :return: Boolean
         """
         return math.sqrt((self.getPosX() - self.getGoalX()) ** 2 +
-                  (self.getPosY() - self.getGoalY()) ** 2) < r
+                         (self.getPosY() - self.getGoalY()) ** 2) < r
 
     def hasGoal(self, station):
         """
@@ -564,6 +671,10 @@ class Robot:
     def getRadius(self):
         return self.width * .5
 
+    def getPieSliceWalls(self):
+
+        return self.pieSliceWalls
+
     def isActive(self):
         return self.active
 
@@ -608,7 +719,7 @@ class FastCollisionRay:
     with other line segments or circles.
     """
 
-    def __init__(self, rayOrigin, rayCount, startAngle, radius):
+    def __init__(self, rayOrigin, numberOfRays, startAngle, radius, fov):
         """
         Creates multiple laser rays around the robot for a fast calculation of intersections
         (and distances to those intersections)
@@ -620,9 +731,10 @@ class FastCollisionRay:
         :param radius: the radius of the robot itself
         """
         self.rayOrigin = rayOrigin
-        stepSize = 2*math.pi/rayCount
+
+        stepSize = fov / numberOfRays
         # stepSize = 1.5*math.pi/1081 #FÜR CHRISTIANS NETZ GEWICHTE
-        steps = np.array([startAngle+i*stepSize for i in range(rayCount)])
+        steps = np.array([startAngle+i*stepSize for i in range(numberOfRays)])
         self.rayDirX = np.array([math.cos(step) for step in steps])
         self.rayDirY = np.array([math.sin(step) for step in steps])
         self.ownRadius = radius
@@ -673,46 +785,74 @@ class FastCollisionRay:
         # prüfen, für jedes Segement zwischen Robot-Origin und Collision Point prüfen, ob ein anderer Roboter dazwischen ist.
         # Dafür benötigt: Mittelpunkte aller Roboter und Linie (also Start und Ziel)
 
-        qX = np.array([pointsRobots[0] for _ in range(len(collisionPoints[0]))])
-        qY = np.array([pointsRobots[1] for _ in range(len(collisionPoints[0]))])
-        radii = np.array([radius for _ in range(len(collisionPoints[0]))])
-        qX = np.swapaxes(qX,0,1)
-        qY = np.swapaxes(qY,0,1)
-        radii = np.swapaxes(radii,0,1)
-        colX = np.array([collisionPoints[0] for _ in range(len(pointsRobots[0]))])
-        colY = np.array([collisionPoints[1] for _ in range(len(pointsRobots[0]))])
+
+        if len(pointsRobots[0]) > 0:
+            qX = np.array([pointsRobots[0] for _ in range(len(collisionPoints[0]))])
+            qY = np.array([pointsRobots[1] for _ in range(len(collisionPoints[0]))])
+            radii = np.array([radius for _ in range(len(collisionPoints[0]))])
+            qX = np.swapaxes(qX,0,1)
+            qY = np.swapaxes(qY,0,1)
+            radii = np.swapaxes(radii,0,1)
+            colX = np.array([collisionPoints[0] for _ in range(len(pointsRobots[0]))])
+            colY = np.array([collisionPoints[1] for _ in range(len(pointsRobots[0]))])
 
 
-        vX = colX - x1
-        vY = colY - y1
-        # normalize vector to a length of 1, so that the t parameters of the line-line intersection can be compared with the t's from cirle-line intersection
-        vLengthFact = 1/np.sqrt(vX**2 + vY**2) #again division costs too much for us poor students so we like to use multiplications with a factor
-        vX= vX * vLengthFact
-        vY= vY * vLengthFact
+            vX = colX - x1
+            vY = colY - y1
+            # normalize vector to a length of 1, so that the t parameters of the line-line intersection can be compared with the t's from cirle-line intersection
+            vLengthFact = 1/np.sqrt(vX**2 + vY**2) #again division costs too much for us poor students so we like to use multiplications with a factor
+            vX= vX * vLengthFact
+            vY= vY * vLengthFact
 
 
-        # a,b und c als Array zum Berechnen der Diskriminanten
-        a = vX * vX + vY * vY # array voll skalarere Werte
-        b = 2 * (vX * (x1 - qX) + vY * (y1 - qY))
-        c = (x1**2 + y1**2) + (qX**2 + qY**2) - (2* (x1 * qX + y1*qY)) - radii**2
+            # a,b und c als Array zum Berechnen der Diskriminanten
+            a = vX * vX + vY * vY # array voll skalarere Werte
+            b = 2 * (vX * (x1 - qX) + vY * (y1 - qY))
+            c = (x1**2 + y1**2) + (qX**2 + qY**2) - (2* (x1 * qX + y1*qY)) - radii**2
 
-        disc = b**2 - 4 * a * c
-        denominator = 1/ (2 * a)
-        tc1 = np.where((disc>0), ((-b + np.sqrt(disc)) * denominator), -1) #check if discriminat is negative --> no collision
-        tc2 = np.where((disc>0), ((-b - np.sqrt(disc)) * denominator), -1)
-        tc1 = np.where((tc1>=0), tc1, 2048)
-        tc2 = np.where((tc2>=0), tc2, 2048)
+            disc = b**2 - 4 * a * c
+            denominator = 1/ (2 * a)
+            tc1 = np.where((disc>0), ((-b + np.sqrt(disc)) * denominator), -1) #check if discriminat is negative --> no collision
+            tc2 = np.where((disc>0), ((-b - np.sqrt(disc)) * denominator), -1)
+            tc1 = np.where((tc1>=0), tc1, 2048)
+            tc2 = np.where((tc2>=0), tc2, 2048)
 
-        smallestTOfCircle = np.where((tc1<tc2), tc1, tc2)
-        smallestTOfCircle = np.amin(smallestTOfCircle, axis=0)
+            smallestTOfCircle = np.where((tc1<tc2), tc1, tc2)
+            smallestTOfCircle = np.amin(smallestTOfCircle, axis=0)
 
-        t1NearestHit = np.where(((smallestTOfCircle<2048) & (smallestTOfCircle<t1NearestHit)), smallestTOfCircle, t1NearestHit)
+            t1NearestHit = np.where(((smallestTOfCircle<2048) & (smallestTOfCircle<t1NearestHit)), smallestTOfCircle, t1NearestHit)
 
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
 
-        t1NearestHit = t1NearestHit - self.ownRadius #AUSKOMMENTIEREN FÜR CHRISTIANS NETZ
+        # t1NearestHit = t1NearestHit #- self.ownRadius #AUSKOMMENTIEREN FÜR CHRISTIANS NETZ
 
 
         collisionPoints = np.swapaxes(collisionPoints, 0, 1)#für Rückgabe in x,y-Paaren
         return [t1NearestHit, collisionPoints]
+
+    def shortestDistanceToCollidors(self, pos, lineSegments, circles, radii):
+        x1 = pos[0]  # originX
+        y1 = pos[1]  # originY
+
+        x2 = np.array([lineSegments[i].getStart()[0] for i in range(len(lineSegments))])  # lineStartXArray
+        y2 = np.array([lineSegments[i].getStart()[1] for i in range(len(lineSegments))])  # lineStartYArray
+        x3 = np.array([lineSegments[i].getEnd()[0] for i in range(len(lineSegments))])  # lineEndXArray
+        y3 = np.array([lineSegments[i].getEnd()[1] for i in range(len(lineSegments))])  # lineEndYArray
+
+        sqrDist = (x2 - x3) ** 2 + (y2 - y3) ** 2
+        t = np.where((sqrDist == 0), 0, ((x1 - x2) * (x3 - x2) + (y1 - y2) * (y3 - y2)) / sqrDist)
+        t = np.clip(t, 0, 1)
+
+        dist = (x1 - (x2 + t * (x3 - x2))) ** 2 + (y1 - (y2 + t * (y3 - y2))) ** 2
+        dist = np.sqrt(dist)
+
+        if len(circles[0]) > 0:
+            x4 = np.array([circles[0][i] for i in range(len(circles[0]))])  # circleXArray
+            y4 = np.array([circles[1][i] for i in range(len(circles[1]))])  # circleYArray
+            r = np.array([radii[i] for i in range(len(radii))])        # circleradiusArray
+
+            distCircles = np.sqrt((x1-x4)**2 + (y1-y4)**2) - r
+            dist = np.concatenate((dist, distCircles))
+
+        return dist
 

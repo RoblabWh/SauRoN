@@ -1,5 +1,6 @@
 from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtCore import Qt
+import numpy as np
 
 class ColliderLine:
     def __init__(self,x1, y1, x2, y2, xn = 0, yn = 0):
@@ -12,6 +13,11 @@ class ColliderLine:
         else:
             self.n = (xn, yn)
 
+    def updatePos(self, pos1, pos2):
+        self.a = pos1
+        self.b = pos2
+
+
     def getN(self):
         return self.n
 
@@ -22,7 +28,7 @@ class ColliderLine:
         return self.b
 
     def paint(self, painter, scaleFactor):
-        painter.setPen(QPen(Qt.black))
+        painter.setPen(QPen(Qt.black, 3))
         painter.drawLine(self.a[0] * scaleFactor, self.a[1] * scaleFactor, self.b[0] * scaleFactor, self.b[1] * scaleFactor)
 
 import math

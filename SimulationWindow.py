@@ -166,7 +166,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
     def updateRobot(self, robot, num, stepsLeft):
 
 
-        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing, robot.isActive(), robot.debugAngle)
+        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing, robot.isActive(), robot.debugAngle, robot.getPieSliceWalls(), robot.posSensor)
         if self.simShowing:
             observatedRobot = 0
             if self.monitorGraph != None and num == observatedRobot:

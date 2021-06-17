@@ -51,7 +51,7 @@ class PPO_MultiprocessingActor:
             self.network.printSummary()
         if weights != None:
             self.network.setWeights(weights)
-        self.env = Environment(app, args, env_dim[0])
+        self.env = Environment(app, args, env_dim[0], level)
         self.env.setUISaveListener(self)
         self.numbOfRobots = args.numb_of_robots
         self.timePenalty = args.time_penalty
@@ -91,6 +91,7 @@ class PPO_MultiprocessingActor:
         for _ in range(len(self.reachedTargetList)):
             self.reachedTargetList.pop(0)
             self.reachedTargetList.append(False)
+        self.env.reset(level)
 
     def trainSteps(self, numbrOfSteps):
         stepsLeft , cumul_reward = numbrOfSteps, 0
@@ -172,6 +173,7 @@ class PPO_MultiprocessingActor:
         self.robotsDataBackup = robotsData
         self.robotsOldStateBackup = robotsOldState
         self.cumul_reward += cumul_reward
+        #TODO hier schon Robotdata aufschlüsseln, so macht das jeder Process alleine und man kann mehr paralleliliseren. am ende nurnoch alle aneineander hängen
         return robotsData
 
 

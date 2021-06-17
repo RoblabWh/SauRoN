@@ -24,7 +24,7 @@ class PPO_Network:
         self.env_dim = env_dim
         self.gamma = args.gamma
         self.lr = args.learningrate
-        self.rays = int(360/args.angle_steps)
+        self.rays = args.number_of_rays
         # self.rays = 1081 #FÜR CHRISTIANS NETZ GEWICHTE
         self.timePenalty = args.time_penalty
 

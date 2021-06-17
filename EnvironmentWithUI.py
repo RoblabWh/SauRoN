@@ -10,7 +10,7 @@ class Environment:
     Defines the environment of the reinforcement learning algorithm
     """
 
-    def __init__(self, app, args, timeframes):
+    def __init__(self, app, args, timeframes, level):
         """
         :param app: PyQt5.QtWidgets.QApplication
         :param args: args defined in main
@@ -21,7 +21,7 @@ class Environment:
         self.args = args
         self.steps = args.steps
         self.steps_left = args.steps
-        self.simulation = Simulation.Simulation(app, args, timeframes)
+        self.simulation = Simulation.Simulation(app, args, timeframes, level)
         self.timeframs = timeframes
         self.total_reward = 0.0
         self.done = False
@@ -326,12 +326,12 @@ class Environment:
         :return: returns the result of the fitness function
         """
 
-        distPos = 0.01
+        distPos = 0.015
         distNeg = 0.002  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
         oriPos = 0.0003
         oriNeg = 0.00002
         lastDistPos = 0.05
-        unblViewPos = 0.001
+        unblViewPos = 0.0003
 
         deltaDist = dist_old - dist_new
 

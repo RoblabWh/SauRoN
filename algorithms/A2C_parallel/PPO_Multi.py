@@ -47,7 +47,7 @@ class PPO_Multi:
 
 
         #Create parallel workers with own environment
-        envLevel = [1 for i in range(self.numbOfParallelEnvs)]
+        envLevel = [(i+3)%4 for i in range(self.numbOfParallelEnvs)]
         #envLevel = [3 for _ in range(self.numbOfParallelEnvs)]
         ray.init()
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
@@ -109,6 +109,7 @@ class PPO_Multi:
             tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(successrate) + " --var: " + str(var[0]))
             tqdm_e.refresh()
 
+        self.save_weights(multiActors[0], self.args.path)
         for actor in multiActors:
             actor.killActor.remote()
 
@@ -248,7 +249,7 @@ class PPO_Multi:
         robotsCount = self.numbOfRobots
 
         for e in range(18):
-            env.reset(e % 9)
+            env.reset(e % len(env.simulation.level))
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
             robotsDone = [False for i in range(0, robotsCount)]
 

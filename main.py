@@ -1,4 +1,6 @@
 import argparse
+import math
+
 import numpy as np
 import os
 from PyQt5.QtWidgets import QApplication
@@ -25,17 +27,18 @@ memory_size = 10000
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0003                 # learning rate
 num_episodes = 2500         # the number of epochs (/episodes) that are simulated
-steps = 600                 # number of steps per epoch (/episode)
+steps = 750                 # number of steps per epoch (/episode)
 trainingInterval = 75       # number of steps after which the neural net is trained
 
 arenaWidth = 22             # Width (X Direction) of the Arena in Meter
 arenaLength = 10            # Length (Y direction) of the Arena in Meter
-simTimeStep = 0.15          # simulated time between two steps in the simulation
+simTimeStep = 0.1           # simulated time between two steps in the simulation
 
-angleStepsSonar = 0.5       # spacing between two light rays (for distance calculation) in degrees
+numberOfRays = 810          # spacing between two light rays (for distance calculation) in degrees
+fov = 270                   # field of view in degree
 timeFrames = 4              # number of past states used as an Input for the neural net
 numbOfRobots = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 3*8    # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 6*9    # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
@@ -43,8 +46,12 @@ startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp us
 
 filename = "" # enter the filename from the models folder (without .h5 or .yml)
 filename = 'PPO_21-05-07--12-26_e580'
-filename = 'PPO_21-05-10--14-58'
-# filename = 'PPO_21-05-14--10-10'
+filename = 'PPO_21-05-10--14-58' #das ist jut
+filename = 'PPO_21-05-31--08-03'
+filename = 'PPO_21-05-31--15-43_e644'
+filename = 'PPO_21-06-08--18-09_e1'
+filename = 'PPO_21-06-08--18-18_e167'
+#filename = 'PPO_21-06-01--17-47_e434'
 
 
 if __name__ == '__main__':
@@ -79,7 +86,9 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  # Global oder Sonar einstellbar
     parser.add_argument('--collide_other_targets', type=str2bool, default=False, help='Determines whether the robot collides with targets of other robots (or passes through them)')  # Global oder Sonar einstellbar
     parser.add_argument('--time_penalty', type=str2bool, default='False', help='Reward function with time step penalty')
-    parser.add_argument('--angle_steps', type=int, default=angleStepsSonar, help='Angle Steps for sonar training')
+    parser.add_argument('--number_of_rays', type=int, default=numberOfRays, help='The number of Rays emittet by the laser')
+    parser.add_argument('--field_of_view', type=int, default=(fov/180 * math.pi), help='The lidars field of view in degree')
+    parser.add_argument('--has_pie_slice',  type=str2bool, default='True', help='Determines if an Object is places on top of the robot to reflect pther robots lidar')
     parser.add_argument('--time_frames', type=int, default=timeFrames, help='Number of Timeframes which will be analyzed by neural net')
     parser.add_argument('--parallel_envs', type=int, default=numbOfParallelEnvs, help='Number of parallel environments used during training in addition to the main training process')
     parser.add_argument('--numb_of_robots', type=int, default=numbOfRobots, help='Number of robots acting in one environment')
@@ -117,7 +126,8 @@ if __name__ == '__main__':
 
 
     if args.mode == 'sonar':
-        states = int((360 / angleStepsSonar) + 7)
+        states = int((numberOfRays) + 7)
+
         #states = int((1081) + 7) #FÜR CHRISTIANS NETZ GEWICHTE
         env_dim = (args.time_frames, states)  # Timeframes, Robotstates
 
