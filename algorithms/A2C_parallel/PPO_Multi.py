@@ -47,8 +47,8 @@ class PPO_Multi:
 
 
         #Create parallel workers with own environment
-        envLevel = [(i+3)%4 for i in range(self.numbOfParallelEnvs)]
-        #envLevel = [3 for _ in range(self.numbOfParallelEnvs)]
+        # envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
+        envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
         ray.init()
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
@@ -62,7 +62,7 @@ class PPO_Multi:
 
         for e in tqdm_e:
             self.currentEpisode = e
-            currentVar = 0;
+            currentVar = 0
             #Start of episode for the parallel PPO actors with their own environment
             #Hier wird die gesamte Episode durchlaufen und dann erst trainiert
 
@@ -72,7 +72,7 @@ class PPO_Multi:
             while len(activeActors) > 0:
                 futures = [actor.trainSteps.remote(self.args.train_interval) for actor in activeActors]
                 allTrainingResults = ray.get(futures)
-                trainedWeights, var = self.train_models(allTrainingResults, multiActors[0])
+                trainedWeights, var = self.train_modelsFaster(allTrainingResults, multiActors[0])
                 for actor in multiActors[1:len(multiActors)]:
                     actor.setWeights.remote(trainedWeights)
                 currentVar = var
@@ -112,6 +112,44 @@ class PPO_Multi:
         self.save_weights(multiActors[0], self.args.path)
         for actor in multiActors:
             actor.killActor.remote()
+
+    def train_modelsFaster(self, envsData, masterEnv = None):
+        statesConcatenatedL = envsData[0][0]
+        statesConcatenatedO = envsData[0][1]
+        statesConcatenatedD = envsData[0][2]
+        statesConcatenatedV = envsData[0][3]
+        statesConcatenatedT = envsData[0][4]
+        discounted_rewards = envsData[0][5]
+        actionsConcatenated = envsData[0][6]
+        advantagesConcatenated = envsData[0][7]
+        neglogsConcatinated = envsData[0][8]
+
+        for robotsData in envsData[1:]:
+            statesConcatenatedL = np.concatenate((statesConcatenatedL ,robotsData[0]));
+            statesConcatenatedO = np.concatenate((statesConcatenatedO ,robotsData[1]));
+            statesConcatenatedD = np.concatenate((statesConcatenatedD, robotsData[2]));
+            statesConcatenatedV = np.concatenate((statesConcatenatedV, robotsData[3]));
+            statesConcatenatedT = np.concatenate((statesConcatenatedT, robotsData[4]));
+            discounted_rewards = np.concatenate((discounted_rewards, robotsData[5]));
+            actionsConcatenated = np.concatenate((actionsConcatenated, robotsData[6]));
+            advantagesConcatenated = np.concatenate((advantagesConcatenated, robotsData[7]));
+            neglogsConcatinated = np.concatenate((neglogsConcatinated, robotsData[8]));
+            i = 0
+        neglogsConcatinated = np.squeeze(neglogsConcatinated)
+
+
+        if masterEnv == None:
+           self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD, statesConcatenatedV,
+                                   statesConcatenatedT, discounted_rewards, actionsConcatenated, advantagesConcatenated,
+                                   neglogsConcatinated)
+           weights = self.network.getWeights()
+        else:
+            weights, var = ray.get(
+                masterEnv.trainNet.remote(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD, statesConcatenatedV,
+                                   statesConcatenatedT, discounted_rewards, actionsConcatenated, advantagesConcatenated,
+                                   neglogsConcatinated))
+        return weights, var
+
 
     def train_models(self, envsData, masterEnv = None):#, states, actions, rewards): 1 0 2
         """

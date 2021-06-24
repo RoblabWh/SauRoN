@@ -38,7 +38,7 @@ numberOfRays = 810          # spacing between two light rays (for distance calcu
 fov = 270                   # field of view in degree
 timeFrames = 4              # number of past states used as an Input for the neural net
 numbOfRobots = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 6*9    # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 20    # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
@@ -51,6 +51,8 @@ filename = 'PPO_21-05-31--08-03'
 filename = 'PPO_21-05-31--15-43_e644'
 filename = 'PPO_21-06-08--18-09_e1'
 filename = 'PPO_21-06-08--18-18_e167'
+filename = 'PPO_21-06-17--18-19_e9'
+filenameChristian = 'ppo_small_continuous_noshared_2020-10-29_12 46_0000010062'
 #filename = 'PPO_21-06-01--17-47_e434'
 
 
@@ -69,6 +71,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_interval', type=int, default=trainingInterval, help='The number of steps after which the neural net is trained.')
     parser.add_argument('--net_size', type=str, default='big', choices=['small', 'medium', 'big'], help='Determines the number of filters in the convolutional layers, the overall amount of neurons and the number of layers.')
     parser.add_argument('--shared', type=str2bool, default='False', help='Determines whether actor and aritic share their main network weights.')
+    parser.add_argument('--load_christian', type=bool, default=True, help='Loads the best network ever trained by the master, be hold ... CHRISTIAN.')
 
     # FOR DQN
     parser.add_argument('--target_update', type=int, default=target_update, help='How often is the Agent updated')
@@ -88,15 +91,15 @@ if __name__ == '__main__':
     parser.add_argument('--time_penalty', type=str2bool, default='False', help='Reward function with time step penalty')
     parser.add_argument('--number_of_rays', type=int, default=numberOfRays, help='The number of Rays emittet by the laser')
     parser.add_argument('--field_of_view', type=int, default=(fov/180 * math.pi), help='The lidars field of view in degree')
-    parser.add_argument('--has_pie_slice',  type=str2bool, default='True', help='Determines if an Object is places on top of the robot to reflect pther robots lidar')
+    parser.add_argument('--has_pie_slice',  type=str2bool, default='False', help='Determines if an Object is places on top of the robot to reflect pther robots lidar')
     parser.add_argument('--time_frames', type=int, default=timeFrames, help='Number of Timeframes which will be analyzed by neural net')
     parser.add_argument('--parallel_envs', type=int, default=numbOfParallelEnvs, help='Number of parallel environments used during training in addition to the main training process')
     parser.add_argument('--numb_of_robots', type=int, default=numbOfRobots, help='Number of robots acting in one environment')
     parser.add_argument('--sim_time_step', type=float, default=simTimeStep, help='Time between steps')
 
-    parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
+    parser.add_argument('--training', type=bool, default=False, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
-    parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
+    parser.add_argument('--load_old', type=bool, default=True, help='Improve existing net (by loading pretrained weights and continuing with training)')
 
     args = parser.parse_args(args)
 
@@ -110,7 +113,7 @@ if __name__ == '__main__':
         args.steps = 1000000
         args.parallel_envs = 1
 
-    if args.load_old or not args.training:       #FÜR CHRISTIANS NETZ GEWICHTE AUSKOMMENTIWER
+    if (args.load_old or not args.training) and not args.load_christian:
         # Read YAML file
         with open(args.path + filename + ".yml", 'r') as stream:
             data_loaded = yaml.load(stream, Loader=yaml.UnsafeLoader)
@@ -118,15 +121,30 @@ if __name__ == '__main__':
             args.steps = loadedArgs.steps
             args.time_frames = loadedArgs.time_frames
             args.time_penalty = loadedArgs.time_penalty
-            args.angle_steps = loadedArgs.angle_steps
+            args.number_of_rays = loadedArgs.number_of_rays
+            args.field_of_view = loadedArgs.field_of_view
+            args.has_pie_slice = loadedArgs.has_pie_slice
             args.net_size = loadedArgs.net_size
             args.shared = loadedArgs.shared
             #args.sim_time_step=loadedArgs.sim_time_step
 
+    if args.load_christian:
+        args.load_old = True
+        filename = filenameChristian
+        args.steps = 600
+        args.time_frames = 4
+        args.time_penalty = False
+        args.alg = 'ppo'
+        args.number_of_rays = 1081 #TODO
+        args.field_of_view = 1.5*math.pi
+        args.net_size = 'small'
+        args.shared = False
+        args.sim_time_step = 0.2
+
 
 
     if args.mode == 'sonar':
-        states = int((numberOfRays) + 7)
+        states = int((args.number_of_rays) + 7)
 
         #states = int((1081) + 7) #FÜR CHRISTIANS NETZ GEWICHTE
         env_dim = (args.time_frames, states)  # Timeframes, Robotstates
@@ -157,7 +175,7 @@ if __name__ == '__main__':
         # model.trainA3C()
     elif not args.training:
         app = QApplication(sys.argv)
-        env = EnvironmentWithUI.Environment(app, args, env_dim[0])
+        env = EnvironmentWithUI.Environment(app, args, env_dim[0], 0)
         model.load_net(args.path+filename+'.h5')
         model.execute(env, args)
 

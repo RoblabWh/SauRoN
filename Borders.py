@@ -17,7 +17,6 @@ class ColliderLine:
         self.a = pos1
         self.b = pos2
 
-
     def getN(self):
         return self.n
 
@@ -35,9 +34,11 @@ import math
 
 class SquareWall:
 
-    def __init__(self, xPos, yPos, width, height, rotation, degree = False):
-        halfW = width/2
-        halfH = height/2
+    def __init__(self, xPos, yPos, width, height, rotation = 0, degree = False):
+        self.xPos = xPos
+        self.yPos = yPos
+        self.halfW = width/2
+        self.halfH = height/2
 
         # (xa,ya)     ya     (xb,ya)
         #     o----------------o
@@ -45,10 +46,10 @@ class SquareWall:
         #     o----------------o
         # (xa,yb)     yb     (xb,yb)
 
-        xa = - halfW
-        xb = + halfW
-        ya = - halfH
-        yb = + halfH
+        xa = - self.halfW
+        xb = + self.halfW
+        ya = - self.halfH
+        yb = + self.halfH
 
 
         if(degree):
@@ -75,12 +76,36 @@ class SquareWall:
         x3 = rot00 * xa + rot01 * yb +xPos
         y3 = rot10 * xa + rot11 * yb +yPos
 
+        self.corners=[(x0,y0), (x1,y1), (x2,y2), (x3,y3)]
+
 
         c1 = ColliderLine(x0, y0, x1, y1)
         c2 = ColliderLine(x1, y1, x2, y2)
         c3 = ColliderLine(x2, y2, x3, y3)
         c4 = ColliderLine(x3, y3, x0, y0)
         self.borders = [c1, c2, c3, c4]
+
+    def rotate(self, rot00, rot10, rot01, rot11):
+        #-0.5736 0.8191 -0.8191 -0.5736
+        # Rot matrix R:
+        # [[rot00, rot01]    =   [[cos(r), -sin(r)]
+        #  [rot10, rot11]]        [sin(r),  cos(r)]
+
+        xPos = self.xPos
+        yPos = self.yPos
+
+
+        for i, corner in enumerate(self.corners):
+            x, y = corner
+            x -= xPos
+            y -= yPos
+            x1 = rot00 * x + rot01 * y + xPos
+            y1 = rot10 * x + rot11 * y + yPos
+            self.corners[i]= (x1,y1)
+
+        for i, border in enumerate(self.borders):
+            border.updatePos(self.corners[i], self.corners[(i+1)%4])
+
 
 
     def getBorders(self):

@@ -14,7 +14,7 @@ class Robot:
     Defines a Robot that can move inside of simulation
     """
 
-    def __init__(self, position, startOrientation, station, args, timeframes, walls, allStations):
+    def __init__(self, position, startOrientation, station, args, walls, allStations):
         """
         :param position: tuple (float,float) -
             defines the robots starting position
@@ -27,8 +27,6 @@ class Robot:
             defines the target of the robot
         :param args:
             args defined in main
-        :param timeframes: int -
-            the amount of frames saved as a history to train the neural net
         :param walls: list of Borders.ColliderLines -
             should at least include the borders of the arena
         :param allStations: list of Station.Stations
@@ -41,7 +39,7 @@ class Robot:
         self.goalX, self.goalY = station.getPosX(), station.getPosY()
 
         # Variables regarding the state
-        self.time_steps = timeframes #4
+        self.time_steps = args.time_frames #4
         self.state = []
         self.state_raw = []
         self.stateSonar = []
@@ -56,7 +54,7 @@ class Robot:
         self.length = 0.5  # m
         self.radius = self.width / 2
 
-        self.maxLinearVelocity = 0.7  # 10m/s
+        self.maxLinearVelocity = 0.7  # m/s
         self.minLinearVelocity = -0.7  # m/s
         self.maxLinearAcceleration = 1.5  # 5m/s^2
         self.minLinearAcceleration = -1.5  # 5m/s^2
@@ -65,6 +63,16 @@ class Robot:
         self.maxAngularAcceleration = 0.5 * math.pi   #rad/s^2
         self.minAngularAcceleration = -0.5 * math.pi  #rad/s^2
 
+        if args.load_christian:
+            self.width = 0.25  # m
+            self.length = 0.25  # m
+            self.radius = self.width / 2
+            self.minLinearVelocity = 0
+            self.maxLinearVelocity = 0.5
+            self.maxAngularVelocity = .5
+            self.minAngularVelocity = -.5
+
+
         self.maxLinearVelocityFact = 1/self.maxLinearVelocity
         self.maxAngularVelocityFact = 1/self.maxAngularVelocity
 
@@ -72,8 +80,10 @@ class Robot:
         self.XYnorm = [args.arena_width, args.arena_length]
         self.XYnormFact = [1/args.arena_width, 1/args.arena_length]
         self.directionnom = [-1, 1]#2 * math.pi]
-        self.maxDistFact = 1/math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[1] ** 2)
-        # self.maxDistFact = 1/20 #FÜR CHRISTIANS SIMULATION
+
+
+        if args.load_christian: self.maxDistFact = 1/20 #FÜR CHRISTIANS Netz
+        else: self.maxDistFact = 1/math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[1] ** 2)
 
         self.manuell = args.manually
         self.args = args
@@ -412,8 +422,6 @@ class Robot:
 
 
 
-
-
         self.radarHits = (radarHits)
         self.distances = (distances)
 
@@ -454,7 +462,8 @@ class Robot:
 
 
         distancesNorm = self.distances* self.maxDistFact
-        # distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)  # FÜR CHRISTIANS SIM
+        if self.args.load_christian:
+            distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)  # FÜR CHRISTIANS SIM
         distancesNorm = distancesNorm.tolist()
 
         currentTimestep = (steps - stepsLeft)/steps #TODO setps im Konstruktor übergeben und einenFaktor draus machen, muss nicht bei jedem Aufruf mit übergeben werden
@@ -733,7 +742,6 @@ class FastCollisionRay:
         self.rayOrigin = rayOrigin
 
         stepSize = fov / numberOfRays
-        # stepSize = 1.5*math.pi/1081 #FÜR CHRISTIANS NETZ GEWICHTE
         steps = np.array([startAngle+i*stepSize for i in range(numberOfRays)])
         self.rayDirX = np.array([math.cos(step) for step in steps])
         self.rayDirY = np.array([math.sin(step) for step in steps])
@@ -824,7 +832,7 @@ class FastCollisionRay:
 
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
 
-        # t1NearestHit = t1NearestHit #- self.ownRadius #AUSKOMMENTIEREN FÜR CHRISTIANS NETZ
+        t1NearestHit = t1NearestHit - self.ownRadius #AUSKOMMENTIEREN FÜR CHRISTIANS NETZ
 
 
         collisionPoints = np.swapaxes(collisionPoints, 0, 1)#für Rückgabe in x,y-Paaren

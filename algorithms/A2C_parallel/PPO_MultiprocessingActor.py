@@ -174,7 +174,116 @@ class PPO_MultiprocessingActor:
         self.robotsOldStateBackup = robotsOldState
         self.cumul_reward += cumul_reward
         #TODO hier schon Robotdata aufschlüsseln, so macht das jeder Process alleine und man kann mehr paralleliliseren. am ende nurnoch alle aneineander hängen
-        return robotsData
+        #return robotsData
+        return self.restructureRobotsData(robotsData)
+
+    def restructureRobotsData(self, robotsData):#, states, actions, rewards): 1 0 2
+        """
+        Update actor and critic networks from experience
+        :param envsData: Collected states of all robots from all used parallel environments. Collected over the last n time steps
+        :param masterEnv: The environment which is used to train the network. all other networks will receive a copy
+        of its weights after the training process.
+        :return: trained weights of the master environments network
+        """
+        # Compute discounted rewards and Advantage (TD. Error)
+
+        discounted_rewards = np.array([])
+        state_values = np.array([])
+        advantages = np.array([])
+        actionsConcatenated = np.array([])
+        statesConcatenatedL = np.array([])
+        statesConcatenatedO = np.array([])
+        statesConcatenatedD = np.array([])
+        statesConcatenatedV = np.array([])
+        statesConcatenatedT = np.array([])
+        neglogsConcatinated = np.array([])
+
+        for data in robotsData:
+            actions, states, rewards, dones, evaluations, neglogs = data
+
+            if (actionsConcatenated.size == 0):
+                actionsConcatenated = np.vstack(actions)
+
+            else:
+                actionsConcatenated = np.concatenate((actionsConcatenated, np.vstack(actions)))
+
+
+            lasers = []
+            orientations = []
+            distances = []
+            velocities = []
+            usedTimeSteps = []
+
+            for s in states:
+                laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
+                orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
+                distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
+                velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
+                usedTimeStep = np.array([np.array(s[i][4]) for i in range(0, len(s))])
+
+                lasers.append(laser)
+                orientations.append(orientation)
+                distances.append(distance)
+                velocities.append(velocity)
+                usedTimeSteps.append(usedTimeStep)
+
+            if(statesConcatenatedL.size == 0):
+                statesConcatenatedL = np.array(lasers)
+                statesConcatenatedO = np.array(orientations)
+                statesConcatenatedD = np.array(distances)
+                statesConcatenatedV = np.array(velocities)
+                statesConcatenatedT = np.array(usedTimeSteps)
+                state_values = np.array(evaluations)
+                neglogsConcatinated = np.array(neglogs)
+            else:
+                statesConcatenatedL = np.concatenate((statesConcatenatedL, np.array(lasers)))
+                statesConcatenatedO = np.concatenate((statesConcatenatedO, np.array(orientations)))
+                statesConcatenatedD = np.concatenate((statesConcatenatedD, np.array(distances)))
+                statesConcatenatedV = np.concatenate((statesConcatenatedV, np.array(velocities)))
+                statesConcatenatedT = np.concatenate((statesConcatenatedT, np.array(usedTimeSteps)))
+                state_values = np.concatenate((state_values, evaluations))
+                neglogsConcatinated = np.concatenate((neglogsConcatinated, np.array(neglogs)))
+
+            discounted_rewardsTmp = self.discount(rewards)
+            discounted_rewards = np.concatenate((discounted_rewards, discounted_rewardsTmp))
+
+
+
+            advantagesTmp = discounted_rewardsTmp - np.reshape(evaluations, len(evaluations))  # Warum reshape
+            advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)
+            advantages = np.concatenate((advantages, advantagesTmp))
+
+
+                # print("discounted_rewards", discounted_rewards.shape, "state_values", state_values.shape, "advantages",
+                #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
+                # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
+
+        # neglogsConcatinated = np.squeeze(neglogsConcatinated)
+
+
+        #statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs)
+        return (statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT, discounted_rewards, actionsConcatenated, advantages, neglogsConcatinated)
+
+
+        # if masterEnv == None:
+        #     #for i in len(statesConcatenatedL):
+        #      #   self.network.train_net(statesConcatenatedL[i], statesConcatenatedO[i], statesConcatenatedD[i],statesConcatenatedV[i], statesConcatenatedT[i],discounted_rewards[i], actionsConcatenated[i],advantages[i], neglogsConcatinated[i])
+        #     self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogsConcatinated)
+        #     weights = self.network.getWeights()
+        # else:
+        #     weights, var = ray.get(masterEnv.trainNet.remote(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogsConcatinated))
+        # return weights , var
+
+    def discount(self, r):
+        """
+        Compute the gamma-discounted rewards over an episode
+        """
+        discounted_r = np.zeros_like(r, dtype=float)
+        cumul_r = 0
+        for t in reversed(range(0, len(r))):
+            cumul_r = r[t] + cumul_r * self.gamma
+            discounted_r[t] = cumul_r
+        return discounted_r
 
 
     def resetActor(self):

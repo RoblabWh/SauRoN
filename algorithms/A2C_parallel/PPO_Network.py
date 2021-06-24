@@ -25,7 +25,6 @@ class PPO_Network:
         self.gamma = args.gamma
         self.lr = args.learningrate
         self.rays = args.number_of_rays
-        # self.rays = 1081 #FÜR CHRISTIANS NETZ GEWICHTE
         self.timePenalty = args.time_penalty
 
         self._network_size = args.net_size
@@ -205,6 +204,8 @@ class PPO_Network:
             [self._selected_action, self._value, self._neglog])
         self._sample = function(
             [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity], self._mu)
+
+        self.printSummary()
 
 
     def select_action_continuous_clip(self, mu, var):
