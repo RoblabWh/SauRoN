@@ -10,7 +10,7 @@ import yaml
 import keras
 
 
-
+@ray.remote
 class PPO_Multi:
     """
     Defines an Proximal Policy Optimization learning algorithm for neural nets
@@ -49,12 +49,14 @@ class PPO_Multi:
         #Create parallel workers with own environment
         # envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
         envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
-        ray.init()
+        #ray.init()
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
         multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
         for i, actor in enumerate(multiActors):
             actor.setLevel.remote(envLevel[i])
+
+        self.multiActors = multiActors
 
 
         # Main Loop
@@ -271,6 +273,12 @@ class PPO_Multi:
     def load_net(self, path):
         self.network = PPO_Network(self.act_dim, self.env_dim, self.args)
         self.network.load_weights(path)
+
+    def showEnvWindow(self, row):
+        print(type(row), " wird geöffnet")
+        if row < len(self.multiActors):
+            print("im If")
+            self.multiActors[row].showWindow.remote()
 
     def execute(self, env, args):
         """

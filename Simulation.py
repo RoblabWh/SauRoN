@@ -390,3 +390,8 @@ class Simulation:
 
         return robotsTerminations
 
+    def showWindow(self, app):
+        if not self.hasUI:
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args, self.walls)
+            self.simulationWindow.show()
+            self.hasUI = True

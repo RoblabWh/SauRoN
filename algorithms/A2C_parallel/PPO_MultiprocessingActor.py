@@ -328,3 +328,8 @@ class PPO_MultiprocessingActor:
 
     def killActor(self):
         ray.actor.exit_actor()
+
+    def showWindow(self):
+        if self.app == None:
+            self.app = QApplication(sys.argv)
+            self.env.simulation.showWindow(self.app)

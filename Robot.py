@@ -50,8 +50,8 @@ class Robot:
         self.angularDeviation = 0
 
         # Robot Hardware Params
-        self.width = 0.5  # m
-        self.length = 0.5  # m
+        self.width = 0.35  # m
+        self.length = 0.35  # m
         self.radius = self.width / 2
 
         self.maxLinearVelocity = 0.7  # m/s
@@ -64,13 +64,14 @@ class Robot:
         self.minAngularAcceleration = -0.5 * math.pi  #rad/s^2
 
         if args.load_christian:
-            self.width = 0.25  # m
-            self.length = 0.25  # m
+            self.width = 0.35  # m
+            self.length = 0.35  # m
             self.radius = self.width / 2
             self.minLinearVelocity = 0
-            self.maxLinearVelocity = 0.5
-            self.maxAngularVelocity = .5
-            self.minAngularVelocity = -.5
+            self.maxLinearVelocity = 0.6
+            self.maxAngularVelocity = 0.5
+            self.minAngularVelocity = -0.5
+            #v = 0.6
 
 
         self.maxLinearVelocityFact = 1/self.maxLinearVelocity
@@ -97,7 +98,7 @@ class Robot:
             self.pieSliceWalls = [ColliderLine(0,0,1,1), ColliderLine(0,0,1,1), ColliderLine(0,0,1,1), ColliderLine(0,0,1,1), ColliderLine(0,0,1,1)]
         self.posSensor = []
         self.robotsPieSliceWalls = []
-        self.offsetSensorDist = 0.16
+        self.offsetSensorDist = 0.08
         normFac = 1 / self.radius
         self.offsetAngle = 2/3 * np.arccos((np.sqrt(2-(self.offsetSensorDist* normFac)**2)-(self.offsetSensorDist* normFac)) / 2)
 
@@ -393,6 +394,7 @@ class Robot:
 
         colLinesStartPoints = np.swapaxes(np.array([cl.getStart() for cl in colliderLines]), 0, 1)  # [[x,x,x,x],[y,y,y,y]]
         colLinesEndPoints = np.swapaxes(np.array([cl.getEnd() for cl in colliderLines]), 0, 1)
+        normals = np.swapaxes(np.array([cl.getN() for cl in colliderLines]), 0, 1)
 
         collidorCircleAllForTerminations = collidorCirclePosWithoutRobots + collidorCirclePosOnlyRobots
 
@@ -411,7 +413,7 @@ class Robot:
         circlesPositions = np.array([circleX, circleY])
 
         rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.args.field_of_view)
-        distances, radarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, circlesPositions, circleR))
+        distances, radarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
 
 
         circleX = [r[0] for r in collidorCircleAllForTerminations]
@@ -747,7 +749,7 @@ class FastCollisionRay:
         self.rayDirY = np.array([math.sin(step) for step in steps])
         self.ownRadius = radius
 
-    def lineRayIntersectionPoint(self, points1, points2, pointsRobots, radius):
+    def lineRayIntersectionPoint(self, points1, points2, normals, pointsRobots, radius, sensorOffset):
         """
 
         :param points1: List of starting points of collision lines - points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
@@ -763,6 +765,11 @@ class FastCollisionRay:
         x2 = x2V+x1
         y2 = y2V+y1
 
+        nX = np.array([normals[0] for _ in range(len(self.rayDirX))]) #normalsXArray
+        nY = np.array([normals[1] for _ in range(len(self.rayDirX))]) #normalsXArray
+
+        skalarProd = nX * x2V + nY * y2V
+
         x3 = np.array([points1[0] for _ in range(len(self.rayDirX))]) #lineStartXArray
         y3 = np.array([points1[1] for _ in range(len(self.rayDirX))]) #lineStartYArray
         x4 = np.array([points2[0] for _ in range(len(self.rayDirX))]) #lineEndXArray
@@ -775,10 +782,12 @@ class FastCollisionRay:
 
         # Ersten den denominator berechnen, da er für t1 und t2 gleich ist.
         # 1 / ... um später für beiden die Multiplikation zu verwenden. Division ist die teuerste mathematische Operation ;)
-        denominator = 1.0 / ((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+        denominator = np.where(skalarProd<0, 1.0 / ((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4)), -1)
 
-        t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))*denominator #Faktor des Laserstrahls vom Roboter bis zum Schnittpunkt
-        t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))*denominator #Faktor vom Startpunkt des Geradenabschnitts bis zum Schnittpunkt
+        # t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))*denominator #Faktor des Laserstrahls vom Roboter bis zum Schnittpunkt
+        # t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))*denominator #Faktor vom Startpunkt des Geradenabschnitts bis zum Schnittpunkt
+        t1=np.where(skalarProd<0, ((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))*denominator,-1) #Faktor des Laserstrahls vom Roboter bis zum Schnittpunkt
+        t2=np.where(skalarProd<0,((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))*denominator, -1) #Faktor vom Startpunkt des Geradenabschnitts bis zum Schnittpunkt
 
         # Liegt der Schnitt bei einem t2<0 oder t2>1 ist der Schnitt nicht auf dem Geradenabschnitt
         # Liegt der Schnitt bei einem t1<0 ist der Schnitt in negativer Richtung des Lichtstrahls
@@ -832,7 +841,7 @@ class FastCollisionRay:
 
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
 
-        t1NearestHit = t1NearestHit - self.ownRadius #AUSKOMMENTIEREN FÜR CHRISTIANS NETZ
+        # t1NearestHit = t1NearestHit - (self.ownRadius-sensorOffset) #AUSKOMMENTIEREN FÜR CHRISTIANS NETZ
 
 
         collisionPoints = np.swapaxes(collisionPoints, 0, 1)#für Rückgabe in x,y-Paaren

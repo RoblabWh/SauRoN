@@ -386,3 +386,4 @@ class Environment:
         """
         if self.simulation.hasUI:
             self.simulation.simulationWindow.setSaveListener(observer)
+

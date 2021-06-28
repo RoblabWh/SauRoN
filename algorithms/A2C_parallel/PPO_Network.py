@@ -205,7 +205,7 @@ class PPO_Network:
         self._sample = function(
             [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity], self._mu)
 
-        self.printSummary()
+        #self.printSummary()
 
 
     def select_action_continuous_clip(self, mu, var):

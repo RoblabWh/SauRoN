@@ -9,13 +9,21 @@ class ColliderLine:
         if xn == 0 and yn == 0:
             xDif = x2-x1
             yDif = y2-y1
-            self.n = (-yDif, xDif)
+            length = math.sqrt(xDif**2 + yDif**2)
+            self.n = (-yDif/length, xDif/length)
+            self.normalOrigin = (x1 + xDif/2, y1 + yDif/2)
         else:
             self.n = (xn, yn)
 
     def updatePos(self, pos1, pos2):
         self.a = pos1
         self.b = pos2
+
+        xDif = pos2[0] - pos1[0]
+        yDif = pos2[1] - pos1[1]
+        length = math.sqrt(xDif ** 2 + yDif ** 2)
+        self.n = (-yDif / length, xDif / length)
+        self.normalOrigin = (pos1[0] + xDif / 2, pos1[1] + yDif / 2)
 
     def getN(self):
         return self.n
@@ -29,6 +37,9 @@ class ColliderLine:
     def paint(self, painter, scaleFactor):
         painter.setPen(QPen(Qt.black, 3))
         painter.drawLine(self.a[0] * scaleFactor, self.a[1] * scaleFactor, self.b[0] * scaleFactor, self.b[1] * scaleFactor)
+        painter.setPen(QPen(Qt.magenta))
+        painter.drawLine(self.normalOrigin[0]*scaleFactor, self.normalOrigin[1]*scaleFactor,
+                         (self.normalOrigin[0]+ (self.n[0]*0.5)) *scaleFactor, (self.normalOrigin[1]+ (self.n[1]*0.5))*scaleFactor)
 
 import math
 
@@ -79,10 +90,10 @@ class SquareWall:
         self.corners=[(x0,y0), (x1,y1), (x2,y2), (x3,y3)]
 
 
-        c1 = ColliderLine(x0, y0, x1, y1)
-        c2 = ColliderLine(x1, y1, x2, y2)
-        c3 = ColliderLine(x2, y2, x3, y3)
-        c4 = ColliderLine(x3, y3, x0, y0)
+        c1 = ColliderLine(x1, y1, x0, y0)
+        c2 = ColliderLine(x2, y2, x1, y1)
+        c3 = ColliderLine(x3, y3, x2, y2)
+        c4 = ColliderLine(x0, y0, x3, y3)
         self.borders = [c1, c2, c3, c4]
 
     def rotate(self, rot00, rot10, rot01, rot11):
@@ -104,7 +115,7 @@ class SquareWall:
             self.corners[i]= (x1,y1)
 
         for i, border in enumerate(self.borders):
-            border.updatePos(self.corners[i], self.corners[(i+1)%4])
+            border.updatePos(self.corners[(i+1)%4], self.corners[i])
 
 
 
