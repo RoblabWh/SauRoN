@@ -1,4 +1,4 @@
-from PyQt5.QtGui import QPainter, QBrush, QPen
+from PyQt5.QtGui import QPainter, QBrush, QPen, QColor
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5 import QtWidgets
 import math
@@ -30,17 +30,10 @@ class RobotRepresentation:
         self.radarHits = []
         self.isActive = True
 
-        self.lineColor = Qt.blue
-        if colorIndex == 1:
-            self.lineColor = Qt.red
-        if colorIndex == 2:
-            self.lineColor = Qt.darkGray
-        if colorIndex == 3:
-            self.lineColor = Qt.green
-        if colorIndex == 4:
-            self.lineColor = Qt.darkBlue
-        if colorIndex == 5:
-            self.lineColor = Qt.gray
+        brightness = 235 - (int((colorIndex * 39) / 255) * 80)
+        self.lineColor = QColor.fromHsv((colorIndex * 39) % 255, 255, brightness)
+
+
 
     def paint(self, painter, sonarShowing):
 

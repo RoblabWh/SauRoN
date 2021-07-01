@@ -1,7 +1,9 @@
 import sys
 
 import numpy as np
+from PyQt5.QtWidgets import QApplication
 
+import EnvironmentWithUI
 from BucketRenderer import BucketRenderer
 from algorithms.A2C_parallel.A2C_Multi import AverageMeter
 from algorithms.A2C_parallel.PPO_Network import PPO_Network
@@ -395,6 +397,8 @@ class PPO_Multi:
     def load_net(self, path):
         self.network = PPO_Network(self.act_dim, self.env_dim, self.args)
         self.network.load_weights(path)
+        return True
+
 
     def showEnvWindow(self, envID):
         if envID < len(self.multiActors):
@@ -404,12 +408,18 @@ class PPO_Multi:
         if envID < len(self.multiActors):
             self.multiActors[envID].hideWindow.remote()
 
-    def execute(self, env, args):
+    def execute(self, args, env_dim):
         """
         executes a trained net (without using the standard deviation in the action selection)
         :param env: EnvironmentWithUI.Environment
         :param args: args defined in main
         """
+        print("hello there")
+        app = QApplication(sys.argv)
+        env = EnvironmentWithUI.Environment(app, args, env_dim, 0)
+        env.simulation.showWindow(app)
+
+
 
         # visualization of chosen actions
         histogramm = BucketRenderer(20, 0)
@@ -419,7 +429,7 @@ class PPO_Multi:
         robotsCount = self.numbOfRobots
 
         for e in range(18):
-            env.reset(e % len(env.simulation.level))
+            env.reset(0)#e % len(env.simulation.level))
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
             robotsDone = [False for i in range(0, robotsCount)]
 
@@ -430,6 +440,7 @@ class PPO_Multi:
                     if not robotsDone[i]:
                         aTmp = self.network.policy_action_certain(robotsOldState[i][0])
                         a = np.ndarray.tolist(aTmp[0])
+
 
                         #visualization of chosen actions
                         if i == liveHistogramRobot:

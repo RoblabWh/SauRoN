@@ -1,4 +1,4 @@
-from PyQt5.QtGui import QBrush, QPen
+from PyQt5.QtGui import QBrush, QPen, QColor
 from PyQt5.QtCore import Qt
 from Borders import ColliderLine
 
@@ -11,18 +11,21 @@ class Station:
 
         self.radius = radius
 
-        self.color = Qt.blue
-        if color == 1:
-            self.color = Qt.red
-        if color == 2:
-            self.color = Qt.darkGray
-        if color == 3:
-            self.color = Qt.green
-        if color == 4:
-            self.color = Qt.darkBlue
-        if color == 5:
-            self.color = Qt.gray
+        # self.color = Qt.blue
+        # if color == 1:
+        #     self.color = Qt.red
+        # if color == 2:
+        #     self.color = Qt.darkGray
+        # if color == 3:
+        #     self.color = Qt.green
+        # if color == 4:
+        #     self.color = Qt.darkBlue
+        # if color == 5:
+        #     self.color = Qt.gray
 
+
+        brightness = 235 - (int((color * 39) / 255) * 80)
+        self.color = QColor.fromHsv((color * 39) % 255, 255, brightness)
 
         self.lineColor = self.color  # Qt.red Qt.blue
         self.fillColor = self.color  # Qt.red Qt.blue

@@ -1,8 +1,11 @@
 import argparse
 import math
+import time
 
 import numpy as np
 import os
+
+import ray
 from PyQt5.QtWidgets import QApplication
 
 import yaml
@@ -39,8 +42,8 @@ simTimeStep = 0.25           # simulated time between two steps in the simulatio
 numberOfRays = 810          # spacing between two light rays (for distance calculation) in degrees
 fov = 270                   # field of view in degree
 timeFrames = 4              # number of past states used as an Input for the neural net
-numbOfRobots = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 6      # parallel environments are used to create more and diverse training experiences
+numbOfRobots = 8            # only change if set to manual do not use more than 4
+numbOfParallelEnvs = 2      # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
@@ -138,11 +141,11 @@ if __name__ == '__main__':
         args.time_frames = 4
         args.time_penalty = False
         args.alg = 'ppo'
-        args.number_of_rays = 1081 #TODO
+        args.number_of_rays = 1081
         args.field_of_view = 1.5*math.pi
         args.net_size = 'small'
         args.shared = False
-        args.sim_time_step = 0.2
+        args.sim_time_step = 0.125
 
 
 
@@ -182,9 +185,36 @@ if __name__ == '__main__':
     #     model.load_net(args.path+filename+'.h5')
     #     model.execute(env, args)
 
-    app = QApplication(sys.argv)
-    controlWindow = ControlWindow(app, args.parallel_envs, act_dim, env_dim, args)  # , model)
-    controlWindow.show()
-    app.exec_()
+    if(args.training):
+
+        app = QApplication(sys.argv)
+        controlWindow = ControlWindow(app, args.parallel_envs, act_dim, env_dim, args)  # , model)
+        controlWindow.show()
+        app.exec_()
+
+    else:
+        ray.init()
+        model = None
+        if args.alg == 'a2c':
+            model = A2C_Multi(act_dim, env_dim, args)
+            # model = PPO_Multi(act_dim, env_dim, args)
+            # model = A2C(act_dim, env_dim, args)
+        elif args.alg == 'dqn':
+            model = DQN(act_dim, env_dim, args)
+        elif args.alg == 'ppo':
+            model = PPO_Multi.remote(act_dim, env_dim, args)
+
+        if args.training:
+            if args.load_old:
+                model.train(args.path+filename+'.h5')
+            model.train.remote()
+            # model.trainA3C()
+        elif not args.training:
+            print('been here')
+            ray.get(model.load_net.remote(args.path+filename+'.h5'))
+            print("done that")
+            ray.get(model.execute.remote(args, env_dim[0]))
+
+
 
 

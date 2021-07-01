@@ -216,7 +216,9 @@ class Simulation:
         # self.level.append(testlevel04)
 
         # level01SVG = SVGParser.SVGLevelParser("test_v3.svg", args)
-        level01SVG = SVGParser.SVGLevelParser("laborNachbauAuschnitt_kleiner.svg", args)
+        # level01SVG = SVGParser.SVGLevelParser("laborNachbauAuschnitt_kleiner.svg", args)
+
+        level01SVG = SVGParser.SVGLevelParser("Reissverschluss_test.svg", args)
         self.robots = level01SVG.getRobots()
         self.stations = level01SVG.getStations()
         self.walls = level01SVG.getWalls()
@@ -368,7 +370,7 @@ class Simulation:
                 if stepsLeft <= 0:
                     runOutOfTime = True
 
-                if(np.min(robot.collisionDistances) <= robot.radius + 0.035 ):
+                if(np.min(robot.collisionDistances) <= robot.radius + 0.0 ):
                 # if(np.min(robot.distances)<=0.3): # FÜR CHRISTIANS NETZ
                     collision = True
 

@@ -56,12 +56,12 @@ class Robot:
 
         self.maxLinearVelocity = 0.7  # m/s
         self.minLinearVelocity = -0.7  # m/s
-        self.maxLinearAcceleration = 1.5  # 5m/s^2
-        self.minLinearAcceleration = -1.5  # 5m/s^2
-        self.maxAngularVelocity = 0.5 * math.pi  # rad/s
-        self.minAngularVelocity = -0.5 * math.pi  # rad/s
-        self.maxAngularAcceleration = 0.5 * math.pi   #rad/s^2
-        self.minAngularAcceleration = -0.5 * math.pi  #rad/s^2
+        self.maxLinearAcceleration = 1  # 5m/s^2
+        self.minLinearAcceleration = -1  # 5m/s^2
+        self.maxAngularVelocity = 1.5 * math.pi  # rad/s
+        self.minAngularVelocity = -1.5 * math.pi  # rad/s
+        self.maxAngularAcceleration = 1.5 * math.pi   #rad/s^2
+        self.minAngularAcceleration = -1.5 * math.pi  #rad/s^2
 
         if args.load_christian:
             self.width = 0.35  # m
@@ -69,8 +69,8 @@ class Robot:
             self.radius = self.width / 2
             self.minLinearVelocity = 0
             self.maxLinearVelocity = 0.6
-            self.maxAngularVelocity = 0.5
-            self.minAngularVelocity = -0.5
+            self.maxAngularVelocity = 0.75
+            self.minAngularVelocity = -0.75
             #v = 0.6
 
 
@@ -542,8 +542,11 @@ class Robot:
         """
         self.netOutput = (tarAngVel, tarLinVel)
 
-        tarAngVel = tarAngVel * self.maxAngularVelocity
-        tarLinVel = tarLinVel * self.maxLinearVelocity
+        tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + (self.maxAngularVelocity + self.minAngularVelocity) * 0.5
+        tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity)* 0.5) + (self.maxLinearVelocity + self.minLinearVelocity)*0.5
+
+
+
 
 
 
@@ -571,7 +574,7 @@ class Robot:
             if angVel < self.minAngularVelocity:
                 angVel = self.minAngularVelocity
 
-        # return tarLinVel, tarAngVel
+        #return tarLinVel, tarAngVel
         return linVel, angVel
 
 

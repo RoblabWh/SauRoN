@@ -1,5 +1,9 @@
-import numpy as np
+import sys
 
+import numpy as np
+from PyQt5.QtWidgets import QApplication
+
+import EnvironmentWithUI
 from BucketRenderer import BucketRenderer
 from algorithms.A2C_parallel.A2C_Network import A2C_Network
 from algorithms.A2C_parallel.A2C_MultiprocessingActor import A2C_MultiprocessingActor
@@ -229,14 +233,20 @@ class A2C_Multi:
     def load_net(self, path):
         self.network = A2C_Network(self.act_dim, self.env_dim, self.args)
         self.network.load_weights(path)
+        return True
 
-    def execute(self, env, args):
+    def execute(self,  args, env_dim):
         """
         executes a trained net (without using the standard deviation in the action selection)
         :param env: EnvironmentWithUI.Environment
         :param args: args defined in main
         """
         # visualization of chosen actions
+
+        app = QApplication(sys.argv)
+        env = EnvironmentWithUI.Environment(app, args, env_dim, 0)
+        env.simulation.showWindow()
+
         histogramm = BucketRenderer(20, 0)
         histogramm.show()
         liveHistogramRobot = 0
@@ -246,7 +256,7 @@ class A2C_Multi:
 
         for e in range(18):
 
-            env.reset(e%9)
+            env.reset(0)
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
             robotsDone = [False for i in range(0, robotsCount)]
 
@@ -282,6 +292,7 @@ class A2C_Multi:
                     robotsOldState[i] = new_state
                     if not robotsDone[i]:
                         robotsDone[i] = done
+        return False
 
 
 
