@@ -44,14 +44,14 @@ class PPO_MultiprocessingActor:
 
 
         self.args = args
-        app = None
+        self.app = None
         self.network = PPO_Network(act_dim, env_dim, args)
         if master:
-            app = QApplication(sys.argv)
+            self.app = QApplication(sys.argv)
             self.network.printSummary()
         if weights != None:
             self.network.setWeights(weights)
-        self.env = Environment(app, args, env_dim[0], level)
+        self.env = Environment(self.app, args, env_dim[0], level)
         self.env.setUISaveListener(self)
         self.numbOfRobots = args.numb_of_robots
         self.timePenalty = args.time_penalty
@@ -333,3 +333,11 @@ class PPO_MultiprocessingActor:
         if self.app == None:
             self.app = QApplication(sys.argv)
             self.env.simulation.showWindow(self.app)
+
+    def hideWindow(self):
+        if self.app != None:
+            self.app = None
+            self.env.simulation.closeWindow()
+
+    def isNotShowing(self):
+        return self.app == None

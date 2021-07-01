@@ -395,3 +395,9 @@ class Simulation:
             self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args, self.walls)
             self.simulationWindow.show()
             self.hasUI = True
+
+    def closeWindow(self):
+        if self.hasUI:
+            self.simulationWindow.close()
+            self.simulationWindow = None
+            self.hasUI = False

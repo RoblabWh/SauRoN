@@ -64,7 +64,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.saveButtonListenrs = []
         self.monitorGraph = None
 
-        if (True):
+        if (False):
             self.monitorGraph = DistanceGraph.DistanceGraph(application)
 
 

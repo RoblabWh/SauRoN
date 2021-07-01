@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 
 from BucketRenderer import BucketRenderer
@@ -32,13 +34,18 @@ class PPO_Multi:
         self.timePenalty = args.time_penalty
         self.av_meter = AverageMeter()
         self.gamma = args.gamma
+#        ray.init()
+
+        # self.app = QApplication(sys.argv)
+        # #self.controlWindow = ControlWindowController.remote(args.parallel_envs)#, act_dim, env_dim, args)  # , model)
+        # self.controlWindow = ControlWindow(args.parallel_envs, self.app)#, act_dim, env_dim, args)  # , model)
+        # self.controlWindow.showandPause()
 
     def train(self, loadWeightsPath = ""):
         """ Main PPO Training Algorithm
         :param loadWeightsPath: The path to the .h5 file containing the pretrained weights.
          Only required if a pretrained net is used.
         """
-
         loadedWeights = None
         if loadWeightsPath != "":
             self.load_net(loadWeightsPath)
@@ -83,6 +90,11 @@ class PPO_Multi:
                 for actor in multiActors:
                     if ray.get(actor.isActive.remote()):
                         activeActors.append(actor)
+                print('b4 getting data')
+                levelVisibilty = [True, False]#TODO CHANGE ray.get(self.controlWindow.getLevelVisibilities.remote())
+                for i, show in enumerate(levelVisibilty):
+                    if show and ray.get(multiActors[i].isNotShowing.remote()):
+                        self.showEnvWindow(i)
 
 
 
@@ -114,6 +126,116 @@ class PPO_Multi:
         self.save_weights(multiActors[0], self.args.path)
         for actor in multiActors:
             actor.killActor.remote()
+
+    def prepareTraining(self, loadWeightsPath = ""):
+        self.currentEpisode = 0
+
+        loadedWeights = None
+        if loadWeightsPath != "":
+            self.load_net(loadWeightsPath)
+            loadedWeights = self.network.getWeights()
+            keras.backend.clear_session()
+
+
+        #Create parallel workers with own environment
+        # envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
+        envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
+        #ray.init()
+        multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
+        startweights = multiActors[0].getWeights.remote()
+        multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
+        for i, actor in enumerate(multiActors):
+            actor.setLevel.remote(envLevel[i])
+
+        self.multiActors = multiActors
+        self.activeActors = multiActors
+
+
+        # Main Loop
+        self.tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
+
+        return False
+
+    def trainWithFeedbackSteps(self, visibleLevels):
+
+        activeActors = self.activeActors
+
+        if len(activeActors) > 0:
+            futures = [actor.trainSteps.remote(self.args.train_interval) for actor in activeActors]
+            allTrainingResults = ray.get(futures)
+            trainedWeights, var = self.train_modelsFaster(allTrainingResults, self.multiActors[0])
+            for actor in self.multiActors[1:len(self.multiActors)]:
+                actor.setWeights.remote(trainedWeights)
+            currentVar = var
+
+            activeActors = []
+            for actor in self.multiActors:
+                if ray.get(actor.isActive.remote()):
+                    activeActors.append(actor)
+
+
+            for i, show in enumerate(visibleLevels):
+                if show:# and ray.get(self.multiActors[i].isNotShowing.remote()):
+                    self.showEnvWindow(i)
+                else:
+                    self.hideEnvWindow(i)
+            self.activeActors = activeActors
+
+            return False
+        else:
+            return True
+
+    def trainWithFeedbackEpisodes(self):
+        """ Main PPO Training Algorithm
+        :param loadWeightsPath: The path to the .h5 file containing the pretrained weights.
+         Only required if a pretrained net is used.
+        """
+        if self.currentEpisode < self.args.nb_episodes:
+
+            self.tqdm_e.update(1)
+            self.currentEpisode += 1
+            currentVar = 0
+            #Start of episode for the parallel PPO actors with their own environment
+            #Hier wird die gesamte Episode durchlaufen und dann erst trainiert
+
+
+            #Training bereits alle n=75 steps mit den zu dem Zeitounkt gesammelten Daten (nur für noch aktive Environments)
+            self.activeActors = self.multiActors
+
+            zeit, cumul_reward, done = 0, 0, False
+
+            if (self.currentEpisode+1) % self.args.save_intervall == 0:
+                print('Saving')
+                self.save_weights(self.multiActors[0], self.args.path)
+
+            allReachedTargetList = []
+            for actor in self.multiActors:
+                tmpTargetList = ray.get(actor.getTargetList.remote())
+                allReachedTargetList += tmpTargetList
+
+            targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
+            successrate = allReachedTargetList.count(True) / targetDivider
+
+
+            # Calculate and display score
+            individualLastAverageReward = []
+            for actor in self.multiActors:
+                (cumRewardActor, steps) = ray.get(actor.resetActor.remote())
+                self.av_meter.update(cumRewardActor, steps)
+                cumul_reward += cumRewardActor
+                individualLastAverageReward.append(cumRewardActor/steps)
+            cumul_reward = cumul_reward / self.args.parallel_envs
+
+            self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(successrate))
+            self.tqdm_e.refresh()
+            return (False, individualLastAverageReward)
+        else:
+            self.save_weights(self.multiActors[0], self.args.path)
+            for actor in self.multiActors:
+                actor.killActor.remote()
+            return (True, [])
+
+
 
     def train_modelsFaster(self, envsData, masterEnv = None):
         statesConcatenatedL = envsData[0][0]
@@ -274,11 +396,13 @@ class PPO_Multi:
         self.network = PPO_Network(self.act_dim, self.env_dim, self.args)
         self.network.load_weights(path)
 
-    def showEnvWindow(self, row):
-        print(type(row), " wird geöffnet")
-        if row < len(self.multiActors):
-            print("im If")
-            self.multiActors[row].showWindow.remote()
+    def showEnvWindow(self, envID):
+        if envID < len(self.multiActors):
+            self.multiActors[envID].showWindow.remote()
+
+    def hideEnvWindow(self, envID):
+        if envID < len(self.multiActors):
+            self.multiActors[envID].hideWindow.remote()
 
     def execute(self, env, args):
         """
