@@ -10,10 +10,10 @@ from algorithms.A2C_parallel.PPO_Multi import PPO_Multi
 import EnvironmentWithUI
 
 class ControlWindow(QtWidgets.QMainWindow):
-    #TODO Fortschrittsbalken für alle Episoden
-    # Tabelle mit 0 zB initialisieren
-    # Tabelle übrige spaöten füllen
-    # Werte runden
+    #TODO Fortschrittsbalken für alle Episoden -> erledigt
+    # Tabelle mit 0 zB initialisieren -> erledigt
+    # Tabelle übrige spaöten füllen -> fehlt nur noch Level -> was soll da genau drin stehen: Ein Name?
+    # Werte runden -> erledigt
     # Spalten teilweise kleiner machen (falls das geht)
 
 
@@ -21,29 +21,44 @@ class ControlWindow(QtWidgets.QMainWindow):
         super(ControlWindow, self).__init__()
         ray.init()
         self.app = application
+        self.args = args
 
 
         self.setWindowTitle("Control Panel")
-        self.setFixedSize(650, 700)
+        self.setFixedSize(350, 700)
 
         self.model = PPO_Multi.remote(act_dim, env_dim, args)
+        self.currentEpisode = 0
+        self.progressbarWidget = Progressbar(self.currentEpisode, self.args)
         self.tableWidget = Table(nbOfEnvs)
 
-        self.statusLabel = QLabel(self)
-        self.statusLabel.setGeometry(0, 0, 550, 50)
-        self.statusLabel.setWordWrap(True)
-        self.statusLabel.move(0, 0)
 
-        self.statusLabel.setFont(QFont("Helvetica", 15, QFont.Black))
-        self.statusLabel.setText("Status Bar")  # TODO Get Data for status bar
+        #self.progressbarWidget.setGeometry()
+
+        # self.statusLabel = QLabel(self)
+        # self.statusLabel.setGeometry(0, 0, 550, 50)
+        # self.statusLabel.setWordWrap(True)
+        # self.statusLabel.move(0, 0)
+
+        # self.statusLabel.setFont(QFont("Helvetica", 15, QFont.Black))
+        # self.statusLabel.setText("Status Bar")  # TODO Get Data for status bar
+
+        self.successLabel = QLabel(self)
+        self.successLabel.setFont(QFont("Helvetica", 12, QFont.Black))
+        self.successLabel.setText("Success insgesamt: ")
 
         self.widget = QWidget(self)
         layout = QGridLayout()
         self.widget.setLayout(layout)
         layout.setSpacing(2)
         layout.setContentsMargins(0, 0, 0, 10)
+
         layout.addWidget(self.tableWidget)
-        layout.addWidget(self.statusLabel)
+        layout.addWidget(self.successLabel)
+        layout.addWidget(self.progressbarWidget)
+
+        #layout.addWidget(self.statusLabel)
+
         startbutton = QPushButton("start")
         startbutton.clicked.connect(self.train)
         layout.addWidget(startbutton)
@@ -70,8 +85,12 @@ class ControlWindow(QtWidgets.QMainWindow):
                 self.worker.episode_done.connect(self.startNextSteps)
             else:
                 doneFuture = self.model.trainWithFeedbackEpisodes.remote()
-                self.done, avrgRewardLastEpisode = ray.get(doneFuture)
+                self.done, avrgRewardLastEpisode, successrates, currentEpisode, successAll = ray.get(doneFuture)
+                self.currentEpisode = currentEpisode
+                self.progressbarWidget.updateProgressbar(currentEpisode)
                 self.tableWidget.updateAvrgRewardLastEpisode(avrgRewardLastEpisode)
+                self.tableWidget.updateSuccessrate(successrates)
+                self.successLabel.setText("Success insgesamt: " + str(successAll))
                 self.worker.terminate()
                 self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
                 self.worker.start()
@@ -120,12 +139,18 @@ class Table(QWidget):
     def setTableLayout(self):
         self.tabWidget = QTableWidget()
         #self.tabWidget.setGeometry(0, 50, 400, 550)
-        self.tabWidget.setMaximumWidth(650)
+        self.tabWidget.setMaximumWidth(450)
         self.tabWidget.setMaximumHeight(450)
         self.tabWidget.setRowCount(self.nbOfEnvs)
         self.tabWidget.setColumnCount(5)
         self.tabWidget.setHorizontalHeaderLabels(self.headers)
         self.tabWidget.verticalHeader().hide()
+        self.tabWidget.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+
+        self.columns = 4
+        for col in range(self.columns):
+            self.tabWidget.resizeColumnToContents(col)
+
 
         for env in range(self.nbOfEnvs):
             self.buttonList.append(QPushButton(self))
@@ -135,6 +160,10 @@ class Table(QWidget):
             self.buttonList[env].clicked.connect(lambda *args, row=env, column=4: self.buttonClicked(row, column))
 
             self.tabWidget.setItem(env, 0, QTableWidgetItem(str(env)))
+            self.tabWidget.setItem(env, 2, QTableWidgetItem("0"))
+            self.tabWidget.setItem(env, 3, QTableWidgetItem("0"))
+
+
 
 
         # for env in range(self.nbOfEnvs):
@@ -160,9 +189,6 @@ class Table(QWidget):
             self.buttonList[row].setText("Hiding")
 
 
-
-        # TODO entsprechendes Fenster des Envs anzeigen (in separatem Fenster) in etwa wie: self.envsList[row].show()
-
     def getVisibilites(self):
         return self.levelVisibilty
 
@@ -183,10 +209,43 @@ class Table(QWidget):
 
     def updateAvrgRewardLastEpisode(self, avergRewards):
         for i, reward in enumerate(avergRewards):
-            self.tabWidget.setItem(i, 2, QTableWidgetItem(str(reward)))
+            rewardRounded = round(reward, 5)
+            self.tabWidget.setItem(i, 2, QTableWidgetItem(str(rewardRounded)))
+
+        for col in range(self.columns):
+            self.tabWidget.resizeColumnToContents(col)
+
+    def updateSuccessrate(self, successrates):
+        for i, successrate in enumerate(successrates):
+            self.tabWidget.setItem(i, 3, QTableWidgetItem(str(successrate)))
+
+        for col in range(self.columns):
+            self.tabWidget.resizeColumnToContents(col)
 
 
+class Progressbar(QWidget):
+    def __init__(self, currentEpisode, args):
+        super(Progressbar, self).__init__()
+        self.args = args
+        self.progressbar = QProgressBar() # evt self übergeben
+        #self.progressbar.setValue(50)
+        #self.progressbar.setFixedWidth(450)
+        #self.progressbar.setGeometry(0,0,300,25)
+        #self.progressbar.setFixedSize(650, 200)
 
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.progressbar)
+        self.setLayout(self.layout)
 
+        self.updateProgressbar(currentEpisode)
+
+        self.show()
+
+    def updateProgressbar(self, currentEpisode):
+
+        value = (currentEpisode / self.args.nb_episodes) * 100
+        self.progressbar.setValue(value)
+        self.progressbar.setFormat(str(currentEpisode) + " / " + str(self.args.nb_episodes) + " Episoden")
+        self.progressbar.setAlignment(Qt.AlignCenter)
 
 

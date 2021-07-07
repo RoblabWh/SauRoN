@@ -56,8 +56,8 @@ class PPO_Multi:
 
 
         #Create parallel workers with own environment
-        # envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
-        envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
+        envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
+        #envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
         #ray.init()
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
@@ -141,7 +141,7 @@ class PPO_Multi:
 
         #Create parallel workers with own environment
         # envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
-        envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
+        envLevel = [(i)%2 for i in range(self.numbOfParallelEnvs)]
         #ray.init()
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
@@ -211,9 +211,11 @@ class PPO_Multi:
                 self.save_weights(self.multiActors[0], self.args.path)
 
             allReachedTargetList = []
+            individualSuccessrate = []
             for actor in self.multiActors:
                 tmpTargetList = ray.get(actor.getTargetList.remote())
                 allReachedTargetList += tmpTargetList
+                individualSuccessrate.append(tmpTargetList.count(True) / 100)
 
             targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
             successrate = allReachedTargetList.count(True) / targetDivider
@@ -221,21 +223,23 @@ class PPO_Multi:
 
             # Calculate and display score
             individualLastAverageReward = []
+
             for actor in self.multiActors:
                 (cumRewardActor, steps) = ray.get(actor.resetActor.remote())
                 self.av_meter.update(cumRewardActor, steps)
                 cumul_reward += cumRewardActor
                 individualLastAverageReward.append(cumRewardActor/steps)
+
             cumul_reward = cumul_reward / self.args.parallel_envs
 
             self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(successrate))
             self.tqdm_e.refresh()
-            return (False, individualLastAverageReward)
+            return (False, individualLastAverageReward, individualSuccessrate, self.currentEpisode, successrate)
         else:
             self.save_weights(self.multiActors[0], self.args.path)
             for actor in self.multiActors:
                 actor.killActor.remote()
-            return (True, [])
+            return (True, [], [], self.currentEpisode)
 
 
 

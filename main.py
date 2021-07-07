@@ -31,7 +31,7 @@ memory_size = 10000
 
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0003                 # learning rate
-num_episodes = 2500         # the number of epochs (/episodes) that are simulated
+num_episodes = 100         # the number of epochs (/episodes) that are simulated
 steps = 750                 # number of steps per epoch (/episode)
 trainingInterval = 75       # number of steps after which the neural net is trained
 
@@ -42,8 +42,11 @@ simTimeStep = 0.25           # simulated time between two steps in the simulatio
 numberOfRays = 810          # spacing between two light rays (for distance calculation) in degrees
 fov = 270                   # field of view in degree
 timeFrames = 4              # number of past states used as an Input for the neural net
-numbOfRobots = 8            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 2      # parallel environments are used to create more and diverse training experiences
+
+# TODO numbOfRobots von SVG überschreiben, weil er sonst mit einem index out of range Fehler reagiert,
+#  wenn die Anzahl der Roboter nicht zum Bild passt und auch bzgl manually, wenn man nur einen Roboter steuern will
+numbOfRobots = 4            # only change if set to manual do not use more than 4
+numbOfParallelEnvs = 4      # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 

@@ -55,10 +55,10 @@ class Simulation:
         #     self.robots = self.robots[:args.numb_of_robots]
         #
         # #Level bestehend aus Positionen für Stationen und Robotern, deren Ausrichtung und Wänden werden erstellt
-        # level00_robotPos = [(self.arenaWidth / 5, self.arenaLength - 3.5),
-        #                      (self.arenaWidth / 5 * 2, self.arenaLength - 3.5),
-        #                      (self.arenaWidth / 5 * 3, self.arenaLength - 3.5),
-        #                      (self.arenaWidth / 5 * 4, self.arenaLength - 3.5)]
+        level00_robotPos = [(self.arenaWidth / 5, self.arenaLength - 3.5),
+                             (self.arenaWidth / 5 * 2, self.arenaLength - 3.5),
+                             (self.arenaWidth / 5 * 3, self.arenaLength - 3.5),
+                             (self.arenaWidth / 5 * 4, self.arenaLength - 3.5)]
         # level01_robotPos = [(self.arenaWidth / 5, self.arenaLength - 4),
         #                     (self.arenaWidth / 5 * 2, self.arenaLength - 2.5),
         #                     (self.arenaWidth / 5 * 3, self.arenaLength - 2.5),
@@ -90,7 +90,7 @@ class Simulation:
         # lvl_narrowWayEasy_robPos = [(20,5.5),(2,5.5),(20,4),(20,7)]
         #
         #
-        # level00_robotOrient = [math.pi/2*3 for _ in range(4)]
+        level00_robotOrient = [math.pi/2*3 for _ in range(4)]
         # level01_robotOrient = [math.pi/4 *7, math.pi/2 *3, math.pi/2 *3, math.pi/4 *5]
         # level02_robotOrient = [math.pi/4 , math.pi/4 *3, math.pi/4 *5, math.pi/4 *7]
         # level03b_robotOrient = [math.pi/2*3 for _ in range(4)]
@@ -104,10 +104,10 @@ class Simulation:
         # lvl_funnle_robotOrient = [math.pi/4 *7, math.pi/2 *3, math.pi/2 *3, math.pi/4 *5]
         #
         #
-        # level00_stationsPos = [(self.arenaWidth / 5, 3.5),
-        #                         (self.arenaWidth / 5 * 2, 3.5),
-        #                         (self.arenaWidth / 5 * 3, 3.5),
-        #                         (self.arenaWidth / 5 * 4, 3.5)]
+        level00_stationsPos = [(self.arenaWidth / 5, 3.5),
+                                (self.arenaWidth / 5 * 2, 3.5),
+                                (self.arenaWidth / 5 * 3, 3.5),
+                                (self.arenaWidth / 5 * 4, 3.5)]
         # level01_stationsPos = [(self.arenaWidth / 2 - 3, 2.2),
         #                        (self.arenaWidth / 2 -1.15, 3.1),
         #                        (self.arenaWidth / 2 +1.15, 3.1),
@@ -138,7 +138,7 @@ class Simulation:
         # lvl_narrowWayWithBays_statPos = [(21,4),(21,7),(1,4),(1,7)]
         # lvl_narrowWayEasy_statPos = [(1,5.5),(21,5.5),(1,4),(1,7)]
         #
-        # noWalls = self.walls
+        noWalls = self.walls
         # level03b_walls = self.walls + [ColliderLine(self.arenaWidth / 16, self.arenaLength / 2 + 0.5, self.arenaWidth / 5 * 2, self.arenaLength / 2 + .5),
         #                                ColliderLine(self.arenaWidth / 5 * 3, self.arenaLength / 2 + 0.5, self.arenaWidth / 16 * 15, self.arenaLength / 2 + .5),
         #                                ColliderLine(self.arenaWidth / 16, self.arenaLength / 2 - 0.2, self.arenaWidth / 5 * 2, self.arenaLength / 2 - .2),
@@ -216,13 +216,15 @@ class Simulation:
         # self.level.append(testlevel04)
 
         # level01SVG = SVGParser.SVGLevelParser("test_v3.svg", args)
-        # level01SVG = SVGParser.SVGLevelParser("laborNachbauAuschnitt_kleiner.svg", args)
+        level01SVG = SVGParser.SVGLevelParser("laborNachbauAuschnitt_kleiner.svg", args)
 
-        level01SVG = SVGParser.SVGLevelParser("Reissverschluss_test.svg", args)
+        #level01SVG = SVGParser.SVGLevelParser("Reissverschluss_test.svg", args)
         self.robots = level01SVG.getRobots()
         self.stations = level01SVG.getStations()
         self.walls = level01SVG.getWalls()
-        self.level = [(level01SVG.getRobsPos(), level01SVG.getRobsOrient(), level01SVG.getStatsPos(), self.walls)]
+        self.level = [(level01SVG.getRobsPos(), level01SVG.getRobsOrient(), level01SVG.getStatsPos(), self.walls),
+                      (level00_robotPos,level00_robotOrient,level00_stationsPos, noWalls)]
+        #self.level = [(level00_robotPos,level00_robotOrient,level00_stationsPos, noWalls)]
         # self.noiseStrength = [0,0,0,0,0,0,0,0,0,0,0,0]
 
         self.simulationWindow = None
@@ -232,6 +234,7 @@ class Simulation:
         if self.hasUI:
             self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls)
             self.simulationWindow.show()
+
 
         self.simTime = 0  # s
         self.simTimestep = args.sim_time_step  # s
@@ -391,6 +394,12 @@ class Simulation:
                     self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
 
         return robotsTerminations
+
+    def showWindow(self, app):
+        if not self.hasUI:
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args, self.walls)
+            self.simulationWindow.show()
+            self.hasUI = True
 
     def showWindow(self, app):
         if not self.hasUI:

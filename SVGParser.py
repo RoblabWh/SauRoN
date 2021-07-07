@@ -86,7 +86,6 @@ class SVGLevelParser:
         # for path in paths:
         #     d = path.attrib['d']
         #     print(path, d)
-
         for line in lines:
             #id = line.attrib['id']
             x1 = float(line.attrib['x1']) * dpiFactor
