@@ -141,7 +141,7 @@ class PPO_Multi:
 
         #Create parallel workers with own environment
         # envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
-        envLevel = [(i)%2 for i in range(self.numbOfParallelEnvs)]
+        envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
         #ray.init()
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
