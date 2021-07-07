@@ -51,7 +51,7 @@ class Simulation:
         for robot in self.robots:
             robot.reset()
         for robot in self.robots:
-            robot.resetSonar(self.robots)
+            robot.resetLidar(self.robots)
 
         self.simTime = 0  # s
         self.simTimestep = 0.1  # s
@@ -96,7 +96,7 @@ class Simulation:
         if self.args.mode == 'sonar':
             for i, robot in enumerate(self.robots):
                 if robotsTarVels[i] != (None, None):
-                    robot.sonarReading(self.robots, stepsLeft, self.steps)
+                    robot.lidarReading(self.robots, stepsLeft, self.steps)
 
 
 

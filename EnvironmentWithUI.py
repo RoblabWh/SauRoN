@@ -43,7 +43,7 @@ class Environment:
         if self.args.mode == 'global':
             return np.asarray(self.simulation.robots[i].state)  # Pos, Geschwindigkeit, Zielposition
         elif self.args.mode == 'sonar':
-            return np.asarray(self.simulation.robots[i].stateSonar)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
+            return np.asarray(self.simulation.robots[i].stateLidar)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
 
     @staticmethod
     def get_actions():

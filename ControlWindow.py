@@ -17,12 +17,13 @@ class ControlWindow(QtWidgets.QMainWindow):
     # Spalten teilweise kleiner machen (falls das geht)
 
 
-    def __init__(self, application, nbOfEnvs, act_dim, env_dim, args): #, model):  #TODO environments in einer Liste übergeben und speichern
+    def __init__(self, application, nbOfEnvs, act_dim, env_dim, args, loadWeightsPath = ""): #, model):  #TODO environments in einer Liste übergeben und speichern
         super(ControlWindow, self).__init__()
         ray.init()
         self.app = application
         self.args = args
 
+        self.loadWeightsPath = loadWeightsPath
 
         self.setWindowTitle("Control Panel")
         self.setFixedSize(350, 700)
@@ -67,7 +68,7 @@ class ControlWindow(QtWidgets.QMainWindow):
 
 
     def train(self):
-        startup = self.model.prepareTraining.remote()
+        startup = self.model.prepareTraining.remote(self.loadWeightsPath)
         self.done = ray.get(startup)
         self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
         self.worker.start()

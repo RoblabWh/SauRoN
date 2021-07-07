@@ -53,7 +53,7 @@ class PPO_MultiprocessingActor:
             self.network.setWeights(weights)
         self.env = Environment(self.app, args, env_dim[0], level)
         self.env.setUISaveListener(self)
-        self.numbOfRobots = args.numb_of_robots
+        self.numbOfRobots = self.env.simulation.getCurrentNumberOfRobots()
         self.timePenalty = args.time_penalty
         # self.av_meter = AverageMeter()
         self.gamma = args.gamma

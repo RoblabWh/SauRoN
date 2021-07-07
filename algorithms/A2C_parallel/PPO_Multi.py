@@ -430,7 +430,7 @@ class PPO_Multi:
         histogramm.show()
         liveHistogramRobot = 0
 
-        robotsCount = self.numbOfRobots
+        robotsCount = self.numbOfRobots #TODO bei jedem neuen Level laden akualisieren
 
         for e in range(18):
             env.reset(0)#e % len(env.simulation.level))

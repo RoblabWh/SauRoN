@@ -43,8 +43,8 @@ class BucketRenderer():
         self.axes.set_xlabel('angVel')
 
         # keyboard interrupt stuff
-        self.listener = Listener(on_press=self.set_delay)
-        self.listener.start()
+        # self.listener = Listener(on_press=self.set_delay)
+        # self.listener.start()
 
         plt.show(block=False)
 

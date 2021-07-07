@@ -170,7 +170,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         if self.simShowing:
             observatedRobot = 0
             if self.monitorGraph != None and num == observatedRobot:
-                distancesNormRob0 = robot.stateSonar[len(robot.stateSonar) - 1][0]
+                distancesNormRob0 = robot.stateLidar[len(robot.stateLidar) - 1][0]
                 self.monitorGraph.plot(range(len(distancesNormRob0)), distancesNormRob0)
 
             self.repaint()

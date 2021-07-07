@@ -42,7 +42,7 @@ class Robot:
         self.time_steps = args.time_frames #4
         self.state = []
         self.state_raw = []
-        self.stateSonar = []
+        self.stateLidar = []
         self.netOutput = (0,0)
         self.distances = []
         self.radarHits = []
@@ -56,8 +56,8 @@ class Robot:
 
         self.maxLinearVelocity = 0.7  # m/s
         self.minLinearVelocity = -0.7  # m/s
-        self.maxLinearAcceleration = 1  # 5m/s^2
-        self.minLinearAcceleration = -1  # 5m/s^2
+        self.maxLinearAcceleration = 1.5  # m/s^2
+        self.minLinearAcceleration = -1.5  # m/s^2
         self.maxAngularVelocity = 1.5 * math.pi  # rad/s
         self.minAngularVelocity = -1.5 * math.pi  # rad/s
         self.maxAngularAcceleration = 1.5 * math.pi   #rad/s^2
@@ -69,8 +69,10 @@ class Robot:
             self.radius = self.width / 2
             self.minLinearVelocity = 0
             self.maxLinearVelocity = 0.6
-            self.maxAngularVelocity = 0.75
-            self.minAngularVelocity = -0.75
+            self.maxAngularVelocity = 1#1.5#1.5 #* math.pi
+            self.minAngularVelocity = -1#-1.5#-1.5 #* math.pi
+            self.maxAngularAcceleration = 1.5 #* math.pi  # rad/s^2
+            self.minAngularAcceleration = -1.5 #* math.pi  # rad/s^2
             #v = 0.6
 
 
@@ -130,6 +132,7 @@ class Robot:
         In addition the state gets cleared.
         This method is typically called at the beginning of a training epoch.
 
+
         It can also provide information about a new level (different walls, starting position...)
 
         :param allStations: list of Station.Stations
@@ -186,7 +189,7 @@ class Robot:
             self.push_frame(frame)
 
 
-        self.stateSonar = []
+        self.stateLidar = []
 
 
         self.distances = []
@@ -202,7 +205,7 @@ class Robot:
         else:
             self.posSensor = [posX, posY]
 
-    def resetSonar(self, robots):
+    def resetLidar(self, robots):
         if self.args.mode == 'sonar':
             if self.hasPieSlice:
                 self.robotsPieSliceWalls = []
@@ -211,7 +214,7 @@ class Robot:
                         self.robotsPieSliceWalls += robot.getPieSliceWalls()
 
             for _ in range(self.time_steps):
-                self.sonarReading(robots, self.args.steps,self.args.steps)
+                self.lidarReading(robots, self.args.steps, self.args.steps)
 
 
     def denormdata(self, data, limits):
@@ -241,8 +244,10 @@ class Robot:
         posY = frame[1] * self.XYnormFact[1]
         directionX = frame[2]
         directionY = frame[3]
-        linVel = frame[4] * self.maxLinearVelocityFact #(frame[4] - self.minLinearVelocity) / (self.maxLinearVelocity - self.minLinearVelocity)
-        angVel = frame[5] * self.maxAngularVelocityFact #(frame[5] - self.minAngularVelocity) / (self.maxAngularVelocity - self.minAngularVelocity)
+        linVel = (frame[4] - ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)) /  ((self.maxLinearVelocity - self.minLinearVelocity) * 0.5)
+        #self.maxLinearVelocityFact
+        angVel = (frame[5] - ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)) /  ((self.maxAngularVelocity - self.minAngularVelocity) * 0.5)
+        #self.maxAngularVelocityFact
         goalX = frame[6] * self.XYnormFact[0]
         goalY = frame[7] * self.XYnormFact[1]
         dist = frame[8] * self.maxDistFact
@@ -293,16 +298,23 @@ class Robot:
             linVel = self.linTast
             angVel = self.angTast
 
-        goalDist = math.sqrt((posX-goalX)**2+(posY-goalY)**2)
         oldDir = self.getDirectionAngle()
+        directionVector = self.directionVectorFromAngle(oldDir)
+
+        deltaPosX = directionVector[0] * linVel * dt  # math.cos(direction) * linVel * dt
+        deltaPosY = directionVector[1] * linVel * dt  # math.sin(direction) * linVel * dt
+        posX += deltaPosX
+        posY += deltaPosY
+
+
         direction = (self.getDirectionAngle() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
         directionVector = self.directionVectorFromAngle(direction)
         deltaDir = direction - oldDir
 
-        deltaPosX = directionVector[0] * linVel * dt #math.cos(direction) * linVel * dt
-        deltaPosY = directionVector[1] * linVel * dt #math.sin(direction) * linVel * dt
-        posX += deltaPosX
-        posY += deltaPosY
+
+
+        goalDist = math.sqrt((posX-goalX)**2+(posY-goalY)**2)
+
 
         frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist, direction]
         self.push_frame(frame)
@@ -359,10 +371,9 @@ class Robot:
         self.posSensor = points[0]
         self.pieSlicePoints = points
 
-    def sonarReading(self, robots, stepsLeft, steps):
+    def lidarReading(self, robots, stepsLeft, steps):
         """
-        Creates a state with a virtual 2D laser scan (yes it is called sonar reading but what can we say...
-        is is not a sonar it is a laser scan or to be more precise it is 2D raycasting)
+        Creates a state with a virtual 2D laser scan
 
         The state consists of n frames (a frame is data from a certain timeframe) with each containing the following data:
         [normalised laser distances of 2D laser scan, angular Deviation between the robots forward axis and its target represented by vector of the length 1,
@@ -428,7 +439,7 @@ class Robot:
         self.distances = (distances)
 
 
-        # frame_sonar = []
+        # frame_lidar = []
         target = (self.station.posX, self.station.posY)
         # target = (self.station.posX + (self.station.width / 2), self.station.posY + (self.station.length/2))
         distance = math.sqrt((self.getPosX() - target[0]) ** 2 + (self.getPosY() - target[1]) ** 2)
@@ -471,13 +482,13 @@ class Robot:
         currentTimestep = (steps - stepsLeft)/steps #TODO setps im Konstruktor übergeben und einenFaktor draus machen, muss nicht bei jedem Aufruf mit übergeben werden
 
 
-        frame_sonar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
+        frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
-        if len(self.stateSonar) >= self.time_steps:
-            self.stateSonar.pop(0)
-            self.stateSonar.append(frame_sonar)
+        if len(self.stateLidar) >= self.time_steps:
+            self.stateLidar.pop(0)
+            self.stateLidar.append(frame_lidar)
         else:
-            self.stateSonar.append(frame_sonar)
+            self.stateLidar.append(frame_lidar)
 
 
 
@@ -542,6 +553,9 @@ class Robot:
         """
         self.netOutput = (tarAngVel, tarLinVel)
 
+        tarLinVel = max(-1, min(tarLinVel, 1))
+        tarAngVel = max(-1, min(tarAngVel, 1))
+
         tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + (self.maxAngularVelocity + self.minAngularVelocity) * 0.5
         tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity)* 0.5) + (self.maxLinearVelocity + self.minLinearVelocity)*0.5
 
@@ -574,8 +588,8 @@ class Robot:
             if angVel < self.minAngularVelocity:
                 angVel = self.minAngularVelocity
 
-        #return tarLinVel, tarAngVel
-        return linVel, angVel
+        return tarLinVel, tarAngVel
+        #return linVel, angVel
 
 
     def directionVectorFromAngle(self, direction):
