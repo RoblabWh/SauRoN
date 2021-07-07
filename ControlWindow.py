@@ -10,14 +10,8 @@ from algorithms.A2C_parallel.PPO_Multi import PPO_Multi
 import EnvironmentWithUI
 
 class ControlWindow(QtWidgets.QMainWindow):
-    #TODO Fortschrittsbalken für alle Episoden -> erledigt
-    # Tabelle mit 0 zB initialisieren -> erledigt
-    # Tabelle übrige spaöten füllen -> fehlt nur noch Level -> was soll da genau drin stehen: Ein Name?
-    # Werte runden -> erledigt
-    # Spalten teilweise kleiner machen (falls das geht)
 
-
-    def __init__(self, application, nbOfEnvs, act_dim, env_dim, args, loadWeightsPath = ""): #, model):  #TODO environments in einer Liste übergeben und speichern
+    def __init__(self, application, nbOfEnvs, act_dim, env_dim, args, loadWeightsPath = ""): #, model):
         super(ControlWindow, self).__init__()
         ray.init()
         self.app = application
@@ -60,16 +54,19 @@ class ControlWindow(QtWidgets.QMainWindow):
 
         #layout.addWidget(self.statusLabel)
 
-        startbutton = QPushButton("start")
-        startbutton.clicked.connect(self.train)
-        layout.addWidget(startbutton)
+        self.startbutton = QPushButton("start")
+        self.startbutton.clicked.connect(self.train)
+        layout.addWidget(self.startbutton)
 
         self.setCentralWidget(self.widget)
 
 
     def train(self):
-        startup = self.model.prepareTraining.remote(self.loadWeightsPath)
-        self.done = ray.get(startup)
+        self.startbutton.setEnabled(False)
+        self.tableWidget.fillTable()
+        futures = self.model.prepareTraining.remote(self.loadWeightsPath)
+        self.done, levelNames = ray.get(futures)
+        self.tableWidget.addLevelNames(levelNames)
         self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
         self.worker.start()
         self.worker.episode_done.connect(self.startNextSteps)
@@ -77,7 +74,7 @@ class ControlWindow(QtWidgets.QMainWindow):
 
     def startNextSteps(self, episodeDone):
         self.tableWidget.updateButtons()
-        #TODO balken um eine episode erhöhen
+
         if not self.done:
             if not episodeDone:
                 self.worker.terminate()
@@ -108,6 +105,9 @@ class ControlWindow(QtWidgets.QMainWindow):
     #
     # def getLevelVisibilities(self):
     #     return self.tableWidget.getVisibilites()
+
+
+
 
 class WorkerThread(QThread):
     episode_done = pyqtSignal(bool)
@@ -152,11 +152,15 @@ class Table(QWidget):
         for col in range(self.columns):
             self.tabWidget.resizeColumnToContents(col)
 
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.tabWidget)
+        self.setLayout(self.layout)
 
+        self.show()
+
+    def fillTable(self):
         for env in range(self.nbOfEnvs):
             self.buttonList.append(QPushButton(self))
-            self.buttonList[env].setText("Waiting")
-            self.buttonList[env].setEnabled(False)
             self.tabWidget.setCellWidget(env, 4, self.buttonList[env])
             self.buttonList[env].clicked.connect(lambda *args, row=env, column=4: self.buttonClicked(row, column))
 
@@ -167,17 +171,14 @@ class Table(QWidget):
 
 
 
+
         # for env in range(self.nbOfEnvs):
         #     self.btShowEnv = QPushButton(self)
         #     self.btShowEnv.setText("Show Env")
         #     self.tabWidget.setCellWidget(env, 4, self.btShowEnv)
         #     self.btShowEnv.clicked.connect(lambda *args, row=env, column=4: cellClick(row, column))
 
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(self.tabWidget)
-        self.setLayout(self.layout)
 
-        self.show()
 
     def buttonClicked(self, row, col):
 
@@ -222,6 +223,10 @@ class Table(QWidget):
 
         for col in range(self.columns):
             self.tabWidget.resizeColumnToContents(col)
+
+    def addLevelNames(self, levelNames):
+        for i, name in enumerate(levelNames):
+            self.tabWidget.setItem(i, 1, QTableWidgetItem(str(name)))
 
 
 class Progressbar(QWidget):

@@ -93,6 +93,8 @@ class PPO_MultiprocessingActor:
             self.reachedTargetList.append(False)
         self.env.reset(level)
 
+        return self.env.simulation.getLevelName()
+
     def trainSteps(self, numbrOfSteps):
         stepsLeft , cumul_reward = numbrOfSteps, 0
 

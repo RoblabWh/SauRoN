@@ -146,8 +146,11 @@ class PPO_Multi:
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
         multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
+
+        levelNames = []
         for i, actor in enumerate(multiActors):
-            actor.setLevel.remote(envLevel[i])
+            levelName = ray.get(actor.setLevel.remote(envLevel[i]))
+            levelNames.append(levelName)
 
         self.multiActors = multiActors
         self.activeActors = multiActors
@@ -156,7 +159,7 @@ class PPO_Multi:
         # Main Loop
         self.tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
 
-        return False
+        return (False, levelNames)
 
     def trainWithFeedbackSteps(self, visibleLevels):
 

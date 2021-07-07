@@ -204,3 +204,8 @@ class Simulation:
         self.walls = selectedLevel.getWalls()
         self.level = (selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls)
         self.levelID = levelID
+
+    def getLevelName(self):
+        levelNameSVG = self.levelFiles[self.levelID]
+        levelName = levelNameSVG.split('.', 1)[0]
+        return levelName
