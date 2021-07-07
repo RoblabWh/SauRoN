@@ -228,6 +228,9 @@ class Table(QWidget):
         for i, name in enumerate(levelNames):
             self.tabWidget.setItem(i, 1, QTableWidgetItem(str(name)))
 
+        for col in range(self.columns):
+            self.tabWidget.resizeColumnToContents(col)
+
 
 class Progressbar(QWidget):
     def __init__(self, currentEpisode, args):
