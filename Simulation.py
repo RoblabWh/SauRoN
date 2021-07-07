@@ -12,7 +12,7 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    levelFiles = ['labor.svg', 'zipper.svg']
+    levelFiles = ['Lab.svg', 'zipper.svg', 'Funnle.svg', 'SwapSide.svg']
 
 
     def __init__(self, app, args, timeframes, level):
@@ -181,11 +181,6 @@ class Simulation:
             self.simulationWindow.show()
             self.hasUI = True
 
-    def showWindow(self, app):
-        if not self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args, self.walls)
-            self.simulationWindow.show()
-            self.hasUI = True
 
     def closeWindow(self):
         if self.hasUI:

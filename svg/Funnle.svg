@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 16.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Ebene_1_Kopie" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px"
+	 y="0px" width="623.619px" height="283.46px" viewBox="0 0 623.619 283.46" enable-background="new 0 0 623.619 283.46"
+	 xml:space="preserve">
+<circle id="start_1_2_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="31.707" cy="255.161" r="7.499"/>
+<circle id="start_2_2_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="167.804" cy="249.22" r="7.5"/>
+<circle id="start_3_2_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="340.821" cy="249.439" r="7.499"/>
+<circle id="start_4_2_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="585.882" cy="258.464" r="7.5"/>
+<circle id="goal_1_2_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="366.236" cy="76.295" r="13.668"/>
+<circle id="goal_2_2_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="428.558" cy="31.052" r="13.668"/>
+<circle id="goal_3_2_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="209.43" cy="33.558" r="13.99"/>
+<circle id="goal_4_2_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="268.268" cy="74.823" r="13.99"/>
+<polygon fill="none" stroke="#000000" stroke-miterlimit="10" points="619.977,279.897 619.977,2.563 3.31,2.563 3.31,279.563 "/>
+<polyline fill="none" stroke="#000000" stroke-miterlimit="10" points="628.309,74.823 383.643,137.633 462.643,179.541 
+	625.976,219.563 "/>
+<polyline fill="none" stroke="#000000" stroke-miterlimit="10" points="-4.024,213.567 175.304,188.901 265.309,140.565 
+	-4.024,80.297 "/>
+</svg>
