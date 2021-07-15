@@ -20,7 +20,8 @@ class ControlWindow(QtWidgets.QMainWindow):
         self.loadWeightsPath = loadWeightsPath
 
         self.setWindowTitle("Control Panel")
-        self.setFixedSize(350, 700)
+        # self.setFixedSize(350, 700)
+
 
         self.model = PPO_Multi.remote(act_dim, env_dim, args)
         self.currentEpisode = 0
