@@ -8,7 +8,6 @@ class RobotRepresentation:
     def __init__(self, x, y, direction, width, height, scaleFactor, mode, colorIndex):
         self.mode = mode
         self.scale = scaleFactor
-        print(self.scale)
         self.width = width #* self.scale
         self.height = height # * self.scale
 
