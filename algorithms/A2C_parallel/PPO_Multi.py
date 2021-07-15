@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QApplication
 
 import EnvironmentWithUI
 from BucketRenderer import BucketRenderer
+from DistanceGraph import DistanceGraph
 from algorithms.A2C_parallel.A2C_Multi import AverageMeter
 from algorithms.A2C_parallel.PPO_Network import PPO_Network
 from algorithms.A2C_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
@@ -12,6 +13,8 @@ from tqdm import tqdm
 import ray
 import yaml
 import keras
+import matplotlib.pyplot as plt
+
 
 
 @ray.remote
@@ -429,12 +432,13 @@ class PPO_Multi:
 
 
         # visualization of chosen actions
-        histogramm = BucketRenderer(20, 0)
-        histogramm.show()
+        #histogramm = BucketRenderer(20, 0)
+        #histogramm.show()
         liveHistogramRobot = 0
 
         robotsCount = self.numbOfRobots #TODO bei jedem neuen Level laden akualisieren
 
+        distGraph = DistanceGraph(app)
         for e in range(18):
             env.reset(0)#e % len(env.simulation.level))
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
@@ -445,14 +449,22 @@ class PPO_Multi:
                 # Actor picks an action (following the policy)
                 for i in range(0, robotsCount):
                     if not robotsDone[i]:
-                        aTmp = self.network.policy_action_certain(robotsOldState[i][0])
+                        aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0])
                         a = np.ndarray.tolist(aTmp[0])
 
+                        if i == liveHistogramRobot:
+                            distGraph.plot([i for i in range(heatmap.shape[0])], heatmap)
+                            # heatmap = np.maximum(heatmap, 0)
+                            # heatmap /= np.max(heatmap)
+                            # print(heatmap)
+                            # plt.plot(heatmap)
+                            # # matshow(heatmap)
+                            # plt.show()
 
                         #visualization of chosen actions
-                        if i == liveHistogramRobot:
-                            histogramm.add_action(a)
-                            histogramm.show()
+                        #if i == liveHistogramRobot:
+                            #histogramm.add_action(a)
+                            #histogramm.show()
 
                     else:
                         a = [None, None]

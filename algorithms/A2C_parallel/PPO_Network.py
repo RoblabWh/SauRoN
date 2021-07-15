@@ -4,8 +4,9 @@ import keras as k
 from keras.optimizers import  Adam
 from keras.losses import mean_squared_error
 from keras.layers import Input, Conv1D, Dense, Flatten, concatenate, MaxPool1D, Lambda
-from keras.backend import maximum, mean, exp, log, function, squeeze, categorical_crossentropy,placeholder, sum, square, random_normal, shape, cast, clip, softmax, argmax
+from keras.backend import maximum, mean, exp, log, function, squeeze, categorical_crossentropy,placeholder, sum, square, random_normal, shape, cast, clip, softmax, argmax, gradients
 from keras import backend as K
+
 
 
 
@@ -60,7 +61,8 @@ class PPO_Network:
             x_laser = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu',
                              name=tag + '_conv1d_laser_1')(self._input_laser)
             x_laser = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu',
-                             name=tag + '_conv1d_laser_2')(x_laser)
+                             name=tag + '_conv1d_laser_last')(x_laser)
+
             x_laser = Flatten()(x_laser)
 
             x_laser = Dense(units=256, activation='relu', name=tag + '_dense_laser')(x_laser)
@@ -81,6 +83,9 @@ class PPO_Network:
             fully_connect = concatenate([x_laser, x_orientation, x_distance, x_velocity])
             fully_connect = Dense(units=384, activation='relu', name=tag + '_dense_fully_connect')(fully_connect)
 
+
+
+
             return fully_connect
 
         elif type == 'medium':
@@ -88,7 +93,8 @@ class PPO_Network:
             x_laser = Conv1D(filters=12, kernel_size=7, strides=3, padding='same', activation='relu',
                              name=tag + '_conv1d_laser_1')(self._input_laser)
             x_laser = Conv1D(filters=24, kernel_size=5, strides=2, padding='same', activation='relu',
-                             name=tag + '_conv1d_laser_2')(x_laser)
+                             name=tag + '_conv1d_laser_last')(x_laser)
+
             x_laser = Flatten()(x_laser)
 
             x_laser = Dense(units=192, activation='relu', name=tag + '_dense_laser')(x_laser)
@@ -116,7 +122,8 @@ class PPO_Network:
             x_laser = Conv1D(filters=8, kernel_size=7, strides=3, padding='same', activation='relu',
                              name=tag + '_conv1d_laser_1')(self._input_laser)
             x_laser = Conv1D(filters=16, kernel_size=5, strides=2, padding='same', activation='relu',
-                             name=tag + '_conv1d_laser_2')(x_laser)
+                             name=tag + '_conv1d_laser_last')(x_laser)
+
             x_laser = Flatten()(x_laser)
 
             x_laser = Dense(units=128, activation='relu', name=tag + '_dense_laser')(x_laser)
@@ -188,6 +195,22 @@ class PPO_Network:
         self._model = Model(
             inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
             outputs=[self._mu, self._var, self._value])
+
+        outputLin = [self._model.output[0][:, 0]] #, self._model.output[1][0], self._model.output[2]]
+        outputAng = [self._model.output[0][:, 1]] #, self._model.output[1][1], self._model.output[2]]
+        lastConvLayer = self._model.get_layer("shared" if self._shared else "policy" + '_conv1d_laser_last')
+
+        grads = gradients(outputAng, lastConvLayer.output)[0]
+
+        # This is a vector of shape (512,), where each entry
+        # is the mean intensity of the gradient over a specific feature map channel
+        pooled_grads = mean(grads, axis=(0,1))
+
+        # This function allows us to access the values of the quantities we just defined:
+        # `pooled_grads` and the output feature map of `block5_conv3`,
+        # given a sample image
+        self.iterate = function([self._model.input], [pooled_grads, lastConvLayer.output[0], self._model.output])
+
 
 
         # Optimizer
@@ -266,7 +289,26 @@ class PPO_Network:
         action = self._sample(
             [np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])])
 
-        return action
+
+        # These are the values of these two quantities, as Numpy arrays,
+        # given our sample image of two elephants
+        pooled_grads_value, conv_layer_output_value, output = self.iterate([np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])])
+
+        print("output shape: ", output)
+        print(pooled_grads_value.shape, conv_layer_output_value.shape)
+        # We multiply each channel in the feature map array
+        # by "how important this channel is" with regard to the elephant class
+        for i in range(16):
+            conv_layer_output_value[:, i] *= pooled_grads_value[i]
+
+        # The channel-wise mean of the resulting feature map
+        # is our heatmap of class activation
+        heatmap = np.mean(conv_layer_output_value, axis=-1)
+        print(heatmap.shape)
+
+
+
+        return (action, heatmap)
 
 
 ########################################################################
