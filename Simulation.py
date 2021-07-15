@@ -12,7 +12,7 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    levelFiles = ['Lab.svg', 'zipper.svg', 'Funnle.svg', 'SwapSide.svg']
+    levelFiles = ['Simple.svg', 'Lab.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']
 
 
     def __init__(self, app, args, timeframes, level):
@@ -193,8 +193,10 @@ class Simulation:
 
     def loadLevel(self, levelID):
         selectedLevel = SVGParser.SVGLevelParser(self.levelFiles[levelID], self.args)
-
         self.robots = selectedLevel.getRobots()
+        if self.args.manually:
+            self.robots = self.robots[0:self.args.numb_of_robots]
+
         self.stations = selectedLevel.getStations()
         self.walls = selectedLevel.getWalls()
         self.level = (selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls)
