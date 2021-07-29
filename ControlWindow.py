@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import ray
 import sys
-from algorithms.DQN import DQN
+#from algorithms.DQN import DQN
 #from algorithms.A2C_parallel.A2C_Multi import A2C_Multi
 from algorithms.A2C_parallel.PPO_Multi import PPO_Multi
 import EnvironmentWithUI

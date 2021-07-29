@@ -113,7 +113,7 @@ class Environment:
                 break
         return self.steps_left <= 0 or robotsDone
 
-    def step(self, actions):
+    def step(self, actions, activations = None):
         """
         Executes a step in the environment and updates the simulation
 
@@ -131,7 +131,7 @@ class Environment:
         #     tarLinVel, tarAngVel = action #self.get_velocity(action)
         #     robotsTarVels.append((tarLinVel, tarAngVel))
 
-        robotsTermination = self.simulation.update(actions, self.steps_left)
+        robotsTermination = self.simulation.update(actions, self.steps_left, activations)
         robotsDataCurrentFrame = []
         for i, termination in enumerate(robotsTermination):
             if termination != (None, None, None):
@@ -140,6 +140,7 @@ class Environment:
                 robotsDataCurrentFrame.append((None, None, None))
 
         return robotsDataCurrentFrame
+
 
 
 

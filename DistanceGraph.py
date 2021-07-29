@@ -1,5 +1,6 @@
 from collections import deque
 import pyqtgraph as pg
+import numpy as np
 
 
 class DistanceGraph:
@@ -21,7 +22,11 @@ class DistanceGraph:
         self.p1.setLabel(axis='bottom', text='sonar ray (half x-axis is forward)')
 
     def plot(self, valueToPlotX, valueToPlotY):
-        self.datY = valueToPlotY
+        max = np.max(valueToPlotY)
+        min = np.min(valueToPlotY)
+
+        self.datY = (valueToPlotY) * (1 / (max - min)) # + (0-min)
+        #self.datY = valueToPlotY
         self.datX = valueToPlotX
         self.curve1.setData(self.datX, self.datY)
         self.app.processEvents()

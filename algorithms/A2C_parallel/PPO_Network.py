@@ -1,7 +1,7 @@
 import numpy as np
 import keras as k
 
-from keras.optimizers import  Adam
+from keras.optimizers import Adam
 from keras.losses import mean_squared_error
 from keras.layers import Input, Conv1D, Dense, Flatten, concatenate, MaxPool1D, Lambda
 from keras.backend import maximum, mean, exp, log, function, squeeze, categorical_crossentropy,placeholder, sum, square, random_normal, shape, cast, clip, softmax, argmax, gradients
@@ -200,11 +200,13 @@ class PPO_Network:
         outputAng = [self._model.output[0][:, 1]] #, self._model.output[1][1], self._model.output[2]]
         lastConvLayer = self._model.get_layer("shared" if self._shared else "policy" + '_conv1d_laser_last')
 
-        grads = gradients(outputAng, lastConvLayer.output)[0]
+        grads = gradients(outputLin, lastConvLayer.output)[0]
+        print("Grads: ", grads)
 
         # This is a vector of shape (512,), where each entry
         # is the mean intensity of the gradient over a specific feature map channel
         pooled_grads = mean(grads, axis=(0,1))
+        print("Pooled Grads shape: ", pooled_grads)
 
         # This function allows us to access the values of the quantities we just defined:
         # `pooled_grads` and the output feature map of `block5_conv3`,
@@ -294,8 +296,10 @@ class PPO_Network:
         # given our sample image of two elephants
         pooled_grads_value, conv_layer_output_value, output = self.iterate([np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])])
 
-        print("output shape: ", output)
-        print(pooled_grads_value.shape, conv_layer_output_value.shape)
+        # print("output: ", output)
+        # print("Pooled grads value: ", pooled_grads_value)
+        # print("Conv_Layer_output_value: ", conv_layer_output_value)
+        # print("Output: ", output)
         # We multiply each channel in the feature map array
         # by "how important this channel is" with regard to the elephant class
         for i in range(16):
@@ -303,12 +307,16 @@ class PPO_Network:
 
         # The channel-wise mean of the resulting feature map
         # is our heatmap of class activation
+        # print("Conv Value 2: ", conv_layer_output_value)
         heatmap = np.mean(conv_layer_output_value, axis=-1)
-        print(heatmap.shape)
+        # print(heatmap.shape)
+        # print("Heatmap: ", heatmap)
 
 
 
         return (action, heatmap)
+
+
 
 
 ########################################################################

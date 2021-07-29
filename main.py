@@ -45,6 +45,7 @@ timeFrames = 4              # number of past states used as an Input for the neu
 
 # TODO numbOfRobots von SVG überschreiben, weil er sonst mit einem index out of range Fehler reagiert,
 #  wenn die Anzahl der Roboter nicht zum Bild passt und auch bzgl manually, wenn man nur einen Roboter steuern will
+# TODO er scheint auch den numbOfRobotsManual zu nehmen, auch wenn es nicht auf manual ist
 numbOfRobotsManual = 2            # only change if set to manual do not use more than 4
 numbOfParallelEnvs = 5     # parallel environments are used to create more and diverse training experiences
 
@@ -82,7 +83,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_interval', type=int, default=trainingInterval, help='The number of steps after which the neural net is trained.')
     parser.add_argument('--net_size', type=str, default='big', choices=['small', 'medium', 'big'], help='Determines the number of filters in the convolutional layers, the overall amount of neurons and the number of layers.')
     parser.add_argument('--shared', type=str2bool, default='False', help='Determines whether actor and aritic share their main network weights.')
-    parser.add_argument('--load_christian', type=bool, default=False, help='Loads the best network ever trained by the master, be hold ... CHRISTIAN.')
+    parser.add_argument('--load_christian', type=bool, default=True, help='Loads the best network ever trained by the master, be hold ... CHRISTIAN.')
 
     # FOR DQN
     parser.add_argument('--target_update', type=int, default=target_update, help='How often is the Agent updated')
@@ -111,6 +112,8 @@ if __name__ == '__main__':
     parser.add_argument('--training', type=bool, default=False, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
     parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
+    parser.add_argument('--lidar_activation', type=bool, default=True, help='Show Lidar activation')
+
 
     args = parser.parse_args(args)
 

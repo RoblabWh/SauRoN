@@ -2,6 +2,7 @@ from PyQt5.QtGui import QPainter, QBrush, QPen, QColor
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5 import QtWidgets
 import math
+import numpy as np
 
 
 class RobotRepresentation:
@@ -28,6 +29,7 @@ class RobotRepresentation:
         self.direction = direction
         self.radarHits = []
         self.isActive = True
+        self.activations = [1 for _ in range(1081)] # TODO 1081 dynamisch einlesen
 
         brightness = 235 - (int((colorIndex * 39) / 255) * 80)
         self.lineColor = QColor.fromHsv((colorIndex * 39) % 255, 255, brightness)
@@ -56,9 +58,13 @@ class RobotRepresentation:
                     posX = self.posX
                     posY = self.posY
 
-                painter.setPen(QPen(self.lineColor, 1.5, Qt.DotLine))
-                painter.setBrush(QBrush(self.lineColor, self.brushStyle))
+
                 for i in range(0, len(self.radarHits)):
+                    alpha = 0 if self.activations[i] < 0.8 else 1
+                    #alpha = 0 if self.activations[i] > 0.2 else 1
+                    self.lineColor.setAlphaF(alpha)
+                    painter.setPen(QPen(self.lineColor, 1.5, Qt.DotLine))
+                    painter.setBrush(QBrush(self.lineColor, self.brushStyle))
                     painter.drawLine(posX,
                                      posY,
                                      self.radarHits[i][0] * self.scale,
@@ -68,7 +74,7 @@ class RobotRepresentation:
 
 
 
-
+        self.lineColor.setAlphaF(1)
         painter.setPen(QPen(self.lineColor, self.thickness, Qt.DotLine))
 
         painter.drawLine(self.posX,
@@ -102,7 +108,7 @@ class RobotRepresentation:
 
 
 
-    def update(self, x, y, direction, radarHits, simShowing, isActive, dirV, pieSliceBorders = None, sensorPos = None):
+    def update(self, x, y, direction, radarHits, simShowing, isActive, dirV, activations, pieSliceBorders = None, sensorPos = None):
         if simShowing:
             self.posX = x * self.scale
             self.posY = y * self.scale
@@ -113,6 +119,15 @@ class RobotRepresentation:
             self.pieSliceBorders = pieSliceBorders
             self.sensorPos = sensorPos
 
+            if activations is not None:
+                max = np.max(activations)
+                min = np.min(activations)
+
+                actives = (activations + (0-min)) * (1 / (max - min))
+
+                self.activations = [actives[int(i/6)] for i in range(1081)] #activations.shape[0]
+            else:
+                self.activations = [1 for _ in range(1081)]  # TODO 1081 dynamisch einlesen
 
     def updateScale(self, scaleFactor):
         self.scale = scaleFactor

@@ -437,16 +437,18 @@ class PPO_Multi:
         #histogramm.show()
         liveHistogramRobot = 0
 
-        robotsCount = self.numbOfRobots #TODO bei jedem neuen Level laden akualisieren
+        #robotsCount = self.numbOfRobots #TODO bei jedem neuen Level laden akualisieren
 
         distGraph = DistanceGraph(app)
         for e in range(18):
-            env.reset(0)#e % len(env.simulation.level))
+            env.reset(e % len(env.simulation.levelFiles))
+            robotsCount = env.simulation.getCurrentNumberOfRobots()
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
             robotsDone = [False for i in range(0, robotsCount)]
 
             while not env.is_done():
                 robotsActions = []
+                robotsHeatmaps = []
                 # Actor picks an action (following the policy)
                 for i in range(0, robotsCount):
                     if not robotsDone[i]:
@@ -469,8 +471,13 @@ class PPO_Multi:
 
                     else:
                         a = [None, None]
+                        heatmap = None
                     robotsActions.append(a)
-                robotsStates = env.step(robotsActions)
+                    robotsHeatmaps.append(heatmap)
+                if args.lidar_activation:
+                    robotsStates = env.step(robotsActions, robotsHeatmaps)
+                else:
+                    robotsStates = env.step(robotsActions)
 
                 rewards = ''
                 for i, stateData in enumerate(robotsStates):

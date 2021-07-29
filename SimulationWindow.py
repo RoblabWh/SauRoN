@@ -37,6 +37,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
     def __init__(self, application, robots, stations, args, walls):
         super().__init__()
 
+        self.args = args
         self.app = application
         self.setWindowTitle("Simulation")
         self.arenaWidth = args.arena_width
@@ -52,6 +53,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.SaveNetClicked = False
         self.mode = args.mode
         self.scaleFactor = args.scale_factor
+        self.newScaleFactorWidth = self.geometry().width() / self.arenaWidth
 
 
         self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode)
@@ -64,6 +66,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.saveButtonListenrs = []
         self.monitorGraph = None
 
+
         if (False):
             self.monitorGraph = DistanceGraph.DistanceGraph(application)
 
@@ -74,17 +77,17 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         QtWidgets.QMainWindow.resizeEvent(self, event)
 
-        newScaleFactorWidth = windowWidth / self.arenaWidth
+        self.newScaleFactorWidth = windowWidth / self.arenaWidth
 
-        self.setFixedHeight(self.arenaHeight * newScaleFactorWidth)
+        self.setFixedHeight(self.arenaHeight * self.newScaleFactorWidth)
 
-        self.scaleFactor = newScaleFactorWidth
+        self.scaleFactor = self.newScaleFactorWidth
 
         for robot in self.robotRepresentations:
-            RobotRepresentation.RobotRepresentation.updateScale(robot, newScaleFactorWidth)
+            RobotRepresentation.RobotRepresentation.updateScale(robot, self.newScaleFactorWidth)
 
         for station in self.stations:
-            Station.updateScale(station, newScaleFactorWidth)   # doof das wir alles anders importieren z.B. Station und RobotRepresentation -> TODO: alles einheitlich importieren
+            Station.updateScale(station, self.newScaleFactorWidth)   # doof das wir alles anders importieren z.B. Station und RobotRepresentation -> TODO: alles einheitlich importieren
 
 
 
@@ -163,10 +166,9 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         self.painter.end()
 
-    def updateRobot(self, robot, num, stepsLeft):
+    def updateRobot(self, robot, num, stepsLeft, activations):
 
-
-        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing, robot.isActive(), robot.debugAngle, robot.getPieSliceWalls(), robot.posSensor)
+        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing, robot.isActive(), robot.debugAngle, activations, robot.getPieSliceWalls(), robot.posSensor)
         if self.simShowing:
             observatedRobot = 0
             if self.monitorGraph != None and num == observatedRobot:
@@ -185,5 +187,13 @@ class SimulationWindow(QtWidgets.QMainWindow):
     def setSaveListener(self, observer):
         self.saveButtonListenrs.append(observer)
 
+    def setRobotRepresentation(self, robots):
+        self.robotRepresentations = initRobots(robots, self.scaleFactor, self.args.mode)
+        for robot in self.robotRepresentations:
+            RobotRepresentation.RobotRepresentation.updateScale(robot, self.newScaleFactorWidth)
+
+
+    def setStations(self, stations):
+        self.stations = stations
 
 

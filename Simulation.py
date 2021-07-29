@@ -12,7 +12,7 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    levelFiles = ['Simple.svg', 'Lab.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']
+    levelFiles = ['Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']
 
 
     def __init__(self, app, args, timeframes, level):
@@ -41,12 +41,8 @@ class Simulation:
         self.walls.append(ColliderLine(self.arenaWidth, self.arenaLength, 0, self.arenaLength))
         self.walls.append(ColliderLine(0, self.arenaLength, 0, 0))
 
-
-
-        self.loadLevel(level)
-
-
         self.simulationWindow = None
+        self.loadLevel(level)
 
         self.reset(level)
 
@@ -68,6 +64,9 @@ class Simulation:
         """
         if self.levelID != level:
             self.loadLevel(level)
+            levelChanged = True
+        else:
+            levelChanged = False
 
         for i, s in enumerate(self.stations):
             s.setPos(self.level[2][i])
@@ -78,7 +77,12 @@ class Simulation:
         for robot in self.robots:
             robot.resetLidar(self.robots)
         if self.hasUI and self.simulationWindow != None:
-            self.simulationWindow.setWalls(self.level[3])
+            if levelChanged:
+                self.simulationWindow.setWalls(self.level[3])
+                self.simulationWindow.setRobotRepresentation(self.robots)
+                self.simulationWindow.setStations(self.stations)
+
+
 
 
     def isFarEnoughApart(self, stationPositions, randPos, minDist):
@@ -118,7 +122,7 @@ class Simulation:
         return goalLength
 
 
-    def update(self, robotsTarVels, stepsLeft):
+    def update(self, robotsTarVels, stepsLeft, activations):
         """
         updates the robots and checks the exit conditions of the current epoch
         :param robotsTarVels: List of tuples of target linear and angular velocity for each robot
@@ -171,7 +175,8 @@ class Simulation:
         if self.hasUI:
             if self.simulationWindow != None:
                 for i, robot in enumerate(self.robots):
-                    self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft)
+                    activationsR = activations[i] if activations is not None else None
+                    self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft, activationsR)
 
         return robotsTerminations
 
@@ -201,6 +206,9 @@ class Simulation:
         self.walls = selectedLevel.getWalls()
         self.level = (selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls)
         self.levelID = levelID
+
+
+
 
     def getLevelName(self):
         levelNameSVG = self.levelFiles[self.levelID]
