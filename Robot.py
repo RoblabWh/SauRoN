@@ -69,8 +69,8 @@ class Robot:
             self.radius = self.width / 2
             self.minLinearVelocity = 0
             self.maxLinearVelocity = 0.6
-            self.maxAngularVelocity = 1#1.5#1.5 #* math.pi
-            self.minAngularVelocity = -1#-1.5#-1.5 #* math.pi
+            self.maxAngularVelocity = 1.2#1.5#1.5 #* math.pi
+            self.minAngularVelocity = -1.2#-1.5#-1.5 #* math.pi
             self.maxAngularAcceleration = 1.5 #* math.pi  # rad/s^2
             self.minAngularAcceleration = -1.5 #* math.pi  # rad/s^2
             #v = 0.6
