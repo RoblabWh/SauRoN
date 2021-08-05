@@ -69,8 +69,8 @@ class Robot:
             self.radius = self.width / 2
             self.minLinearVelocity = 0
             self.maxLinearVelocity = 0.6
-            self.maxAngularVelocity = 1.2#1.5#1.5 #* math.pi
-            self.minAngularVelocity = -1.2#-1.5#-1.5 #* math.pi
+            self.maxAngularVelocity = 1.5#1.5#1.5 #* math.pi
+            self.minAngularVelocity = -1.5#-1.5#-1.5 #* math.pi
             self.maxAngularAcceleration = 1.5 #* math.pi  # rad/s^2
             self.minAngularAcceleration = -1.5 #* math.pi  # rad/s^2
             #v = 0.6
@@ -556,8 +556,9 @@ class Robot:
         tarLinVel = max(-1, min(tarLinVel, 1))
         tarAngVel = max(-1, min(tarAngVel, 1))
 
-        tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + (self.maxAngularVelocity + self.minAngularVelocity) * 0.5
-        tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity)* 0.5) + (self.maxLinearVelocity + self.minLinearVelocity)*0.5
+        # tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + (self.maxAngularVelocity + self.minAngularVelocity) * 0.5
+        tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)
+        tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity)* 0.5) + ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)
 
 
 

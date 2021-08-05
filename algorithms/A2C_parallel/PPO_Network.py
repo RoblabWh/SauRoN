@@ -211,6 +211,7 @@ class PPO_Network:
         # This function allows us to access the values of the quantities we just defined:
         # `pooled_grads` and the output feature map of `block5_conv3`,
         # given a sample image
+        # self.iterate = function([self._model.input], [pooled_grads, lastConvLayer.output[0], self._model.output])
         self.iterate = function([self._model.input], [pooled_grads, lastConvLayer.output[0], self._model.output])
 
 

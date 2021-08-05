@@ -46,7 +46,7 @@ timeFrames = 4              # number of past states used as an Input for the neu
 # TODO numbOfRobots von SVG überschreiben, weil er sonst mit einem index out of range Fehler reagiert,
 #  wenn die Anzahl der Roboter nicht zum Bild passt und auch bzgl manually, wenn man nur einen Roboter steuern will
 # TODO er scheint auch den numbOfRobotsManual zu nehmen, auch wenn es nicht auf manual ist
-numbOfRobotsManual = 2            # only change if set to manual do not use more than 4
+numbOfRobotsManual = 4            # only change if set to manual do not use more than 4
 numbOfParallelEnvs = 5     # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)

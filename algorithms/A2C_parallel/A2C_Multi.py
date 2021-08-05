@@ -233,6 +233,7 @@ class A2C_Multi:
     def load_net(self, path):
         self.network = A2C_Network(self.act_dim, self.env_dim, self.args)
         self.network.load_weights(path)
+
         return True
 
     def execute(self,  args, env_dim):

@@ -1,5 +1,8 @@
+import time
+
 from PyQt5.QtGui import QPainter, QFont
-from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel, QSlider, QHBoxLayout
 from PyQt5 import QtWidgets
 import RobotRepresentation
 from Station import Station
@@ -35,7 +38,7 @@ def initStations(stations, scaleFactor):
 class SimulationWindow(QtWidgets.QMainWindow):
 
     def __init__(self, application, robots, stations, args, walls):
-        super().__init__()
+        super(SimulationWindow, self).__init__()
 
         self.args = args
         self.app = application
@@ -54,6 +57,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.mode = args.mode
         self.scaleFactor = args.scale_factor
         self.newScaleFactorWidth = self.geometry().width() / self.arenaWidth
+        self.delay = 0
 
 
         self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode)
@@ -65,6 +69,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.initUI()
         self.saveButtonListenrs = []
         self.monitorGraph = None
+
 
 
         if (False):
@@ -94,26 +99,88 @@ class SimulationWindow(QtWidgets.QMainWindow):
     def initUI(self):
         self.btSimulation = QPushButton(self)
         self.btSimulation.clicked.connect(self.clickedSimulation)
-        self.btSimulation.move(0, 0)
+        # self.btSimulation.move(0, 0)
         self.btSimulation.setFixedWidth(150)
 
         self.lbSteps = QLabel(self)
         self.lbSteps.setText("0")
-        self.lbSteps.move(self.width - 68, 0)
-        self.lbSteps.setFont(QFont("Helvetica", 14, QFont.Black, ))
+        # self.lbSteps.move(self.width - 68, 0)
+        self.lbSteps.setFont(QFont("Helvetica", 12, QFont.Black, ))
         self.lbSteps.setStyleSheet("color: rgba(0,0 ,0, 96);")
 
         self.btSaveNet = QPushButton(self)
         self.btSaveNet.clicked.connect(self.clickedSaveNet)
-        self.btSaveNet.move(290, 0)
+        # self.btSaveNet.move(290, 0)
         self.btSaveNet.setFixedWidth(120)
         self.btSaveNet.setText("Netz speichern")
+
+        hbox = QHBoxLayout()
+        self.optionsWidget = QWidget(self)
+        self.optionsWidget.setLayout(hbox)
+        hbox.setSpacing(15)
+
+        spacingWidget = QWidget(self)
+        spacingWidget.setLayout(QHBoxLayout())
+
 
         if self.mode == 'sonar':
             self.btSonar = QPushButton(self)
             self.btSonar.clicked.connect(self.clickedSonar)
-            self.btSonar.move(160, 0)
+            # self.btSonar.move(160, 0)
             self.btSonar.setFixedWidth(120)
+
+        if self.args.training == False:
+            self.slDelay = QSlider(Qt.Horizontal)
+            self.slDelay.setRange(0,100)
+            self.slDelay.setValue(0)
+            self.slDelay.setSingleStep(1)
+            self.slDelay.setEnabled(True)
+            self.slDelay.setFixedWidth(200)
+            self.slDelay.valueChanged.connect(self.valueChangesSlider)
+            # self.slDelay.move(360,60)
+
+            lbSlTitle = QLabel(self)
+            lbSlTitle.setText("Simulation Speed")
+            lbSlTitle.setFont(QFont("Helvetica", 12, QFont.Black, ))
+            lbSlTitle.setStyleSheet("color: rgba(0,0 ,0, 96);")
+            lbSlLeft = QLabel(self)
+            lbSlLeft.setText("normal")
+            lbSlLeft.setFont(QFont("Helvetica", 9, QFont.Black, ))
+            lbSlLeft.setStyleSheet("color: rgba(0,0 ,0, 96);")
+            lbSlRight = QLabel(self)
+            lbSlRight.setText("slow")
+            lbSlRight.setFont(QFont("Helvetica", 9, QFont.Black, ))
+            lbSlRight.setStyleSheet("color: rgba(0,0 ,0, 96);")
+
+            sliderbox = QHBoxLayout()
+            slWidget = QWidget(self)
+            slWidget.setLayout(sliderbox)
+
+            sliderbox.setSpacing(5)
+            sliderbox.addWidget(lbSlTitle)
+            sliderbox.addWidget(lbSlLeft)
+            sliderbox.addWidget(self.slDelay)
+            sliderbox.addWidget(lbSlRight)
+
+            slWidget.setFixedWidth(500)
+
+            hbox.addWidget(self.btSimulation)
+            hbox.addWidget(self.btSonar)
+            hbox.addWidget(self.btSaveNet)
+            hbox.addWidget(slWidget)
+            hbox.addWidget(spacingWidget)
+            hbox.addWidget(self.lbSteps)
+
+        else:
+            hbox.addWidget(self.btSimulation)
+            hbox.addWidget(self.btSonar)
+            hbox.addWidget(self.btSaveNet)
+            hbox.addWidget(spacingWidget)
+            hbox.addWidget(self.lbSteps)
+
+        self.setMenuWidget(self.optionsWidget)
+
+
 
         self.updateButtons()
 
@@ -159,14 +226,20 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         for station in self.stations:
             station.paint(self.painter)
-        for robot in self.robotRepresentations:
-            robot.paint(self.painter, self.sonarShowing)
+        for i, robot in enumerate(self.robotRepresentations):
+            sonarShowing = self.sonarShowing
+            if self.args.training == False:
+                if i != self.getActivationRobotIndex():
+                    sonarShowing= False
+            robot.paint(self.painter, sonarShowing)
         for wall in self.walls:
             wall.paint(self.painter, self.scaleFactor)
 
         self.painter.end()
 
     def updateRobot(self, robot, num, stepsLeft, activations):
+        if self.delay > 0: time.sleep(self.delay)
+
 
         self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing, robot.isActive(), robot.debugAngle, activations, robot.getPieSliceWalls(), robot.posSensor)
         if self.simShowing:
@@ -195,5 +268,12 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
     def setStations(self, stations):
         self.stations = stations
+        for station in self.stations:
+            Station.updateScale(station, self.newScaleFactorWidth)
 
+    def getActivationRobotIndex(self):
+        return 0
+
+    def valueChangesSlider(self):
+        self.delay = self.slDelay.value()/500
 

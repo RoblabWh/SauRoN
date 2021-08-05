@@ -33,6 +33,7 @@ class RobotRepresentation:
 
         brightness = 235 - (int((colorIndex * 39) / 255) * 80)
         self.lineColor = QColor.fromHsv((colorIndex * 39) % 255, 255, brightness)
+        self.lineColorNegAct = QColor.fromHsv((colorIndex * 39) % 255, 255, brightness-100)
 
 
 
@@ -58,13 +59,23 @@ class RobotRepresentation:
                     posX = self.posX
                     posY = self.posY
 
-
+                beta = 0.1 # determines which percentage of high and low activations are shown
                 for i in range(0, len(self.radarHits)):
-                    alpha = 0 if self.activations[i] < 0.8 else 1
-                    #alpha = 0 if self.activations[i] > 0.2 else 1
-                    self.lineColor.setAlphaF(alpha)
-                    painter.setPen(QPen(self.lineColor, 1.5, Qt.DotLine))
-                    painter.setBrush(QBrush(self.lineColor, self.brushStyle))
+                    self.lineColor.setAlphaF(1)
+                    color = self.lineColor
+                    if self.activations != None:
+                        alphaPos =False if self.activations[i] < 1-beta else True
+                        alphaNeg =False if self.activations[i] > beta else True
+
+                        if alphaNeg:
+                            color = self.lineColorNegAct
+                        elif not alphaPos:
+                            self.lineColor.setAlphaF(0)
+                            color = self.lineColor
+
+                    painter.setPen(QPen(color, 1.5, Qt.DotLine))
+                    painter.setBrush(QBrush(color, self.brushStyle))
+
                     painter.drawLine(posX,
                                      posY,
                                      self.radarHits[i][0] * self.scale,
@@ -127,7 +138,7 @@ class RobotRepresentation:
 
                 self.activations = [actives[int(i/6)] for i in range(1081)] #activations.shape[0]
             else:
-                self.activations = [1 for _ in range(1081)]  # TODO 1081 dynamisch einlesen
+                self.activations = None # TODO 1081 dynamisch einlesen
 
     def updateScale(self, scaleFactor):
         self.scale = scaleFactor
