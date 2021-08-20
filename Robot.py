@@ -1,6 +1,6 @@
 import math, random, time
 
-from tensorflow.python.framework.test_ops import old
+#from tensorflow.python.framework.test_ops import old
 
 from Borders import ColliderLine
 

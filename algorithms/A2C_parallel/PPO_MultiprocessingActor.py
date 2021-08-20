@@ -7,7 +7,7 @@ from algorithms.A2C_parallel.PPO_Network import PPO_Network
 import sys
 from PyQt5.QtWidgets import QApplication
 import os
-
+import tensorflow as tf
 
 @ray.remote
 class PPO_MultiprocessingActor:
@@ -127,8 +127,6 @@ class PPO_MultiprocessingActor:
                 robotsData.append(([actions[-1]],[states[-1]],[rewards[-1]], [done[-1]], [evaluation[-1]], [neglog[-1]]))
 
 
-
-
         while stepsLeft > 0 and not self.env.is_done():
 
             # Actor picks an action (following the policy)
@@ -136,9 +134,10 @@ class PPO_MultiprocessingActor:
             for i in range(0, len(robotsData)):  # iterating over every robot
                 if not True in robotsData[i][3]:
                     aTmp = self.policy_action(robotsOldState[i][0])
-                    a = np.ndarray.tolist(aTmp[0])[0]
-                    c = np.ndarray.tolist(aTmp[1])[0]
-                    negL = np.ndarray.tolist(aTmp[2])
+                    a = np.ndarray.tolist(aTmp[0].numpy())[0]  # Tensoren in Numpy in List umwandeln
+                    #a = np.ndarray.tolist(aTmp[0])[0]
+                    c = np.ndarray.tolist(aTmp[1].numpy())[0]
+                    negL = np.ndarray.tolist(aTmp[2].numpy())
                     # print(aTmp, a, c, neglog)
                 else:
                     a = [None, None]
@@ -264,7 +263,7 @@ class PPO_MultiprocessingActor:
 
 
         #statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs)
-        return (statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT, discounted_rewards, actionsConcatenated, advantages, neglogsConcatinated)
+        return (statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT, discounted_rewards, actionsConcatenated, advantages, neglogsConcatinated, state_values)
 
 
         # if masterEnv == None:
@@ -319,14 +318,12 @@ class PPO_MultiprocessingActor:
             return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]),
                                         np.array([velocity]), np.array([timesteps]))  # Liste mit [actions, value]
         else:
-            return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]),
-                                        np.array([velocity]))  # Liste mit [actions, value]
+            return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]))  # Liste mit [actions, value]
 
 
-    def trainNet(self, statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs):
-        data = self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs)
-
-        return (self.network.getWeights(), data[4])
+    def trainNet(self, statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs, values):
+        self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs, values)
+        return self.network.getWeights()
 
     def killActor(self):
         ray.actor.exit_actor()

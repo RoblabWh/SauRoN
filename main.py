@@ -16,7 +16,7 @@ import h5py
 import datetime
 
 from ControlWindow import ControlWindow
-from algorithms.DQN import DQN
+#from algorithms.DQN import DQN
 from algorithms.A2C_parallel.A2C_Multi import A2C_Multi
 from algorithms.A2C_parallel.PPO_Multi import PPO_Multi
 from algorithms.utils import str2bool
@@ -39,7 +39,7 @@ arenaWidth = 22             # Width (X Direction) of the Arena in Meter
 arenaLength = 10            # Length (Y direction) of the Arena in Meter
 simTimeStep = 0.15          # simulated time between two steps in the simulation
 
-numberOfRays = 810          # spacing between two light rays (for distance calculation) in degrees
+numberOfRays = 1081          # spacing between two light rays (for distance calculation) in degrees
 fov = 270                   # field of view in degree
 timeFrames = 4              # number of past states used as an Input for the neural net
 
@@ -47,7 +47,7 @@ timeFrames = 4              # number of past states used as an Input for the neu
 #  wenn die Anzahl der Roboter nicht zum Bild passt und auch bzgl manually, wenn man nur einen Roboter steuern will
 # TODO er scheint auch den numbOfRobotsManual zu nehmen, auch wenn es nicht auf manual ist
 numbOfRobotsManual = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 5     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 3     # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     parser.add_argument('--steps', type=int, default=steps, help='Steps in Environment per Episode')
     parser.add_argument('--train_interval', type=int, default=trainingInterval, help='The number of steps after which the neural net is trained.')
     parser.add_argument('--net_size', type=str, default='big', choices=['small', 'medium', 'big'], help='Determines the number of filters in the convolutional layers, the overall amount of neurons and the number of layers.')
-    parser.add_argument('--shared', type=str2bool, default='False', help='Determines whether actor and aritic share their main network weights.')
+    parser.add_argument('--shared', type=str2bool, default='True', help='Determines whether actor and aritic share their main network weights.')
     parser.add_argument('--load_christian', type=bool, default=True, help='Loads the best network ever trained by the master, be hold ... CHRISTIAN.')
 
     # FOR DQN
@@ -210,8 +210,8 @@ if __name__ == '__main__':
             model = A2C_Multi(act_dim, env_dim, args)
             # model = PPO_Multi(act_dim, env_dim, args)
             # model = A2C(act_dim, env_dim, args)
-        elif args.alg == 'dqn':
-            model = DQN(act_dim, env_dim, args)
+        # elif args.alg == 'dqn':
+        #     model = DQN(act_dim, env_dim, args)
         elif args.alg == 'ppo':
             model = PPO_Multi.remote(act_dim, env_dim, args)
 

@@ -5,12 +5,12 @@ from PyQt5.QtWidgets import QApplication
 
 import EnvironmentWithUI
 from BucketRenderer import BucketRenderer
-from algorithms.A2C_parallel.A2C_Network import A2C_Network
-from algorithms.A2C_parallel.A2C_MultiprocessingActor import A2C_MultiprocessingActor
+#from algorithms.A2C_parallel.A2C_Network import A2C_Network
+#from algorithms.A2C_parallel.A2C_MultiprocessingActor import A2C_MultiprocessingActor
 from tqdm import tqdm
 import ray
 import yaml
-import keras
+#import keras
 
 
 
