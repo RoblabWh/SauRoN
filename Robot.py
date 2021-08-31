@@ -14,7 +14,7 @@ class Robot:
     Defines a Robot that can move inside of simulation
     """
 
-    def __init__(self, position, startOrientation, station, args, walls, allStations):
+    def __init__(self, position, startOrientation, station, args, walls, allStations, circleWalls):
         """
         :param position: tuple (float,float) -
             defines the robots starting position
@@ -92,6 +92,7 @@ class Robot:
         self.args = args
         self.station = station
         self.walls = walls
+        self.circleWalls = circleWalls
 
         self.hasPieSlice = args.has_pie_slice
         self.pieSlicePoints = []
@@ -389,6 +390,7 @@ class Robot:
 
         dir = (self.getDirectionAngle() - (self.args.field_of_view / 2)) % (2 * math.pi)
 
+        #TODO Collisions von CircleWall berechnen
         colliderLines = self.walls + self.collidorStationsWalls + self.robotsPieSliceWalls
         collidorCirclePosWithoutRobots = []
         collidorCirclePosOnlyRobots = []

@@ -442,7 +442,7 @@ class PPO_Multi:
 
         distGraph = DistanceGraph(app)
         for e in range(18):
-            env.reset(2)#e % len(env.simulation.levelFiles))
+            env.reset(0)#e % len(env.simulation.levelFiles))
             robotsCount = env.simulation.getCurrentNumberOfRobots()
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
             robotsDone = [False for i in range(0, robotsCount)]

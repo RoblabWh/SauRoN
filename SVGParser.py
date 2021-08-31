@@ -37,6 +37,8 @@ class SVGLevelParser:
         # print(paths)
         # print(circles)
 
+        tareq = True
+
         for rect in rects:
             attributes = rect.attrib
             show = True
@@ -119,7 +121,10 @@ class SVGLevelParser:
                 x2 = float(line.attrib['x2']) * dpiFactor
                 y2 = float(line.attrib['y2']) * dpiFactor
                 # print(line, id, x1, y1, x2, y2)
-                self.lines += [Borders.ColliderLine(x1, y1, x2, y2)]
+                if tareq:
+                    self.lines += [Borders.ColliderLine(x2, y2, x1, y1)]
+                else:
+                    self.lines += [Borders.ColliderLine(x1, y1, x2, y2)]
 
         stationsData = []
         self.robotsData = []
@@ -131,19 +136,20 @@ class SVGLevelParser:
                     show = False
 
             if show:
-
-                id= circle.attrib['id']
                 cx = float(circle.attrib['cx']) * dpiFactor
                 cy = float(circle.attrib['cy']) * dpiFactor
                 r = float(circle.attrib['r']) * dpiFactor
-                # print(circle, cx, cy, r, id)
-                if 'start' in id:
-                    self.robotsData += [(cx, cy)]
+                if 'id' in attributes:
+                    id= circle.attrib['id']
 
-                elif 'goal' in circle.attrib['id']:
-                    stationsData += [(cx, cy, r)]
+                    # print(circle, cx, cy, r, id)
+                    if 'start' in id:
+                        self.robotsData += [(cx, cy)]
+
+                    elif 'goal' in circle.attrib['id']:
+                        stationsData += [(cx, cy, r)]
                 else:
-                    self.circles += [(cx, cy)]
+                    self.circles += [Borders.CircleWall(cx, cy, r)]
 
 
 
@@ -154,7 +160,7 @@ class SVGLevelParser:
         self.stationsData = [stationsData[i][:-1] for i in range(0,len(stationsData))]
 
         for i, data in enumerate(self.robotsData):
-            self.robots += [Robot.Robot((data[0], data[1]), 0, self.stations[i], args, self.lines, self.stations)]
+            self.robots += [Robot.Robot((data[0], data[1]), 0, self.stations[i], args, self.lines, self.stations, self.circles)]
 
     def getRobots(self):
         return self.robots
@@ -165,6 +171,9 @@ class SVGLevelParser:
     def getWalls(self):
         return self.lines
 
+    def getCircleWalls(self):
+        return self.circles
+
     def getRobsPos(self):
         return self.robotsData
 
@@ -172,7 +181,7 @@ class SVGLevelParser:
         return [random.random()*2*math.pi for _ in range(len(self.robots))]
 
     def getStatsPos(self):
-        return  self.stationsData
+        return self.stationsData
 
 
 def getBorders(self):

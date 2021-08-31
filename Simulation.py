@@ -12,7 +12,7 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    levelFiles = ['Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']
+    levelFiles = ['svg0.svg','Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']
 
 
     def __init__(self, app, args, timeframes, level):
@@ -41,13 +41,14 @@ class Simulation:
         self.walls.append(ColliderLine(self.arenaWidth, self.arenaLength, 0, self.arenaLength))
         self.walls.append(ColliderLine(0, self.arenaLength, 0, 0))
 
+
         self.simulationWindow = None
         self.loadLevel(level)
 
         self.reset(level)
 
         if self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls)
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls, self.circleWalls)
             self.simulationWindow.show()
 
 
@@ -81,6 +82,7 @@ class Simulation:
                 self.simulationWindow.setWalls(self.level[3])
                 self.simulationWindow.setRobotRepresentation(self.robots)
                 self.simulationWindow.setStations(self.stations)
+                self.simulationWindow.setCircleWalls(self.circleWalls)
 
 
 
@@ -182,7 +184,7 @@ class Simulation:
 
     def showWindow(self, app):
         if not self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args, self.walls)
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args, self.walls, self.circleWalls)
             self.simulationWindow.show()
             self.hasUI = True
 
@@ -204,7 +206,8 @@ class Simulation:
 
         self.stations = selectedLevel.getStations()
         self.walls = selectedLevel.getWalls()
-        self.level = (selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls)
+        self.circleWalls = selectedLevel.getCircleWalls()
+        self.level = (selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls, self.circleWalls)
         self.levelID = levelID
 
 

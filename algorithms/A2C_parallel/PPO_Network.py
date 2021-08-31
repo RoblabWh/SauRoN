@@ -59,7 +59,6 @@ class PPO_Network:
         :param type: String - Choose ["small", "medium", "big"] to determine the amount of layers and convolutions used.
         :return: returns the final layer of the created network which can be used as a new input
         """
-
         if type == 'big':
             # Laser input und convolutions
             x_laser = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu',
@@ -127,6 +126,7 @@ class PPO_Network:
                              name=tag + '_conv1d_laser_1')(self._input_laser)
             x_laser = Conv1D(filters=16, kernel_size=5, strides=2, padding='same', activation='relu',
                              name=tag + '_conv1d_laser_last')(x_laser)
+            convOut = x_laser
 
             x_laser = Flatten()(x_laser)
 
@@ -145,7 +145,7 @@ class PPO_Network:
             fully_connect = concatenate([x_laser, x_orientation, x_distance, x_velocity])
             fully_connect = Dense(units=128, activation='relu', name=tag + '_dense_fully_connect')(fully_connect)
 
-            return fully_connect
+            return fully_connect, convOut
 
         else:
             print("Network type ", str(type), " is unknown! select from: small, medium or big!")
@@ -162,12 +162,12 @@ class PPO_Network:
         # self._NEGLOG = placeholder(shape=(None,), name='NEGLOG')
 
 
-        fully_connect = self.buildMainNet("shared" if self._shared else "policy", self._network_size)
+        fully_connect, convOut = self.buildMainNet("shared" if self._shared else "policy", self._network_size)
 
         if self._shared:
             fully_connect2 = fully_connect
         else:
-            fully_connect2 = self.buildMainNet("value", self._network_size)
+            fully_connect2, convOut = self.buildMainNet("value", self._network_size)
 
         # Policy
         # mu = Dense(units=2, activation='tanh', name='output_mu')(fully_connect)
@@ -187,10 +187,17 @@ class PPO_Network:
 
         # Create the Keras Model
         self._model = Model(inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
-                            outputs=[mu, var, value])
+                            outputs=[mu, var, value, convOut])
+
+        # self._model1 = Model(inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
+        #                      outputs=convOut)
+        # self._model2 = Model(inputs=convOut)
 
         # Create the Optimizer
         self._optimizer = Adam(learning_rate=self.lr, epsilon=1e-5, clipnorm=1.0)
+
+
+        #lastConvLayer = self._model.get_layer("shared" if self._shared else "policy" + '_conv1d_laser_last')
 
         #
 
@@ -261,7 +268,7 @@ class PPO_Network:
         # self._sample = function(
         #     [self._input_laser, self._input_orientation, self._input_distance, self._input_velocity], self._mu)
         #
-        # #self.printSummary()
+        self.printSummary()
 
     def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
         a = tf.function(self.predict_function)
@@ -331,7 +338,7 @@ class PPO_Network:
                                    'advantage': tf.TensorSpec((None), dtype='float64')}])
     def train_function(self, observation, action):
         with tf.GradientTape() as tape:
-            net_out = self._model(observation.values())  #TODO observation vernuenftig an model übergeben
+            net_out = self._model(observation.values())  #TODO observation vernuenftig an model übergeben, ändern
             loss = self.calculate_loss(observation, action, net_out)
 
         gradients = tape.gradient(loss, self._model.trainable_variables)
@@ -357,7 +364,7 @@ class PPO_Network:
         value_loss = mean_squared_error(tf.squeeze(net_out[2]), action['reward']) * self._coefficient_value
 
         value_loss = tf.cast(value_loss, tf.float32)
-        loss = pg_loss + value_loss  # TODO Was ist mit Entropie? Warum kann die weg?
+        loss = pg_loss + value_loss  # TODO Was ist mit Entropie? Warum kann die weg? Christian
 
         # entropy
         # entropy = self.entropy_continuous(self._var)
@@ -384,7 +391,7 @@ class PPO_Network:
 
         return [selected_action, net_out[2], neglog]
 
-    def _postprocess_predictions_certain(self, mu, var, val):
+    def _postprocess_predictions_certain(self, mu, var, val, convOut):
         """
         Calculates the action selection and the neglog based on the network output mu, var, value.
 
@@ -402,25 +409,44 @@ class PPO_Network:
         neglog = self._neglog_continuous(selected_action, mu, var)
         return (selected_action, neglog)
 
-    # @tf.function(input_signature=[{'laser_0': tf.TensorSpec((None, 1081, 4)),
-    #                                'orientation_to_goal': tf.TensorSpec((None, 2, 4)),
-    #                                'distance_to_goal': tf.TensorSpec((None, 1, 4)),
-    #                                'velocity': tf.TensorSpec((None, 2, 4))}])
-    # def iterate(self):
-    #     #self.iterate = function([self._model.input], [pooled_grads, lastConvLayer.output[0], self._model.output])
-    #
-    #     outputLin = [self._model.output[0][:, 0]]  # , self._model.output[1][0], self._model.output[2]]
-    #
-    #     outputAng = [self._model.output[0][:, 1]] #, self._model.output[1][1], self._model.output[2]]
-    #     lastConvLayer = self._model.get_layer("shared" if self._shared else "policy" + '_conv1d_laser_last')
-    #
-    #     grads = gradients(outputLin, lastConvLayer.output)[0]
-    #     print("Grads: ", grads)
-    #
-    #     # This is a vector of shape (512,), where each entry
-    #     # is the mean intensity of the gradient over a specific feature map channel
-    #     pooled_grads = reduce_mean(grads, axis=(0,1))
-    #     print("Pooled Grads shape: ", pooled_grads)
+    #self.iterate = function([self._model.input], [pooled_grads, lastConvLayer.output[0], self._model.output])
+
+    @tf.function(input_signature=[tf.TensorSpec((None, 1081, 4), dtype='float64'),
+                                   tf.TensorSpec((None, 2, 4), dtype='float64'),
+                                   tf.TensorSpec((None, 1, 4), dtype='float64'),
+                                   tf.TensorSpec((None, 2, 4), dtype='float64')])
+    def iterate(self, input):
+        #self.iterate = function([self._model.input], [pooled_grads, lastConvLayer.output[0], self._model.output])
+
+        #outputAng = [self._model.output[0][:, 1]] #, self._model.output[1][1], self._model.output[2]]
+        lastConvLayer = self._model.get_layer("shared" if self._shared else "policy" + '_conv1d_laser_last')
+        print("Conv: ", lastConvLayer.name)
+        #lastConvLayerOut = tf.convert_to_tensor(lastConvLayer.output)
+
+        with tf.GradientTape() as tape:
+            watch_layer(lastConvLayer, tape)
+            #tape.watch(*)
+            output = self._model(input)
+            outputLinear = output[0][:, 0]
+            outputAngular = output[0][:, 1]
+            outputConv = output[3]
+            tf.print("outputs: ", output)
+            # outputLin = [self._model.output[0][:, 0]]  # , self._model.output[1][0], self._model.output[2]]
+
+
+        grads = tape.gradient(outputLinear, outputConv) #[0] #.output
+        tf.print("Grads: ", grads)
+        tf.print("outputLin: ", outputLinear)
+        tf.print("outputConv: ", outputConv)
+
+        # This is a vector of shape (512,), where each entry
+        # is the mean intensity of the gradient over a specific feature map channel
+        pooled_grads = reduce_mean(grads, axis=(0,1))
+        tf.print("Pooled Grads shape: ", pooled_grads)
+
+        return pooled_grads, outputConv[0], self._model.output
+
+
 
     def entropy_continuous(self, var):
         return reduce_sum(var + 0.5 * np.log(2.0 * np.pi * np.e), axis=-1)
@@ -466,33 +492,48 @@ class PPO_Network:
 
         action = actionCertainFunc(tf.convert_to_tensor(np.expand_dims(laser, axis=0), dtype='float64'), tf.convert_to_tensor(np.expand_dims(orientation, axis=0), dtype='float64'),
                                    tf.convert_to_tensor(np.expand_dims(distance, axis=0), dtype='float64'),tf.convert_to_tensor(np.expand_dims(velocity, axis=0), dtype='float64'))
-
-        # # These are the values of these two quantities, as Numpy arrays,
-        # # given our sample image of two elephants
-        # pooled_grads_value, conv_layer_output_value, output = self.iterate([np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])])
         #
-        # # print("output: ", output)
-        # # print("Pooled grads value: ", pooled_grads_value)
-        # # print("Conv_Layer_output_value: ", conv_layer_output_value)
-        # # print("Output: ", output)
-        # # We multiply each channel in the feature map array
-        # # by "how important this channel is" with regard to the elephant class
-        # for i in range(16):
-        #     conv_layer_output_value[:, i] *= pooled_grads_value[i]
-        #
-        # # The channel-wise mean of the resulting feature map
-        # # is our heatmap of class activation
-        # # print("Conv Value 2: ", conv_layer_output_value)
-        # heatmap = np.mean(conv_layer_output_value, axis=-1)
-        # # print(heatmap.shape)
-        # # print("Heatmap: ", heatmap)
+        # These are the values of these two quantities, as Numpy arrays,
+        # given our sample image of two elephants
+        pooled_grads_value, conv_layer_output_value, output = self.iterate([np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])])
 
-        heatmap = None
+        # print("output: ", output)
+        # print("Pooled grads value: ", pooled_grads_value)
+        # print("Conv_Layer_output_value: ", conv_layer_output_value)
+        # print("Output: ", output)
+        # We multiply each channel in the feature map array
+        # by "how important this channel is" with regard to the elephant class
+        for i in range(16):
+            conv_layer_output_value[:, i] *= pooled_grads_value[i]
+
+        # The channel-wise mean of the resulting feature map
+        # is our heatmap of class activation
+        # print("Conv Value 2: ", conv_layer_output_value)
+        heatmap = np.mean(conv_layer_output_value, axis=-1)
+        # print(heatmap.shape)
+        # print("Heatmap: ", heatmap)
+
+        #heatmap = None
 
 
         return (action, heatmap)
 
+def watch_layer (layer, tape):
+    print("watch layer")
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            # Store the result of `layer.call` internally.
+            layer.result = func(*args, **kwargs)
+            # From this point onwards, watch this tensor.
+            tape.watch(layer.result)
+            # Return the result to continue with the forward pass.
+            print("Layer result: ", layer.result)
+            return layer.result
 
+        return wrapper
+
+    layer.call = decorator(layer.call)
+    return layer
 
 
 ########################################################################

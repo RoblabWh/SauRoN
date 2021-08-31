@@ -37,7 +37,7 @@ def initStations(stations, scaleFactor):
 
 class SimulationWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, application, robots, stations, args, walls):
+    def __init__(self, application, robots, stations, args, walls, circleWalls):
         super(SimulationWindow, self).__init__()
 
         self.args = args
@@ -63,6 +63,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode)
         self.stations = stations#initStations(stations, args.scale_factor)
         self.walls = walls
+        self.circleWalls = circleWalls
 
         self.painter = QPainter(self)
 
@@ -235,6 +236,10 @@ class SimulationWindow(QtWidgets.QMainWindow):
         for wall in self.walls:
             wall.paint(self.painter, self.scaleFactor)
 
+        for circleWall in self.circleWalls:
+            circleWall.paint(self.painter, self.scaleFactor)
+
+
         self.painter.end()
 
     def updateRobot(self, robot, num, stepsLeft, activations):
@@ -256,6 +261,9 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
     def setWalls(self, walls):
         self.walls = walls
+
+    def setCircleWalls(self, circleWalls):
+        self.circleWalls = circleWalls
 
     def setSaveListener(self, observer):
         self.saveButtonListenrs.append(observer)
