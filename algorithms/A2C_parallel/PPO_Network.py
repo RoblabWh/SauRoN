@@ -126,7 +126,6 @@ class PPO_Network:
                              name=tag + '_conv1d_laser_1')(self._input_laser)
             x_laser = Conv1D(filters=16, kernel_size=5, strides=2, padding='same', activation='relu',
                              name=tag + '_conv1d_laser_last')(x_laser)
-            convOut = x_laser
 
             x_laser = Flatten()(x_laser)
 
@@ -145,7 +144,7 @@ class PPO_Network:
             fully_connect = concatenate([x_laser, x_orientation, x_distance, x_velocity])
             fully_connect = Dense(units=128, activation='relu', name=tag + '_dense_fully_connect')(fully_connect)
 
-            return fully_connect, convOut
+            return fully_connect
 
         else:
             print("Network type ", str(type), " is unknown! select from: small, medium or big!")
@@ -162,12 +161,12 @@ class PPO_Network:
         # self._NEGLOG = placeholder(shape=(None,), name='NEGLOG')
 
 
-        fully_connect, convOut = self.buildMainNet("shared" if self._shared else "policy", self._network_size)
+        fully_connect = self.buildMainNet("shared" if self._shared else "policy", self._network_size)
 
         if self._shared:
             fully_connect2 = fully_connect
         else:
-            fully_connect2, convOut = self.buildMainNet("value", self._network_size)
+            fully_connect2 = self.buildMainNet("value", self._network_size)
 
         # Policy
         # mu = Dense(units=2, activation='tanh', name='output_mu')(fully_connect)
@@ -187,7 +186,7 @@ class PPO_Network:
 
         # Create the Keras Model
         self._model = Model(inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
-                            outputs=[mu, var, value, convOut])
+                            outputs=[mu, var, value])
 
         # self._model1 = Model(inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
         #                      outputs=convOut)
@@ -326,6 +325,7 @@ class PPO_Network:
         func({'laser_0': obs_laser, 'orientation_to_goal': obs_orientation_to_goal, 'distance_to_goal': obs_distance_to_goal, 'velocity': obs_velocity},
              {'action': actions,  'value': values, 'neglog_policy': neglog, 'reward': rewards,  'advantage': advantage})
 
+
     # TODO Laser Strahlen Anzahl aus args holen
     @tf.function(input_signature=[{'laser_0': tf.TensorSpec((None, 1081, 4), dtype='float64'),
                                    'orientation_to_goal': tf.TensorSpec((None, 2, 4), dtype='float64'),
@@ -385,11 +385,37 @@ class PPO_Network:
         shape of each key: (num_agents, size_of_the_obs, stack_size).
         For the lidar with stack_size 4 and 2 agents: (2, 1081, 4)
         '''
-        net_out = self._model([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity]) #TODO observation vernuenftig an model übergeben
+        last_conv_layer_output = self._model.get_layer("shared" if self._shared else "policy" + '_conv1d_laser_last').output
+        grad_model = tf.keras.models.Model(
+            [self._model.inputs], [last_conv_layer_output, self._model.output[0]]
+        )
+        with tf.GradientTape() as tape:
+            last_conv_layer_output, preds = grad_model([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity])
+            class_channel = preds[:, 0] # 0 should tell the gradient tape to watch the lin vel (1 angular) ... at least we hope so...
 
-        selected_action, neglog = self._postprocess_predictions_certain(*net_out)
+        # This is the gradient of the output neuron
+        # with regard to the output feature map of the last conv layer
+        grads = tape.gradient(class_channel, last_conv_layer_output)
 
-        return [selected_action, net_out[2], neglog]
+        # This is a vector where each entry is the mean intensity of the gradient
+        # over a specific feature map channel
+        pooled_grads = tf.reduce_mean(grads, axis=(0, 1))
+        # pooled_grads = mean(grads, axis=(0, 1))
+
+
+        for i in range(16):
+            last_conv_layer_output[:, i] *= pooled_grads[i]
+
+        # The channel-wise mean of the resulting feature map
+        # is our heatmap of class activation
+        # print("Conv Value 2: ", conv_layer_output_value)
+        heatmap = np.mean(last_conv_layer_output, axis=-1)
+
+        # net_out = self._model([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity]) #TODO observation vernuenftig an model übergeben
+
+        # selected_action, neglog = self._postprocess_predictions_certain(*net_out)
+
+        return [preds, heatmap]
 
     def _postprocess_predictions_certain(self, mu, var, val, convOut):
         """
@@ -490,33 +516,14 @@ class PPO_Network:
         #     [np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])])
         actionCertainFunc = tf.function(self.predict_certain)
 
-        action = actionCertainFunc(tf.convert_to_tensor(np.expand_dims(laser, axis=0), dtype='float64'), tf.convert_to_tensor(np.expand_dims(orientation, axis=0), dtype='float64'),
+        action, heatmap = actionCertainFunc(tf.convert_to_tensor(np.expand_dims(laser, axis=0), dtype='float64'), tf.convert_to_tensor(np.expand_dims(orientation, axis=0), dtype='float64'),
                                    tf.convert_to_tensor(np.expand_dims(distance, axis=0), dtype='float64'),tf.convert_to_tensor(np.expand_dims(velocity, axis=0), dtype='float64'))
-        #
-        # These are the values of these two quantities, as Numpy arrays,
-        # given our sample image of two elephants
-        pooled_grads_value, conv_layer_output_value, output = self.iterate([np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity])])
 
-        # print("output: ", output)
-        # print("Pooled grads value: ", pooled_grads_value)
-        # print("Conv_Layer_output_value: ", conv_layer_output_value)
-        # print("Output: ", output)
-        # We multiply each channel in the feature map array
-        # by "how important this channel is" with regard to the elephant class
-        for i in range(16):
-            conv_layer_output_value[:, i] *= pooled_grads_value[i]
-
-        # The channel-wise mean of the resulting feature map
-        # is our heatmap of class activation
-        # print("Conv Value 2: ", conv_layer_output_value)
-        heatmap = np.mean(conv_layer_output_value, axis=-1)
-        # print(heatmap.shape)
-        # print("Heatmap: ", heatmap)
-
-        #heatmap = None
 
 
         return (action, heatmap)
+
+
 
 def watch_layer (layer, tape):
     print("watch layer")
