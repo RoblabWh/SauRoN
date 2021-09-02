@@ -37,14 +37,14 @@ def initStations(stations, scaleFactor):
 
 class SimulationWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, application, robots, stations, args, walls, circleWalls):
+    def __init__(self, application, robots, stations, args, walls, circleWalls, arenaSize):
         super(SimulationWindow, self).__init__()
 
         self.args = args
         self.app = application
         self.setWindowTitle("Simulation")
-        self.arenaWidth = args.arena_width
-        self.arenaHeight = args.arena_length
+        self.arenaWidth = arenaSize[0] #args.arena_width
+        self.arenaHeight = arenaSize[1] #args.arena_length
         self.width = int(args.arena_width*args.scale_factor)
         self.height = int(args.arena_length*args.scale_factor)
         self.setGeometry(200, 100, self.width, self.height)

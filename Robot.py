@@ -392,7 +392,7 @@ class Robot:
 
         #TODO Collisions von CircleWall berechnen
         colliderLines = self.walls + self.collidorStationsWalls + self.robotsPieSliceWalls
-        collidorCirclePosWithoutRobots = []
+        collidorCirclePosWithoutRobots = [(wall.getPosX(), wall.getPosY(), wall.getRadius()) for wall in self.circleWalls]
         collidorCirclePosOnlyRobots = []
         collidorCircleAllForTerminations = []
 
@@ -401,7 +401,7 @@ class Robot:
                 collidorCirclePosOnlyRobots.append((robotA.getPosX(), robotA.getPosY(), robotA.getRadius()))
 
         if self.args.collide_other_targets:
-            collidorCirclePosWithoutRobots = self.collidorStationsCircles
+            collidorCirclePosWithoutRobots += self.collidorStationsCircles
 
 
 

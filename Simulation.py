@@ -12,7 +12,7 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    levelFiles = ['svg0.svg','Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']
+    levelFiles = ['svg0.svg', 'Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']
 
 
     def __init__(self, app, args, timeframes, level):
@@ -48,7 +48,7 @@ class Simulation:
         self.reset(level)
 
         if self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls, self.circleWalls)
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls, self.circleWalls, self.arenaSize)
             self.simulationWindow.show()
 
 
@@ -184,7 +184,7 @@ class Simulation:
 
     def showWindow(self, app):
         if not self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args, self.walls, self.circleWalls)
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args, self.walls, self.circleWalls, self.arenaSize)
             self.simulationWindow.show()
             self.hasUI = True
 
@@ -209,6 +209,7 @@ class Simulation:
         self.circleWalls = selectedLevel.getCircleWalls()
         self.level = (selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls, self.circleWalls)
         self.levelID = levelID
+        self.arenaSize = selectedLevel.getArenaSize()
 
 
 

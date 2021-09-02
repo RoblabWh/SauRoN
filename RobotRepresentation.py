@@ -59,13 +59,13 @@ class RobotRepresentation:
                     posX = self.posX
                     posY = self.posY
 
-                beta = 0.1 # determines which percentage of high and low activations are shown
+                beta = 0.2 # determines which percentage of high and low activations are shown
                 for i in range(0, len(self.radarHits)):
                     self.lineColor.setAlphaF(1)
                     color = self.lineColor
                     if self.activations != None:
                         alphaPos =False if self.activations[i] < 1-beta else True
-                        alphaNeg =False if self.activations[i] > beta else True
+                        alphaNeg =False # if self.activations[i] > beta else True
 
                         if alphaNeg:
                             color = self.lineColorNegAct

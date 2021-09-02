@@ -38,9 +38,9 @@ class ColliderLine:
         painter.setPen(QPen(Qt.black, 3))
         painter.drawLine(self.a[0] * scaleFactor, self.a[1] * scaleFactor, self.b[0] * scaleFactor, self.b[1] * scaleFactor)
         #Flächen-Normalen der Wände
-        painter.setPen(QPen(Qt.magenta))
-        painter.drawLine(self.normalOrigin[0]*scaleFactor, self.normalOrigin[1]*scaleFactor,
-                         (self.normalOrigin[0]+ (self.n[0]*0.2)) *scaleFactor, (self.normalOrigin[1]+ (self.n[1]*0.2))*scaleFactor)
+        # painter.setPen(QPen(Qt.magenta))
+        # painter.drawLine(self.normalOrigin[0]*scaleFactor, self.normalOrigin[1]*scaleFactor,
+        #                  (self.normalOrigin[0]+ (self.n[0]*0.2)) *scaleFactor, (self.normalOrigin[1]+ (self.n[1]*0.2))*scaleFactor)
 
 import math
 
@@ -134,3 +134,12 @@ class CircleWall:
         self.scaleFactor = scaleFactor
         painter.setPen(QPen(Qt.black, 3))
         painter.drawEllipse((self.posX-self.radius) * self.scaleFactor, (self.posY-self.radius) * self.scaleFactor, self.radius*2 * self.scaleFactor, self.radius*2 * self.scaleFactor)
+
+    def getPosX(self):
+        return self.posX
+
+    def getPosY(self):
+        return self.posY
+
+    def getRadius(self):
+        return self.radius

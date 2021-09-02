@@ -457,8 +457,7 @@ class PPO_Multi:
                         a = np.ndarray.tolist(aTmp[0].numpy())
 
                         if i == liveHistogramRobot:
-                            if heatmap != None:
-                                distGraph.plot([i for i in range(heatmap.shape[0])], heatmap)
+                            distGraph.plot([i for i in range(heatmap.shape[0])], heatmap)
                             # heatmap = np.maximum(heatmap, 0)
                             # heatmap /= np.max(heatmap)
                             # print(heatmap)
@@ -474,7 +473,7 @@ class PPO_Multi:
                     else:
                         a = [None, None]
                         heatmap = None
-                    robotsActions.append(a[0])
+                    robotsActions.append(a)
                     robotsHeatmaps.append(heatmap)
                 if args.lidar_activation:
                     robotsStates = env.step(robotsActions, robotsHeatmaps)

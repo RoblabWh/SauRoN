@@ -39,6 +39,10 @@ class SVGLevelParser:
 
         tareq = True
 
+        self.arenaSize = svg.attrib['viewBox'].split(' ')[2:]
+        self.arenaSize = [float(self.arenaSize[0])*dpiFactor, float(self.arenaSize[1])*dpiFactor]
+
+
         for rect in rects:
             attributes = rect.attrib
             show = True
@@ -182,6 +186,9 @@ class SVGLevelParser:
 
     def getStatsPos(self):
         return self.stationsData
+
+    def getArenaSize(self):
+        return self.arenaSize
 
 
 def getBorders(self):
