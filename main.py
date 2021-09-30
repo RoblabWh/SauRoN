@@ -110,6 +110,7 @@ if __name__ == '__main__':
     parser.add_argument('--sim_time_step', type=float, default=simTimeStep, help='Time between steps')
 
     parser.add_argument('--training', type=bool, default=False, help='Training or Loading trained weights')
+    parser.add_argument('--train_perception_only', type=bool, default=True, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
     parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
     parser.add_argument('--lidar_activation', type=bool, default=True, help='Show Lidar activation')
@@ -215,12 +216,13 @@ if __name__ == '__main__':
         elif args.alg == 'ppo':
             model = PPO_Multi.remote(act_dim, env_dim, args)
 
-        if args.training:
-            if args.load_old:
-                model.train(args.path+filename+'.h5')
-            model.train.remote()
-            # model.trainA3C()
-        elif not args.training:
+
+        if args.train_perception_only:
+            print('been here')
+            ray.get(model.load_net.remote(args.path + filename + '.h5'))
+            print("done that")
+            ray.get(model.trainPerception.remote(args, env_dim[0]))
+        else:
             print('been here')
             ray.get(model.load_net.remote(args.path+filename+'.h5'))
             print("done that")

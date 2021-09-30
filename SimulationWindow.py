@@ -1,6 +1,6 @@
 import time
 
-from PyQt5.QtGui import QPainter, QFont
+from PyQt5.QtGui import QPainter, QFont, QPen, QColor
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel, QSlider, QHBoxLayout
 from PyQt5 import QtWidgets
@@ -8,10 +8,10 @@ import RobotRepresentation
 from Station import Station
 from Borders import ColliderLine
 import DistanceGraph
+import numpy as np
 
 
 def initRobots(robots, scaleFactor, mode):
-
     robotRepresentations = []
     for i, robot in enumerate(robots):
         robot_draw = RobotRepresentation.RobotRepresentation(robot.getPosX(),
@@ -43,14 +43,14 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.args = args
         self.app = application
         self.setWindowTitle("Simulation")
-        self.arenaWidth = arenaSize[0] #args.arena_width
-        self.arenaHeight = arenaSize[1] #args.arena_length
-        self.width = int(self.arenaWidth*args.scale_factor)
-        self.height = int(self.arenaHeight*args.scale_factor)
+        self.arenaWidth = arenaSize[0]  # args.arena_width
+        self.arenaHeight = arenaSize[1]  # args.arena_length
+        self.width = int(self.arenaWidth * args.scale_factor)
+        self.height = int(self.arenaHeight * args.scale_factor)
         self.setGeometry(200, 100, self.width, self.height)
         # self.setFixedWidth(self.width)
         # self.setFixedHeight(self.height)
-        #TODO scalefactor an fenstergröße binden
+        # TODO scalefactor an fenstergröße binden
         self.sonarShowing = True
         self.simShowing = True
         self.SaveNetClicked = False
@@ -58,10 +58,10 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.scaleFactor = args.scale_factor
         self.newScaleFactorWidth = self.geometry().width() / self.arenaWidth
         self.delay = 0
-
+        self.selectedCategory = 0
 
         self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode)
-        self.stations = stations#initStations(stations, args.scale_factor)
+        self.stations = stations  # initStations(stations, args.scale_factor)
         self.walls = walls
         self.circleWalls = circleWalls
 
@@ -71,13 +71,10 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.saveButtonListenrs = []
         self.monitorGraph = None
 
-
-
         if (False):
             self.monitorGraph = DistanceGraph.DistanceGraph(application)
 
-
-    def resizeEvent (self, event):
+    def resizeEvent(self, event):
         windowHeight = self.geometry().height()
         windowWidth = self.geometry().width()
 
@@ -93,9 +90,8 @@ class SimulationWindow(QtWidgets.QMainWindow):
             RobotRepresentation.RobotRepresentation.updateScale(robot, self.newScaleFactorWidth)
 
         for station in self.stations:
-            Station.updateScale(station, self.newScaleFactorWidth)   # doof das wir alles anders importieren z.B. Station und RobotRepresentation -> TODO: alles einheitlich importieren
-
-
+            Station.updateScale(station,
+                                self.newScaleFactorWidth)  # doof das wir alles anders importieren z.B. Station und RobotRepresentation -> TODO: alles einheitlich importieren
 
     def initUI(self):
         self.btSimulation = QPushButton(self)
@@ -123,7 +119,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
         spacingWidget = QWidget(self)
         spacingWidget.setLayout(QHBoxLayout())
 
-
         if self.mode == 'sonar':
             self.btSonar = QPushButton(self)
             self.btSonar.clicked.connect(self.clickedSonar)
@@ -132,7 +127,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         if self.args.training == False:
             self.slDelay = QSlider(Qt.Horizontal)
-            self.slDelay.setRange(0,100)
+            self.slDelay.setRange(0, 100)
             self.slDelay.setValue(0)
             self.slDelay.setSingleStep(1)
             self.slDelay.setEnabled(True)
@@ -181,8 +176,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         self.setMenuWidget(self.optionsWidget)
 
-
-
         self.updateButtons()
 
     def clickedSonar(self):
@@ -203,7 +196,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
         for observer in self.saveButtonListenrs:
             observer.saveCurrentWeights()
 
-
     def updateButtons(self):
 
         if self.simShowing:
@@ -211,19 +203,18 @@ class SimulationWindow(QtWidgets.QMainWindow):
         elif not self.simShowing:
             self.btSimulation.setText("Visualisierung fortsetzen")
 
-        #self.btSimulation.adjustSize()
+        # self.btSimulation.adjustSize()
 
         if self.mode == 'sonar':
             if self.sonarShowing:
                 self.btSonar.setText("Sonar ausblenden")
             elif not self.sonarShowing:
                 self.btSonar.setText("Sonar einblenden")
-            #self.btSonar.adjustSize()
+            # self.btSonar.adjustSize()
 
     def paintEvent(self, event):
 
         self.painter.begin(self)
-
 
         for station in self.stations:
             station.paint(self.painter)
@@ -231,7 +222,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
             sonarShowing = self.sonarShowing
             if self.args.training == False:
                 if i != self.getActivationRobotIndex():
-                    sonarShowing= False
+                    sonarShowing = False
             robot.paint(self.painter, sonarShowing)
         for wall in self.walls:
             wall.paint(self.painter, self.scaleFactor)
@@ -239,14 +230,46 @@ class SimulationWindow(QtWidgets.QMainWindow):
         for circleWall in self.circleWalls:
             circleWall.paint(self.painter, self.scaleFactor)
 
+        rep = self.robotRepresentations[0]
+        pos = (rep.posX, rep.posY)
+        self.painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
+        if self.selectedCategory == 1:
+            color = QColor.fromHsv(55, 255 ,255)
+            color.setAlphaF(0.5)
+            self.painter.setBrush(color)
+            self.painter.drawEllipse(pos[0] - self.scaleFactor * 3, pos[1] - self.scaleFactor * 3, 6 * self.scaleFactor,
+                                     6 * self.scaleFactor);
+            color.setAlphaF(0.0)
+            self.painter.setBrush(color)
+            self.painter.drawEllipse(pos[0] - self.scaleFactor * 1, pos[1] - self.scaleFactor * 1, 2 * self.scaleFactor,
+                                     2 * self.scaleFactor)
+        elif self.selectedCategory == 2:
+            color = QColor.fromHsv(0, 255, 255)
+            color.setAlphaF(0.5)
+            self.painter.setBrush(color)
+            self.painter.drawEllipse(pos[0] - self.scaleFactor * 1, pos[1] - self.scaleFactor * 1, 2 * self.scaleFactor,
+                                     2 * self.scaleFactor)
+            color.setAlphaF(0.0)
+            self.painter.setBrush(color)
+            self.painter.drawEllipse(pos[0] - self.scaleFactor * 3, pos[1] - self.scaleFactor * 3, 6 * self.scaleFactor,
+                                     6 * self.scaleFactor)
+        else:
+            color = QColor.fromHsv(0, 255,255)
+            color.setAlphaF(0.0)
+            self.painter.setBrush(color)
+            self.painter.drawEllipse(pos[0] - self.scaleFactor * 1, pos[1] - self.scaleFactor * 1, 2 * self.scaleFactor,
+                                     2 * self.scaleFactor)
+            self.painter.drawEllipse(pos[0] - self.scaleFactor * 3, pos[1] - self.scaleFactor * 3, 6 * self.scaleFactor,
+                                     6 * self.scaleFactor)
 
         self.painter.end()
 
     def updateRobot(self, robot, num, stepsLeft, activations):
         if self.delay > 0: time.sleep(self.delay)
 
-
-        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.lidarHits, self.simShowing, robot.isActive(), robot.debugAngle, activations, robot.getPieSliceWalls(), robot.posSensor)
+        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.lidarHits,
+                                              self.simShowing, robot.isActive(), robot.debugAngle, activations,
+                                              robot.getPieSliceWalls(), robot.posSensor)
         if self.simShowing:
             observatedRobot = 0
             if self.monitorGraph != None and num == observatedRobot:
@@ -256,8 +279,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
             self.repaint()
             self.lbSteps.setText(str(stepsLeft))
         self.app.processEvents()
-
-
 
     def setWalls(self, walls):
         self.walls = walls
@@ -273,7 +294,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
         for robot in self.robotRepresentations:
             RobotRepresentation.RobotRepresentation.updateScale(robot, self.newScaleFactorWidth)
 
-
     def setStations(self, stations):
         self.stations = stations
         for station in self.stations:
@@ -283,7 +303,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         return 0
 
     def valueChangesSlider(self):
-        self.delay = self.slDelay.value()/500
+        self.delay = self.slDelay.value() / 500
 
     def setSize(self, arenaSize):
         self.arenaWidth = arenaSize[0]  # args.arena_width
@@ -293,3 +313,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.newScaleFactorWidth = self.geometry().width() / self.arenaWidth
         self.setFixedHeight(self.arenaHeight * self.newScaleFactorWidth)
 
+    def updateTrafficLights(self, proximity):
+
+        self.selectedCategory = np.argmax(proximity)
+        # print(selectedCategory, proximity[selectedCategory])

@@ -12,7 +12,7 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    levelFiles = ['FuzzyManyRulesMirror2.svg', 'FuzzyManyRules.svg']#'Simple.svg', 'Zipper.svg', 'Funnel.svg']#['svg0_tareq.svg', 'svg4_tareq.svg', 'svg1_tareq.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']# 'Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']#
+    levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg'] #FuzzyManyRulesMirror2.svg', 'FuzzyManyRules.svg']#'Simple.svg', 'Zipper.svg', 'Funnel.svg']#['svg0_tareq.svg', 'svg4_tareq.svg', 'svg1_tareq.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']# 'Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']#
 
 
     def __init__(self, app, args, timeframes, level):
@@ -125,7 +125,7 @@ class Simulation:
         return goalLength
 
 
-    def update(self, robotsTarVels, stepsLeft, activations):
+    def update(self, robotsTarVels, stepsLeft, activations, proximity):
         """
         updates the robots and checks the exit conditions of the current epoch
         :param robotsTarVels: List of tuples of target linear and angular velocity for each robot
@@ -180,6 +180,7 @@ class Simulation:
                 for i, robot in enumerate(self.robots):
                     activationsR = activations[i] if activations is not None else None
                     self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft, activationsR)
+                self.simulationWindow.updateTrafficLights(proximity)
 
         return robotsTerminations
 

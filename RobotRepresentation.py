@@ -144,3 +144,4 @@ class RobotRepresentation:
         self.scale = scaleFactor
         self.radius = self.radiusUnscaled * self.scale
 
+

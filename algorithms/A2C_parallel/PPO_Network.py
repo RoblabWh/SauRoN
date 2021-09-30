@@ -256,7 +256,7 @@ class PPO_Network:
                                    'advantage': tf.TensorSpec((None), dtype='float64')}])
     def train_function(self, observation, action):
         with tf.GradientTape() as tape:
-            net_out = self._model(observation.values())  #TODO observation vernuenftig an model übergeben, ändern
+            net_out = self._model(observation.values())
             loss = self.calculate_loss(observation, action, net_out)
 
         gradients = tape.gradient(loss, self._model.trainable_variables)
@@ -330,14 +330,27 @@ class PPO_Network:
 
         return [preds, heatmap.numpy()]
 
+
+
+    @tf.function(input_signature=[tf.TensorSpec((None, 1081, 4), dtype='float64'),
+                                  tf.TensorSpec((None, 2, 4), dtype='float64'),
+                                  tf.TensorSpec((None, 1, 4), dtype='float64'),
+                                  tf.TensorSpec((None, 2, 4), dtype='float64')])
+    def predict_proximity(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
+        '''
+        observation: python dict with the keys:
+        'laser_0', 'orientation_to_goal', 'distance_to_goal', 'velocity'.
+        shape of each key: (num_agents, size_of_the_obs, stack_size).
+        For the lidar with stack_size 4 and 2 agents: (2, 1081, 4)
+        '''
+        preds = self._perception_model([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity])
+        return preds
+
     def entropy_continuous(self, var):
         return reduce_sum(var + 0.5 * np.log(2.0 * np.pi * np.e), axis=-1)
 
     def printSummary(self):
         self._model.summary()
-
-    def load(self, path):
-        self._model.load_weights(path)
 
     def saveWeights(self, path):
         self._model.save_weights(path + '.h5')
@@ -350,6 +363,66 @@ class PPO_Network:
 
     def load_weights(self, path):
         self._model.load_weights(path)
+
+
+    def create_perception_model(self):
+        layer_name = 'policy_dense_laser'  # TODO schauen ob es wirklich shared ist
+        proximity_predictions = Dense(3, activation='softmax')(self._model.get_layer(layer_name).output)
+        self._perception_model = Model(
+            inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
+            outputs=proximity_predictions)
+        self._perception_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
+        print(self._perception_model.summary())
+
+    def make_proximity_prediction(self, s):
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 1)
+        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0, 1)
+        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0, 1)
+        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0, 1)
+
+        proximityFunc = tf.function(self.predict_proximity)
+
+        proximity_categories = proximityFunc(tf.convert_to_tensor(np.expand_dims(laser, axis=0), dtype='float64'),
+                                            tf.convert_to_tensor(np.expand_dims(orientation, axis=0), dtype='float64'),
+                                            tf.convert_to_tensor(np.expand_dims(distance, axis=0), dtype='float64'),
+                                            tf.convert_to_tensor(np.expand_dims(velocity, axis=0), dtype='float64'))
+        return proximity_categories
+
+    def train_perception(self, states, proximity_categories):
+        inputsL = np.array([])
+        inputsO = np.array([])
+        inputsD = np.array([])
+        inputsV = np.array([])
+        inputs = np.array([])
+        for i, s in enumerate(states):
+            laser = np.array([np.array(s[i][0]).astype('float32') for i in range(0, len(s))]).swapaxes(0, 1)
+            orientation = np.array([np.array(s[i][1]).astype('float32') for i in range(0, len(s))]).swapaxes(0, 1)
+            distance = np.array([np.array(s[i][2]).astype('float32') for i in range(0, len(s))]).swapaxes(0, 1)
+            velocity = np.array([np.array(s[i][3]).astype('float32') for i in range(0, len(s))]).swapaxes(0, 1)
+
+            if i == 0:
+                inputsL = np.array([laser])
+                inputsO = np.array([orientation])
+                inputsD = np.array([distance])
+                inputsV = np.array([velocity])
+            else:
+                #inputs = np.append(inputs, np.array([laser, orientation, distance, velocity]))
+                inputsL = np.append(inputsL,np.expand_dims(laser, axis=0), axis=0)
+                inputsO = np.append(inputsO, np.expand_dims(orientation, axis=0), axis=0)
+                inputsD = np.append(inputsD, np.expand_dims(distance, axis=0), axis=0)
+                inputsV = np.append(inputsV, np.expand_dims(velocity, axis=0), axis=0)
+        proximity_categories = np.asarray(proximity_categories)#.astype('float64')
+        print(inputsL.shape, inputsO.shape, inputsD.shape, inputsV.shape, proximity_categories.shape)
+        print(proximity_categories)
+
+        # tensorL = tf.convert_to_tensor(inputsL, dtype=tf.float32)
+        # tensorO = tf.convert_to_tensor(inputsO, dtype=tf.float32)
+        # tensorD = tf.convert_to_tensor(inputsD, dtype=tf.float32)
+        # tensorV = tf.convert_to_tensor(inputsV, dtype=tf.float32)
+
+
+
+        self._perception_model.fit([inputsL, inputsO, inputsD, inputsV], proximity_categories)
 
 
     def policy_action_certain(self, s):

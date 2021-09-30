@@ -45,6 +45,17 @@ class Environment:
         elif self.args.mode == 'sonar':
             return np.asarray(self.simulation.robots[i].stateLidar)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
 
+
+    def getRobotsProximityCategory(self, i):
+        distances = self.simulation.robots[i].collisionDistances
+        if len(distances) > 0:
+            min = np.min(distances)
+            if min > 3: return 0 #[1,0,0]
+            elif min > 1: return 1 #[0,1,0]
+            else: return 2 #[0,0,1]
+        return 0
+
+
     @staticmethod
     def get_actions():
         """
@@ -113,7 +124,7 @@ class Environment:
                 break
         return self.steps_left <= 0 or robotsDone
 
-    def step(self, actions, activations = None):
+    def step(self, actions, activations = None, proximity = None):
         """
         Executes a step in the environment and updates the simulation
 
@@ -131,7 +142,7 @@ class Environment:
         #     tarLinVel, tarAngVel = action #self.get_velocity(action)
         #     robotsTarVels.append((tarLinVel, tarAngVel))
 
-        robotsTermination = self.simulation.update(actions, self.steps_left, activations)
+        robotsTermination = self.simulation.update(actions, self.steps_left, activations, proximity)
         robotsDataCurrentFrame = []
         for i, termination in enumerate(robotsTermination):
             if termination != (None, None, None):

@@ -427,3 +427,58 @@ class PPO_Multi:
                     robotsOldState[i] = new_state
                     if not robotsDone[i]:
                         robotsDone[i] = done
+
+
+    def trainPerception(self, args, env_dim):
+        """
+        :param env: EnvironmentWithUI.Environment
+        :param args: args defined in main
+        """
+        app = QApplication(sys.argv)
+        env = EnvironmentWithUI.Environment(app, args, env_dim, 0)
+        env.simulation.showWindow(app)
+        self.network.create_perception_model()
+
+        inspectedRobot = 0
+
+        traingDataStates = []
+        traingDataProximityCategories = []
+
+        for e in range(10):
+            env.reset(e % len(env.simulation.levelFiles))
+            robotsCount = env.simulation.getCurrentNumberOfRobots()
+            robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
+            robotsDone = [False for i in range(0, robotsCount)]
+
+            while not env.is_done():
+                robotsActions = []
+                # Actor picks an action (following the policy)
+                proximityCategory = 0
+                for i in range(0, robotsCount):
+                    if not robotsDone[i]:
+                        aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0]) #i for selected robot, 0 beause the state is encapsulated once too much
+                        a = np.ndarray.tolist(aTmp[0].numpy())
+                        traingDataProximityCategories += [env.getRobotsProximityCategory(i)]
+                        traingDataStates += [robotsOldState[i][0]]
+                        if i == inspectedRobot:
+                            proximityCategory = self.network.make_proximity_prediction(robotsOldState[i][0])[0].numpy()
+                    else:
+                        a = [None, None]
+                    robotsActions.append(a)
+
+
+
+                robotsStates = env.step(robotsActions, activations = None, proximity = proximityCategory)
+
+                rewards = ''
+                for i, stateData in enumerate(robotsStates):
+                    new_state = stateData[0]
+                    rewards += (str(i) + ': ' + str(stateData[1]) + '   ')
+                    done = stateData[2]
+                    robotsOldState[i] = new_state
+                    if not robotsDone[i]:
+                        robotsDone[i] = done
+
+            self.network.train_perception(traingDataStates, traingDataProximityCategories)
+            traingDataStates = []
+            traingDataProximityCategories = []
