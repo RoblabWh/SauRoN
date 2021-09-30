@@ -20,24 +20,12 @@ class ControlWindow(QtWidgets.QMainWindow):
         self.loadWeightsPath = loadWeightsPath
 
         self.setWindowTitle("Control Panel")
-        # self.setFixedSize(350, 700)
-
 
         self.model = PPO_Multi.remote(act_dim, env_dim, args)
         self.currentEpisode = 0
         self.progressbarWidget = Progressbar(self.currentEpisode, self.args)
         self.tableWidget = Table(nbOfEnvs)
 
-
-        #self.progressbarWidget.setGeometry()
-
-        # self.statusLabel = QLabel(self)
-        # self.statusLabel.setGeometry(0, 0, 550, 50)
-        # self.statusLabel.setWordWrap(True)
-        # self.statusLabel.move(0, 0)
-
-        # self.statusLabel.setFont(QFont("Helvetica", 15, QFont.Black))
-        # self.statusLabel.setText("Status Bar")  # TODO Get Data for status bar
 
         self.successLabel = QLabel(self)
         self.successLabel.setFont(QFont("Helvetica", 12, QFont.Black))

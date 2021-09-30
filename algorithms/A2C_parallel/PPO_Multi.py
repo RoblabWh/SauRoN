@@ -17,6 +17,13 @@ import tensorflow
 import matplotlib.pyplot as plt
 
 
+import sys
+# insert at 1, 0 is the script path (or '' in REPL)
+sys.path.insert(1, '/')
+# sys.path.insert(1, 'C:/Users/Jenny/Downloads/aia-trt-inference-master/aia-trt-inference-master/fuzzy_controller')
+from displayWidget import DisplayWidget
+
+
 
 @ray.remote
 class PPO_Multi:
@@ -47,90 +54,6 @@ class PPO_Multi:
         # self.controlWindow = ControlWindow(args.parallel_envs, self.app)#, act_dim, env_dim, args)  # , model)
         # self.controlWindow.showandPause()
 
-    def train(self, loadWeightsPath = ""):
-        """ Main PPO Training Algorithm
-        :param loadWeightsPath: The path to the .h5 file containing the pretrained weights.
-         Only required if a pretrained net is used.
-        """
-        loadedWeights = None
-        if loadWeightsPath != "":
-            self.load_net(loadWeightsPath)
-            loadedWeights = self.network.getWeights()
-            #keras.backend.clear_session() # TODO Prüfen ob notwendig, da backend evtl. bald nicht mehr geht
-            tensorflow.keras.backend.clear_session()
-
-        #Create parallel workers with own environment
-        envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
-        #envLevel = [0 for _ in range(self.numbOfParallelEnvs)]
-        #ray.init()
-        multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
-        startweights = multiActors[0].getWeights.remote()
-        multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
-        for i, actor in enumerate(multiActors):
-            actor.setLevel.remote(envLevel[i])
-
-        self.multiActors = multiActors
-
-
-        # Main Loop
-        tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
-
-        for e in tqdm_e:
-            self.currentEpisode = e
-
-            #Start of episode for the parallel PPO actors with their own environment
-            #Hier wird die gesamte Episode durchlaufen und dann erst trainiert
-
-
-            #Training bereits alle n=75 steps mit den zu dem Zeitounkt gesammelten Daten (nur für noch aktive Environments)
-            activeActors = multiActors
-            while len(activeActors) > 0:
-                futures = [actor.trainSteps.remote(self.args.train_interval) for actor in activeActors]
-                allTrainingResults = ray.get(futures)
-                trainedWeights = self.train_modelsFaster(allTrainingResults, multiActors[0])
-                for actor in multiActors[1:len(multiActors)]:
-                    actor.setWeights.remote(trainedWeights)
-
-                activeActors = []
-                for actor in multiActors:
-                    if ray.get(actor.isActive.remote()):
-                        activeActors.append(actor)
-                print('b4 getting data')
-                levelVisibilty = [True, False]#TODO CHANGE ray.get(self.controlWindow.getLevelVisibilities.remote())
-                for i, show in enumerate(levelVisibilty):
-                    if show and ray.get(multiActors[i].isNotShowing.remote()):
-                        self.showEnvWindow(i)
-
-
-
-            zeit, cumul_reward, done = 0, 0, False
-
-            if (e+1) % self.args.save_intervall == 0:
-                print('Saving')
-                self.save_weights(multiActors[0], self.args.path)
-
-            allReachedTargetList = []
-            for actor in multiActors:
-                tmpTargetList = ray.get(actor.getTargetList.remote())
-                allReachedTargetList += tmpTargetList
-
-            targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
-            successrate = allReachedTargetList.count(True) / targetDivider
-
-
-            # Calculate and display score
-            for actor in multiActors:
-                (cumRewardActor, steps) = ray.get(actor.resetActor.remote())
-                self.av_meter.update(cumRewardActor, steps)
-                cumul_reward += cumRewardActor
-            cumul_reward = cumul_reward / self.args.parallel_envs
-
-            tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(successrate))
-            tqdm_e.refresh()
-
-        self.save_weights(multiActors[0], self.args.path)
-        for actor in multiActors:
-            actor.killActor.remote()
 
     def prepareTraining(self, loadWeightsPath = ""):
         self.currentEpisode = 0
@@ -145,7 +68,7 @@ class PPO_Multi:
         #Create parallel workers with own environment
         # envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
         # envLevel = [(i+3)%4 for i in range(self.numbOfParallelEnvs)]
-        envLevel = [int(i/(self.numbOfParallelEnvs/5)) for i in range(self.numbOfParallelEnvs)] # TODO 4 durch anzahl der verfügbaren Level variable ersetzen
+        envLevel = [int(i/(self.numbOfParallelEnvs/6)) for i in range(self.numbOfParallelEnvs)] # TODO 6 durch anzahl der verfügbaren Level variable ersetzen
         #ray.init()
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
@@ -431,7 +354,9 @@ class PPO_Multi:
         env = EnvironmentWithUI.Environment(app, args, env_dim, 0)
         env.simulation.showWindow(app)
 
-
+        #auskommentieren wenn fuzzy nicht genutzt wird
+        displayWidget = DisplayWidget(9)#9)
+        displayWidget.show()
 
         # visualization of chosen actions
         #histogramm = BucketRenderer(20, 0)
@@ -442,7 +367,7 @@ class PPO_Multi:
 
         distGraph = DistanceGraph(app)
         for e in range(18):
-            env.reset(0)#e % len(env.simulation.levelFiles))
+            env.reset(e % len(env.simulation.levelFiles))
             robotsCount = env.simulation.getCurrentNumberOfRobots()
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
             robotsDone = [False for i in range(0, robotsCount)]
@@ -453,7 +378,7 @@ class PPO_Multi:
                 # Actor picks an action (following the policy)
                 for i in range(0, robotsCount):
                     if not robotsDone[i]:
-                        aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0])
+                        aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0]) #i for selected robot, 0 beause the state is encapsulated once too much
                         a = np.ndarray.tolist(aTmp[0].numpy())
 
                         if i == liveHistogramRobot:
@@ -464,6 +389,20 @@ class PPO_Multi:
                             # plt.plot(heatmap)
                             # # matshow(heatmap)
                             # plt.show()
+                        robotsFuzzy = displayWidget.getRobots()
+                        if i in robotsFuzzy:# and args.use_fuzzy:
+                            obs = []
+                            for e_len in range(len(robotsOldState[i][0][3]) - 1): #aktuelle Frame des states liegt auf 3 nicht 0
+                                entry = robotsOldState[i][0][3][e_len]
+                                sh = np.asarray(entry)
+                                sh = sh.reshape((1, len(sh), 1))
+                                obs.append(sh)
+                            obs = (obs[0], obs[1], obs[2], obs[3]) #[lidarDistances, orientationToGoal, normaizedDistance, [linVel, angVel]]   without currentTimestep
+                            displayWidget.setRobot(i)
+                            aCur = displayWidget.step(obs, aTmp)
+
+                            if displayWidget.aggregated:
+                                a = aCur[0]
 
                         #visualization of chosen actions
                         #if i == liveHistogramRobot:

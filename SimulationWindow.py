@@ -45,8 +45,8 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.setWindowTitle("Simulation")
         self.arenaWidth = arenaSize[0] #args.arena_width
         self.arenaHeight = arenaSize[1] #args.arena_length
-        self.width = int(args.arena_width*args.scale_factor)
-        self.height = int(args.arena_length*args.scale_factor)
+        self.width = int(self.arenaWidth*args.scale_factor)
+        self.height = int(self.arenaHeight*args.scale_factor)
         self.setGeometry(200, 100, self.width, self.height)
         # self.setFixedWidth(self.width)
         # self.setFixedHeight(self.height)
@@ -246,7 +246,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         if self.delay > 0: time.sleep(self.delay)
 
 
-        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.radarHits, self.simShowing, robot.isActive(), robot.debugAngle, activations, robot.getPieSliceWalls(), robot.posSensor)
+        self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.lidarHits, self.simShowing, robot.isActive(), robot.debugAngle, activations, robot.getPieSliceWalls(), robot.posSensor)
         if self.simShowing:
             observatedRobot = 0
             if self.monitorGraph != None and num == observatedRobot:
@@ -284,4 +284,12 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
     def valueChangesSlider(self):
         self.delay = self.slDelay.value()/500
+
+    def setSize(self, arenaSize):
+        self.arenaWidth = arenaSize[0]  # args.arena_width
+        self.arenaHeight = arenaSize[1]  # args.arena_length
+        self.width = int(self.arenaWidth * self.scaleFactor)
+        self.height = int(self.arenaHeight * self.scaleFactor)
+        self.newScaleFactorWidth = self.geometry().width() / self.arenaWidth
+        self.setFixedHeight(self.arenaHeight * self.newScaleFactorWidth)
 

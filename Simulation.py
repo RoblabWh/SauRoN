@@ -12,7 +12,7 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    levelFiles = ['svg0.svg', 'Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']
+    levelFiles = ['FuzzyManyRulesMirror2.svg', 'FuzzyManyRules.svg']#'Simple.svg', 'Zipper.svg', 'Funnel.svg']#['svg0_tareq.svg', 'svg4_tareq.svg', 'svg1_tareq.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']# 'Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']#
 
 
     def __init__(self, app, args, timeframes, level):
@@ -79,6 +79,7 @@ class Simulation:
             robot.resetLidar(self.robots)
         if self.hasUI and self.simulationWindow != None:
             if levelChanged:
+                self.simulationWindow.setSize(self.arenaSize)
                 self.simulationWindow.setWalls(self.level[3])
                 self.simulationWindow.setRobotRepresentation(self.robots)
                 self.simulationWindow.setStations(self.stations)

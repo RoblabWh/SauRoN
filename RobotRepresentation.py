@@ -64,8 +64,8 @@ class RobotRepresentation:
                     self.lineColor.setAlphaF(1)
                     color = self.lineColor
                     if self.activations != None:
-                        alphaPos =False if self.activations[i] < 1-beta else True
-                        alphaNeg =False # if self.activations[i] > beta else True
+                        alphaPos = False if self.activations[i] < 1-beta else True
+                        alphaNeg = False #if self.activations[i] > beta else True
 
                         if alphaNeg:
                             color = self.lineColorNegAct

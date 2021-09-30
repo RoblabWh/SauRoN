@@ -37,7 +37,7 @@ class SVGLevelParser:
         # print(paths)
         # print(circles)
 
-        tareq = True
+        tareq = 'tareq' in filename
 
         self.arenaSize = svg.attrib['viewBox'].split(' ')[2:]
         self.arenaSize = [float(self.arenaSize[0])*dpiFactor, float(self.arenaSize[1])*dpiFactor]
@@ -132,6 +132,7 @@ class SVGLevelParser:
 
         stationsData = []
         self.robotsData = []
+        startAndGoalCircles = [] # only used if circles are not defined as start and goal by an ID
         for circle in circles:
             attributes = circle.attrib
             show = True
@@ -152,9 +153,25 @@ class SVGLevelParser:
 
                     elif 'goal' in circle.attrib['id']:
                         stationsData += [(cx, cy, r)]
+                elif 'stroke' in attributes:
+                    strokes = circle.attrib['stroke']
+                    if circle.attrib['stroke'] == 'orange':
+                        startAndGoalCircles += [(cx, cy, r)]
+                    else:
+                        self.circles += [Borders.CircleWall(cx, cy, r)]
                 else:
                     self.circles += [Borders.CircleWall(cx, cy, r)]
 
+        #create goals and starts for 4 roboters by randomly sampling a position defined by the level svg file
+        for i in range(4):
+            if len(startAndGoalCircles)>2:
+                startIndex = random.randint(0, len(startAndGoalCircles)-1)
+                startR = startAndGoalCircles.pop(startIndex)
+                self.robotsData += [(startR[0], startR[1])]
+
+                goalIndex = random.randint(0, len(startAndGoalCircles)-1)
+                goal = startAndGoalCircles.pop(goalIndex)
+                stationsData += [goal]
 
 
         for i, data in enumerate(stationsData):

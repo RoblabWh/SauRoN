@@ -106,10 +106,10 @@
 <line x1="184.905" y1 ="-0.0342407" x2="190.67" y2="1.56619" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
 <line x1="190.67" y1 ="1.56619" x2="169.33" y2="78.4338" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
 <line x1="169.33" y1 ="78.4338" x2="163.565" y2="76.8333" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
-<circle id="start_1_1_" cx="360" cy ="20" r="20" fill="none" stroke = "black" stroke-width = "1"/>
-<circle id="start_2_1_" cx="209.048" cy ="186.998" r="13" fill="none" stroke = "black" stroke-width = "1"/>
-<circle id="goal_1_1_" cx="50.6945" cy ="324.557" r="8" fill="none" stroke = "black" stroke-width = "1"/>
-<circle id="goal_2_1_" cx="47.7085" cy ="287.86" r="12" fill="none" stroke = "black" stroke-width = "1"/>
+<circle cx="360" cy ="20" r="20" fill="none" stroke = "black" stroke-width = "1"/>
+<circle cx="209.048" cy ="186.998" r="13" fill="none" stroke = "black" stroke-width = "1"/>
+<circle cx="50.6945" cy ="324.557" r="8" fill="none" stroke = "black" stroke-width = "1"/>
+<circle cx="47.7085" cy ="287.86" r="12" fill="none" stroke = "black" stroke-width = "1"/>
 <circle cx="35" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
 <circle cx="235" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
 <circle cx="325" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>

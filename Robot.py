@@ -45,7 +45,7 @@ class Robot:
         self.stateLidar = []
         self.netOutput = (0,0)
         self.distances = []
-        self.radarHits = []
+        self.lidarHits = []
         self.collisionDistances = []
         self.angularDeviation = 0
 
@@ -71,8 +71,8 @@ class Robot:
             self.maxLinearVelocity = 0.6
             self.maxAngularVelocity = 1.5#1.5#1.5 #* math.pi
             self.minAngularVelocity = -1.5#-1.5#-1.5 #* math.pi
-            self.maxAngularAcceleration = 1.5 #* math.pi  # rad/s^2
-            self.minAngularAcceleration = -1.5 #* math.pi  # rad/s^2
+            # self.maxAngularAcceleration = 1.5 #* math.pi  # rad/s^2
+            # self.minAngularAcceleration = -1.5 #* math.pi  # rad/s^2
             #v = 0.6
 
 
@@ -195,7 +195,7 @@ class Robot:
 
         self.distances = []
         self.collisionDistances = []
-        self.radarHits = []
+        self.lidarHits = []
         self.netOutput = (0, 0)
 
         self.bestDistToGoal = goalDist
@@ -426,7 +426,7 @@ class Robot:
         circlesPositions = np.array([circleX, circleY])
 
         rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.args.field_of_view)
-        distances, radarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
+        distances, lidarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
 
 
         circleX = [r[0] for r in collidorCircleAllForTerminations]
@@ -437,7 +437,7 @@ class Robot:
 
 
 
-        self.radarHits = (radarHits)
+        self.lidarHits = (lidarHits)
         self.distances = (distances)
 
 
@@ -555,6 +555,8 @@ class Robot:
         """
         self.netOutput = (tarAngVel, tarLinVel)
 
+        if(tarLinVel>1 or tarAngVel>1 or tarLinVel<-1 or tarLinVel<-1):
+            print(tarLinVel, tarAngVel)
         tarLinVel = max(-1, min(tarLinVel, 1))
         tarAngVel = max(-1, min(tarAngVel, 1))
 

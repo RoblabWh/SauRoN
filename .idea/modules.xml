@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/AIA.iml" filepath="$PROJECT_DIR$/.idea/AIA.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../aia-trt-inference-master/fuzzy_controller/.idea/fuzzy_controller.iml" filepath="$PROJECT_DIR$/../aia-trt-inference-master/fuzzy_controller/.idea/fuzzy_controller.iml" />
     </modules>
   </component>
 </project>

@@ -47,7 +47,7 @@ timeFrames = 4              # number of past states used as an Input for the neu
 #  wenn die Anzahl der Roboter nicht zum Bild passt und auch bzgl manually, wenn man nur einen Roboter steuern will
 # TODO er scheint auch den numbOfRobotsManual zu nehmen, auch wenn es nicht auf manual ist
 numbOfRobotsManual = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 3     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 18     # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     if args.load_christian:
         args.load_old = True
         filename = filenameChristian
-        args.steps = 600
+        # args.steps = 600
         args.time_frames = 4
         args.time_penalty = False
         args.alg = 'ppo'
