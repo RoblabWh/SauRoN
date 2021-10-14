@@ -458,10 +458,17 @@ class PPO_Multi:
                     if not robotsDone[i]:
                         aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0]) #i for selected robot, 0 beause the state is encapsulated once too much
                         a = np.ndarray.tolist(aTmp[0].numpy())
-                        traingDataProximityCategories += [env.getRobotsProximityCategory(i)]
+                        traingDataProximityCategories += [env.getMinDistOnVirtualRoadway(i)]
+                        # traingDataProximityCategories += [env.getMinDistOnVirtualRoadwayWithScan(i, robotsOldState[i][0][3][0])]
+                        # traingDataProximityCategories += [env.getRobotsProximityCategoryOnlyRobots(i)]
+                        # traingDataProximityCategories += [env.getRobotsProximityCategoryAllObstacles(i)]
                         traingDataStates += [robotsOldState[i][0]]
                         if i == inspectedRobot:
                             proximityCategory = self.network.make_proximity_prediction(robotsOldState[i][0])[0].numpy()
+                            #foo = env.getMinDistOnVirtualRoadway(0)
+                            # foo = env.getMinDistOnVirtualRoadwayWithScan(0, np.asarray(robotsOldState[i][0][3][0])/env.simulation.robots[0].maxDistFact)
+                            # proximityCategory = [0,0,0]
+                            # proximityCategory[foo] = 1
                     else:
                         a = [None, None]
                     robotsActions.append(a)
@@ -478,7 +485,15 @@ class PPO_Multi:
                     robotsOldState[i] = new_state
                     if not robotsDone[i]:
                         robotsDone[i] = done
+            if (e+1)%3 == 0:
+                self.network.train_perception(traingDataStates, traingDataProximityCategories)
+                traingDataStates = []
+                traingDataProximityCategories = []
 
-            self.network.train_perception(traingDataStates, traingDataProximityCategories)
-            traingDataStates = []
-            traingDataProximityCategories = []
+                #Saving enhanced perception model
+                path = self.args.path
+                path += 'PPO_enhanced_perception' + self.args.model_timestamp
+                self.network.saveWeights(path)
+                data = [self.args]
+                with open(path + '.yml', 'w') as outfile:
+                    yaml.dump(data, outfile, default_flow_style=False)

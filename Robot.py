@@ -47,6 +47,7 @@ class Robot:
         self.distances = []
         self.lidarHits = []
         self.collisionDistances = []
+        self.collisionDistancesRobots = []
         self.angularDeviation = 0
 
         # Robot Hardware Params
@@ -195,6 +196,7 @@ class Robot:
 
         self.distances = []
         self.collisionDistances = []
+        self.collisionDistancesRobots = []
         self.lidarHits = []
         self.netOutput = (0, 0)
 
@@ -433,7 +435,7 @@ class Robot:
         circleY = [r[1] for r in collidorCircleAllForTerminations]
         circleR = [r[2] for r in collidorCircleAllForTerminations]
         circlesPositionsAll = np.array([circleX, circleY])
-        self.collisionDistances = rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colliderLines, circlesPositionsAll, circleR)
+        self.collisionDistances, self.collisionDistancesRobots = rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colliderLines, circlesPositionsAll, circleR)
 
 
 
@@ -476,7 +478,7 @@ class Robot:
         self.debugAngle = orientation
 
 
-        distancesNorm = self.distances* self.maxDistFact
+        distancesNorm = distances* self.maxDistFact
         if self.args.load_christian:
             distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)  # FÜR CHRISTIANS SIM
         distancesNorm = distancesNorm.tolist()
@@ -893,5 +895,5 @@ class FastCollisionRay:
             distCircles = np.sqrt((x1-x4)**2 + (y1-y4)**2) - r
             dist = np.concatenate((dist, distCircles))
 
-        return dist
+        return dist, distCircles
 

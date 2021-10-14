@@ -61,7 +61,9 @@ filename = 'PPO_21-05-31--15-43_e644'
 filename = 'PPO_21-06-08--18-09_e1'
 filename = 'PPO_21-06-08--18-18_e167'
 filename = 'PPO_21-06-17--18-19_e9'
+#filename = 'PPO_enhanced_perception_21-10-07--12-56'
 filenameChristian = 'ppo_small_continuous_noshared_2020-10-29_12 46_0000010062'
+#filenameChristian = filename
 # filenameChristian = 'ppo_big_continuous_noshared_2020-01-22_08_47_0002500617_trained_all_world'
 # filenameChristian = 'ppo_big_continuous_noshared_2020-01-19_02_31_0000187103_trained_5_world'
 # filenameChristian = 'PPO_21-06-24--13-04_e11'
@@ -141,6 +143,7 @@ if __name__ == '__main__':
             args.has_pie_slice = loadedArgs.has_pie_slice
             args.net_size = loadedArgs.net_size
             args.shared = loadedArgs.shared
+            args.load_christian = loadedArgs.load_christian
             #args.sim_time_step=loadedArgs.sim_time_step
 
     if args.load_christian:

@@ -422,7 +422,7 @@ class PPO_Network:
 
 
 
-        self._perception_model.fit([inputsL, inputsO, inputsD, inputsV], proximity_categories)
+        self._perception_model.fit([inputsL, inputsO, inputsD, inputsV], proximity_categories, shuffle=True)
 
 
     def policy_action_certain(self, s):

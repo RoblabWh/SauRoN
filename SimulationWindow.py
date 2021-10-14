@@ -230,37 +230,84 @@ class SimulationWindow(QtWidgets.QMainWindow):
         for circleWall in self.circleWalls:
             circleWall.paint(self.painter, self.scaleFactor)
 
-        rep = self.robotRepresentations[0]
-        pos = (rep.posX, rep.posY)
-        self.painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
-        if self.selectedCategory == 1:
-            color = QColor.fromHsv(55, 255 ,255)
-            color.setAlphaF(0.5)
-            self.painter.setBrush(color)
-            self.painter.drawEllipse(pos[0] - self.scaleFactor * 3, pos[1] - self.scaleFactor * 3, 6 * self.scaleFactor,
-                                     6 * self.scaleFactor);
-            color.setAlphaF(0.0)
-            self.painter.setBrush(color)
-            self.painter.drawEllipse(pos[0] - self.scaleFactor * 1, pos[1] - self.scaleFactor * 1, 2 * self.scaleFactor,
-                                     2 * self.scaleFactor)
-        elif self.selectedCategory == 2:
-            color = QColor.fromHsv(0, 255, 255)
-            color.setAlphaF(0.5)
-            self.painter.setBrush(color)
-            self.painter.drawEllipse(pos[0] - self.scaleFactor * 1, pos[1] - self.scaleFactor * 1, 2 * self.scaleFactor,
-                                     2 * self.scaleFactor)
-            color.setAlphaF(0.0)
-            self.painter.setBrush(color)
-            self.painter.drawEllipse(pos[0] - self.scaleFactor * 3, pos[1] - self.scaleFactor * 3, 6 * self.scaleFactor,
-                                     6 * self.scaleFactor)
-        else:
-            color = QColor.fromHsv(0, 255,255)
-            color.setAlphaF(0.0)
-            self.painter.setBrush(color)
-            self.painter.drawEllipse(pos[0] - self.scaleFactor * 1, pos[1] - self.scaleFactor * 1, 2 * self.scaleFactor,
-                                     2 * self.scaleFactor)
-            self.painter.drawEllipse(pos[0] - self.scaleFactor * 3, pos[1] - self.scaleFactor * 3, 6 * self.scaleFactor,
-                                     6 * self.scaleFactor)
+        if self.args.train_perception_only:
+            showProximityCircle = False
+            rep = self.robotRepresentations[0]
+            pos = (rep.posX, rep.posY)
+            self.painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
+            if not showProximityCircle:
+                # color = QColor.fromHsv(55, 255, 255)
+                # color.setAlphaF(0.0)
+                # self.painter.setBrush(color)
+                # self.painter.drawEllipse(pos[0] - self.scaleFactor * 3, pos[1] - self.scaleFactor * 3,
+                #                          6 * self.scaleFactor,
+                #                          6 * self.scaleFactor)
+                dir = rep.direction
+                dirV = [np.cos(dir) * self.scaleFactor, np.sin(dir) * self.scaleFactor]
+                dirVRotOrth = [-dirV[1]* 0.35, dirV[0]* 0.35]
+
+                lineStartTop = [pos[0] + dirVRotOrth[0], pos[1] + dirVRotOrth[1]]
+                lineMiddleTop = [lineStartTop[0] + dirV[0] * 1.25, lineStartTop[1] + dirV[1] * 1.25]
+                lineEndTop = [lineMiddleTop[0] + dirV[0] * 1.75, lineMiddleTop[1] + dirV[1] * 1.75]
+
+                lineStartBottom = [pos[0] - dirVRotOrth[0], pos[1] - dirVRotOrth[1]]
+                lineMiddleBottom = [lineStartBottom[0] + dirV[0] * 1.25, lineStartBottom[1] + dirV[1] * 1.25]
+                lineEndBottom = [lineMiddleBottom[0] + dirV[0] * 1.75, lineMiddleBottom[1] + dirV[1] * 1.75]
+
+
+                if self.selectedCategory == 1:
+                    self.painter.setPen(QPen(Qt.red, 2.5, Qt.SolidLine))
+                else:
+                    self.painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
+
+                self.painter.drawLine(lineMiddleTop[0], lineMiddleTop[1], lineMiddleBottom[0], lineMiddleBottom[1])
+                self.painter.drawLine(lineEndTop[0], lineEndTop[1], lineEndBottom[0], lineEndBottom[1])
+                self.painter.drawLine(lineEndTop[0], lineEndTop[1], lineMiddleTop[0], lineMiddleTop[1])
+                self.painter.drawLine(lineEndBottom[0], lineEndBottom[1], lineMiddleBottom[0], lineMiddleBottom[1])
+
+                if self.selectedCategory == 2:
+                    self.painter.setPen(QPen(Qt.red, 2.5, Qt.SolidLine))
+                    self.painter.drawLine(lineMiddleTop[0], lineMiddleTop[1], lineMiddleBottom[0], lineMiddleBottom[1])
+                else:
+                    self.painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
+
+                self.painter.drawLine(lineStartTop[0], lineStartTop[1], lineMiddleTop[0], lineMiddleTop[1])
+                self.painter.drawLine(lineStartBottom[0], lineStartBottom[1], lineMiddleBottom[0], lineMiddleBottom[1])
+                self.painter.drawLine(pos[0], pos[1], lineStartBottom[0], lineStartBottom[1])
+                self.painter.drawLine(pos[0], pos[1], lineStartTop[0], lineStartTop[1])
+
+
+            else:
+                if self.selectedCategory == 1:
+                    color = QColor.fromHsv(55, 255 ,255)
+                    color.setAlphaF(0.5)
+                    self.painter.setBrush(color)
+                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
+                                             4 * self.scaleFactor)
+                    color.setAlphaF(0.0)
+                    self.painter.setBrush(color)
+                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75, 1.5 * self.scaleFactor,
+                                             1.5 * self.scaleFactor)
+                elif self.selectedCategory == 2:
+                    color = QColor.fromHsv(0, 255, 255)
+                    color.setAlphaF(0.5)
+                    self.painter.setBrush(color)
+                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75,
+                                             1.5 * self.scaleFactor,
+                                             1.5 * self.scaleFactor)
+                    color.setAlphaF(0.0)
+                    self.painter.setBrush(color)
+                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
+                                             4 * self.scaleFactor)
+                else:
+                    color = QColor.fromHsv(0, 255,255)
+                    color.setAlphaF(0.0)
+                    self.painter.setBrush(color)
+                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75,
+                                             1.5 * self.scaleFactor,
+                                             1.5 * self.scaleFactor)
+                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
+                                             4 * self.scaleFactor)
 
         self.painter.end()
 
@@ -276,9 +323,12 @@ class SimulationWindow(QtWidgets.QMainWindow):
                 distancesNormRob0 = robot.stateLidar[len(robot.stateLidar) - 1][0]
                 self.monitorGraph.plot(range(len(distancesNormRob0)), distancesNormRob0)
 
-            self.repaint()
             self.lbSteps.setText(str(stepsLeft))
+
+    def paintUpdates(self):
+        self.repaint()
         self.app.processEvents()
+
 
     def setWalls(self, walls):
         self.walls = walls

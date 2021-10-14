@@ -12,8 +12,8 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg'] #FuzzyManyRulesMirror2.svg', 'FuzzyManyRules.svg']#'Simple.svg', 'Zipper.svg', 'Funnel.svg']#['svg0_tareq.svg', 'svg4_tareq.svg', 'svg1_tareq.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']# 'Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']#
-
+    levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg'] #FuzzyManyRulesMirror2.svg', 'FuzzyManyRules.svg']#'Simple.svg', 'Zipper.svg', 'Funnel.svg']# 'Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']#
+    # levelFiles = ['svg0_tareq.svg', 'svg4_tareq.svg', 'svg1_tareq.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 
     def __init__(self, app, args, timeframes, level):
         """
@@ -181,7 +181,7 @@ class Simulation:
                     activationsR = activations[i] if activations is not None else None
                     self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft, activationsR)
                 self.simulationWindow.updateTrafficLights(proximity)
-
+                self.simulationWindow.paintUpdates()
         return robotsTerminations
 
     def showWindow(self, app):
@@ -212,8 +212,6 @@ class Simulation:
         self.level = (selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls, self.circleWalls)
         self.levelID = levelID
         self.arenaSize = selectedLevel.getArenaSize()
-
-
 
 
     def getLevelName(self):

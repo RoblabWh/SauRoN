@@ -46,14 +46,60 @@ class Environment:
             return np.asarray(self.simulation.robots[i].stateLidar)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
 
 
-    def getRobotsProximityCategory(self, i):
+    def getRobotsProximityCategoryAllObstacles(self, i):
         distances = self.simulation.robots[i].collisionDistances
         if len(distances) > 0:
             min = np.min(distances)
-            if min > 3: return 0 #[1,0,0]
-            elif min > 1: return 1 #[0,1,0]
+            if min > 2: return 0 #[1,0,0]
+            elif min > 0.75: return 1 #[0,1,0]
             else: return 2 #[0,0,1]
         return 0
+
+    def getRobotsProximityCategoryOnlyRobots(self, i):
+        distances = self.simulation.robots[i].collisionDistancesRobots
+        if len(distances) > 0:
+            min = np.min(distances)
+            if min > 3: return 0 #[1,0,0]
+            elif min > 1.25: return 1 #[0,1,0]
+            else: return 2 #[0,0,1]
+        return 0
+
+    def getAngle(self, i, laserRange=-45):
+        angle_min = np.radians(laserRange)
+        angle_increment = np.radians(0.25)
+        return angle_min + (i * angle_increment)
+
+    def pol2cart(self, rho, phi): #forward axis looking up (positive y)
+        x = rho * np.cos(phi)
+        y = rho * np.sin(phi)
+        return [x, y]
+
+
+    def getMinDistOnVirtualRoadway(self, i):
+        scan = self.simulation.robots[i].distances
+        return self.getMinDistOnVirtualRoadwayWithScan(i, scan)
+
+    def getMinDistOnVirtualRoadwayWithScan(self, i, scan):
+        # print("len:",len( scan))
+        # scan = self.simulation.robots[i].distances
+        scanTransformed = []
+        for j, point in enumerate(scan):
+            angle = self.getAngle(j)
+            scanTransformed.append(self.pol2cart(point, angle))
+        scanTransformed = np.asarray(scanTransformed)
+        x = np.logical_and(scanTransformed[:, 0] > -0.35, scanTransformed[:, 0] < 0.35)
+        roadwayIndexSelection = np.argwhere(np.logical_and(x, scanTransformed[:, 1] > 0))
+        # print(np.min(scan[roadwayIndexSelection]))
+        min = np.min(scan[roadwayIndexSelection])
+        if min > 3:
+            if i == 0: print(0, self.steps- self.steps_left, min)
+            return 0 #[1,0,0]
+        elif min > 1.25:
+            if i == 0: print(1, self.steps- self.steps_left, min)
+            return 1 #[0,1,0]
+        else:
+            if i == 0: print(2, self.steps- self.steps_left, min)
+            return 2 #[0,0,1]
 
 
     @staticmethod
