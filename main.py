@@ -51,7 +51,9 @@ numbOfParallelEnvs = 1     # parallel environments are used to create more and d
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
-levelFiles = ['svg2_tareq.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
+#levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg0_tareq.svg']
+levelFiles = ['svg0_tareq.svg','svg1_tareq.svg','svg2_tareq.svg', 'svg3_tareq.svg', 'svg4_tareq.svg', 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'funnle.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
+
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
 
