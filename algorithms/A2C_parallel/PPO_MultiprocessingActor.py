@@ -3,7 +3,8 @@ import numpy as np
 import yaml
 
 from EnvironmentWithUI import Environment
-from algorithms.A2C_parallel.PPO_Network import PPO_Network
+#from algorithms.A2C_parallel.PPO_Network import PPO_Network
+from algorithms.A2C_parallel.PPO_Network_NewContinuousLayer import PPO_Network
 import sys
 from PyQt5.QtWidgets import QApplication
 import os

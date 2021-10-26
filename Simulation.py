@@ -12,7 +12,7 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg'] #FuzzyManyRulesMirror2.svg', 'FuzzyManyRules.svg']#'Simple.svg', 'Zipper.svg', 'Funnel.svg']# 'Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']#
+    #levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg'] #FuzzyManyRulesMirror2.svg', 'FuzzyManyRules.svg']#'Simple.svg', 'Zipper.svg', 'Funnel.svg']# 'Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']#
     # levelFiles = ['svg0_tareq.svg', 'svg4_tareq.svg', 'svg1_tareq.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 
     def __init__(self, app, args, timeframes, level):
@@ -25,6 +25,7 @@ class Simulation:
             the amount of frames saved as a history by the robots to train the neural net
         """
         self.args = args
+        self.levelFiles = args.level_files
         # Skalierungsparameter für Visualisierung
         self.scaleFactor = args.scale_factor
         self.steps = args.steps
@@ -201,6 +202,7 @@ class Simulation:
         return len(self.robots)
 
     def loadLevel(self, levelID):
+        print("LevelID: ", levelID)
         selectedLevel = SVGParser.SVGLevelParser(self.levelFiles[levelID], self.args)
         self.robots = selectedLevel.getRobots()
         if self.args.manually:

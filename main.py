@@ -51,6 +51,8 @@ numbOfParallelEnvs = 18     # parallel environments are used to create more and 
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
+levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg0_tareq.svg', 'svg4_tareq.svg']
+
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
 
 filename = "" # enter the filename from the models folder (without .h5 or .yml)
@@ -63,6 +65,7 @@ filename = 'PPO_21-06-08--18-18_e167'
 filename = 'PPO_21-06-17--18-19_e9'
 #filename = 'PPO_enhanced_perception_21-10-07--12-56'
 filenameChristian = 'ppo_small_continuous_noshared_2020-10-29_12 46_0000010062'
+#filenameChristian = 'kobuki_train'
 #filenameChristian = filename
 # filenameChristian = 'ppo_big_continuous_noshared_2020-01-22_08_47_0002500617_trained_all_world'
 # filenameChristian = 'ppo_big_continuous_noshared_2020-01-19_02_31_0000187103_trained_5_world'
@@ -85,7 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_interval', type=int, default=trainingInterval, help='The number of steps after which the neural net is trained.')
     parser.add_argument('--net_size', type=str, default='big', choices=['small', 'medium', 'big'], help='Determines the number of filters in the convolutional layers, the overall amount of neurons and the number of layers.')
     parser.add_argument('--shared', type=str2bool, default='True', help='Determines whether actor and aritic share their main network weights.')
-    parser.add_argument('--load_christian', type=bool, default=True, help='Loads the best network ever trained by the master, be hold ... CHRISTIAN.')
+    parser.add_argument('--load_christian', type=bool, default=False, help='Loads the best network ever trained by the master, be hold ... CHRISTIAN.')
 
     # FOR DQN
     parser.add_argument('--target_update', type=int, default=target_update, help='How often is the Agent updated')
@@ -111,11 +114,13 @@ if __name__ == '__main__':
     parser.add_argument('--numb_of_robots', type=int, default=numbOfRobotsManual, help='Number of robots acting in one environment')
     parser.add_argument('--sim_time_step', type=float, default=simTimeStep, help='Time between steps')
 
-    parser.add_argument('--training', type=bool, default=False, help='Training or Loading trained weights')
+    parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
     parser.add_argument('--train_perception_only', type=bool, default=True, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
     parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
     parser.add_argument('--lidar_activation', type=bool, default=True, help='Show Lidar activation')
+
+    parser.add_argument('--level_files', type=list, default=levelFiles, help='List of Level Files')
 
 
     args = parser.parse_args(args)

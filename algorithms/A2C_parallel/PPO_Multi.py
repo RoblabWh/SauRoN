@@ -7,7 +7,8 @@ import EnvironmentWithUI
 from BucketRenderer import BucketRenderer
 from DistanceGraph import DistanceGraph
 from algorithms.A2C_parallel.A2C_Multi import AverageMeter
-from algorithms.A2C_parallel.PPO_Network import PPO_Network
+#from algorithms.A2C_parallel.PPO_Network import PPO_Network
+from algorithms.A2C_parallel.PPO_Network_NewContinuousLayer import PPO_Network
 from algorithms.A2C_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
 from tqdm import tqdm
 import ray
@@ -19,8 +20,8 @@ import matplotlib.pyplot as plt
 
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
-sys.path.insert(1, '/')
-# sys.path.insert(1, 'C:/Users/Jenny/Downloads/aia-trt-inference-master/aia-trt-inference-master/fuzzy_controller')
+#sys.path.insert(1, '/')
+sys.path.insert(1, 'C:/Users/Jenny/Downloads/aia-trt-inference-master/aia-trt-inference-master/fuzzy_controller')
 from displayWidget import DisplayWidget
 
 
@@ -39,6 +40,7 @@ class PPO_Multi:
         :param args:
         """
         self.args = args
+        self.levelFiles = args.level_files
         # self.network = PPO_Network(act_dim, env_dim, args)
         self.act_dim = act_dim
         self.env_dim = env_dim
@@ -68,7 +70,7 @@ class PPO_Multi:
         #Create parallel workers with own environment
         # envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
         # envLevel = [(i+3)%4 for i in range(self.numbOfParallelEnvs)]
-        envLevel = [int(i/(self.numbOfParallelEnvs/6)) for i in range(self.numbOfParallelEnvs)] # TODO 6 durch anzahl der verfügbaren Level variable ersetzen
+        envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
         #ray.init()
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
