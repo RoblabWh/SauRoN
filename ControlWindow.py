@@ -53,7 +53,7 @@ class ControlWindow(QtWidgets.QMainWindow):
     def train(self):
         self.startbutton.setEnabled(False)
         self.tableWidget.fillTable()
-        futures = self.model.prepareTraining.remote(self.loadWeightsPath)
+        futures = self.model.prepare_training.remote(self.loadWeightsPath)
         self.done, levelNames = ray.get(futures)
         self.tableWidget.addLevelNames(levelNames)
         self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
@@ -71,7 +71,7 @@ class ControlWindow(QtWidgets.QMainWindow):
                 self.worker.start()
                 self.worker.episode_done.connect(self.startNextSteps)
             else:
-                doneFuture = self.model.trainWithFeedbackEpisodes.remote()
+                doneFuture = self.model.train_with_feedback_end_of_episode.remote()
                 self.done, avrgRewardLastEpisode, successrates, currentEpisode, successAll = ray.get(doneFuture)
                 self.currentEpisode = currentEpisode
                 self.progressbarWidget.updateProgressbar(currentEpisode)
@@ -108,7 +108,7 @@ class WorkerThread(QThread):
         self.visibilities = visibilities
 
     def run(self):
-        episodeDoneFuture = self.model.trainWithFeedbackSteps.remote(self.visibilities)
+        episodeDoneFuture = self.model.train_with_feedback_for_n_steps.remote(self.visibilities)
         episodeDone = ray.get(episodeDoneFuture)
         self.episode_done.emit(episodeDone)
 

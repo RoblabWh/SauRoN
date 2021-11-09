@@ -5,10 +5,13 @@ import yaml
 from EnvironmentWithUI import Environment
 #from algorithms.A2C_parallel.PPO_Network import PPO_Network
 from algorithms.A2C_parallel.PPO_Network_NewContinuousLayer import PPO_Network
+from algorithms.A2C_parallel.robins.A2C_Network_robin import Robin_Network
 import sys
 from PyQt5.QtWidgets import QApplication
 import os
 import tensorflow as tf
+import time
+
 
 @ray.remote
 class PPO_MultiprocessingActor:
@@ -46,12 +49,16 @@ class PPO_MultiprocessingActor:
 
         self.args = args
         self.app = None
-        self.network = PPO_Network(act_dim, env_dim, args)
+        #self.network = PPO_Network(act_dim, env_dim, args)
+        self.network = Robin_Network(act_dim, env_dim, args) #Robin
+        self.network.build()
         if master:
             self.app = QApplication(sys.argv)
-            self.network.printSummary()
+            # self.network.printSummary()
+            self.network.print_summary() #Robin
         if weights != None:
-            self.network.setWeights(weights)
+            # self.network.setWeights(weights)
+            self.network.set_model_weights(weights) #Robin
         self.env = Environment(self.app, args, env_dim[0], level)
         self.env.setUISaveListener(self)
         self.numbOfRobots = self.env.simulation.getCurrentNumberOfRobots()
@@ -67,13 +74,16 @@ class PPO_MultiprocessingActor:
 
 
     def setWeights(self, weights):
-        self.network.setWeights(weights)
+        # self.network.setWeights(weights)
+        self.network.set_model_weights(weights) #Robins
 
     def getWeights(self):
-        self.network.getWeights()
+        # return self.network.getWeights()
+        return self.network.get_model_weights() #Robins
 
     def saveWeights(self, path):
-        self.network.saveWeights(path)
+        # self.network.saveWeights(path)
+        self.network.save_model_weights(path) # Robin
 
     def saveCurrentWeights(self):
         print('saving individual')
@@ -175,9 +185,41 @@ class PPO_MultiprocessingActor:
         self.robotsDataBackup = robotsData
         self.robotsOldStateBackup = robotsOldState
         self.cumul_reward += cumul_reward
-        #TODO hier schon Robotdata aufschlüsseln, so macht das jeder Process alleine und man kann mehr paralleliliseren. am ende nurnoch alle aneineander hängen
         #return robotsData
         return self.restructureRobotsData(robotsData)
+        #return self.reformat_observation(robotsData)
+
+
+    def reformat_observation(self, robotsData):
+        # start = time.time()
+
+        all_obs_and_actions = []
+        for data in robotsData: #data of a single roboter
+            actions, states, rewards, dones, evaluations, neglogs = data
+            discounted_rewards = self.discount(rewards)
+
+            advantages = discounted_rewards - np.reshape(evaluations, len(evaluations))
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+            for j,s in enumerate(states):
+                laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 1)
+                orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0, 1)
+                distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0, 1)
+                velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0, 1)
+
+                observation = {'laser_0': np.expand_dims(np.array(laser), 0),
+                               'orientation_to_goal': np.expand_dims(np.array(orientation), 0),
+                               'distance_to_goal': np.expand_dims(np.array(distance), 0),
+                               'velocity': np.expand_dims(np.array(velocity), 0)}
+                action = {'action': actions[j], 'value': evaluations[j], 'neglog_policy': neglogs[j],
+                          'reward': discounted_rewards[j], 'advantage': advantages[j]}
+                all_obs_and_actions += [(observation, action)]
+
+        # end = time.time()
+        # print('time for reformatting', self.level, end - start)
+
+        return all_obs_and_actions
+
 
     def restructureRobotsData(self, robotsData):#, states, actions, rewards): 1 0 2
         """
@@ -264,7 +306,10 @@ class PPO_MultiprocessingActor:
 
 
         #statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs)
-        return (statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT, discounted_rewards, actionsConcatenated, advantages, neglogsConcatinated, state_values)
+        observation = {'lidar_0': statesConcatenatedL, 'orientation_to_goal': statesConcatenatedO, 'distance_to_goal': statesConcatenatedD, 'velocity': statesConcatenatedV} #alternativ viel einzelne observations?
+        exp = {'observation': observation, 'action':actionsConcatenated, 'neglog_policy':neglogsConcatinated, 'reward':discounted_rewards, 'advantage':advantages}
+        return exp#(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT, discounted_rewards, actionsConcatenated, advantages, neglogsConcatinated, state_values)
+
 
 
         # if masterEnv == None:
@@ -323,8 +368,29 @@ class PPO_MultiprocessingActor:
 
 
     def trainNet(self, statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs, values):
-        self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs, values)
-        return self.network.getWeights()
+        # self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs, values)
+        #Robins:
+        for i in range(len(statesConcatenatedL)):
+            observation = {'laser_0': np.expand_dims(np.array(statesConcatenatedL[i]),0),
+                           'orientation_to_goal': np.expand_dims(np.array(statesConcatenatedO[i]),0),
+                           'distance_to_goal': np.expand_dims(np.array(statesConcatenatedD[i]),0),
+                           'velocity': np.expand_dims(np.array(statesConcatenatedV[i]),0)}
+            action = {'action': actionsConcatenated[i], 'value': values[i], 'neglog_policy': neglogs[i],
+                      'reward':  discounted_rewards[i], 'advantage': advantages[i]}
+            self.network.train(observation, action)
+
+        # return self.network.getWeights()
+        return self.network.get_model_weights() #Robin
+
+
+
+    def train_net_obs(self, obs_with_actions_list):
+        # print(len(obs_with_actions_list))
+        # for obs_with_actions in obs_with_actions_list:
+        #     obs, action = obs_with_actions
+        #     self.network.train(obs, action)
+        self.network.train(obs_with_actions_list['observation'], obs_with_actions_list)
+        return self.network.get_model_weights()
 
     def killActor(self):
         ray.actor.exit_actor()

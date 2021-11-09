@@ -32,15 +32,17 @@ class Robot:
         :param allStations: list of Station.Stations
             target stations of the other robots can be used as a collider
         """
+        self.args = args
+
         self.startposX, self.startposY = position
         self.startDirectionX = math.cos(startOrientation)
         self.startDirectionY = math.sin(startOrientation)
         self.startOrientation = startOrientation
         self.goalX, self.goalY = station.getPosX(), station.getPosY()
+        self.station = station
 
         # Variables regarding the state
         self.time_steps = args.time_frames #4
-        self.state = []
         self.state_raw = []
         self.stateLidar = []
         self.netOutput = (0,0)
@@ -65,36 +67,22 @@ class Robot:
         self.minAngularAcceleration = -1.5 * math.pi  #rad/s^2
 
         if args.load_christian:
-            self.width = 0.35  # m
-            self.length = 0.35  # m
-            self.radius = self.width / 2
             self.minLinearVelocity = 0
             self.maxLinearVelocity = 0.6
-            self.maxAngularVelocity = 1.5#1.5#1.5 #* math.pi
-            self.minAngularVelocity = -1.5#-1.5#-1.5 #* math.pi
-            # self.maxAngularAcceleration = 1.5 #* math.pi  # rad/s^2
-            # self.minAngularAcceleration = -1.5 #* math.pi  # rad/s^2
-            #v = 0.6
+            self.maxAngularVelocity = 1.5#* math.pi
+            self.minAngularVelocity = -1.5#* math.pi
 
-
+        #Factors for normalization
         self.maxLinearVelocityFact = 1/self.maxLinearVelocity
         self.maxAngularVelocityFact = 1/self.maxAngularVelocity
+        # Maximum distance in laserscan is 20 meters
+        # if args.load_christian: self.maxDistFact = 1/20 #FÜR CHRISTIANS Netz
+        # else: self.maxDistFact = 1/math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[1] ** 2)
+        self.maxDistFact = 1/20
 
 
-        self.XYnorm = [args.arena_width, args.arena_length]
-        self.XYnormFact = [1/args.arena_width, 1/args.arena_length]
-        self.directionnom = [-1, 1]#2 * math.pi]
 
-
-        if args.load_christian: self.maxDistFact = 1/20 #FÜR CHRISTIANS Netz
-        else: self.maxDistFact = 1/math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[1] ** 2)
-
-        self.manuell = args.manually
-        self.args = args
-        self.station = station
-        self.walls = walls
-        self.circleWalls = circleWalls
-
+        #Pie Slice (chassy for better lidar detection as used with real robots)
         self.hasPieSlice = args.has_pie_slice
         self.pieSlicePoints = []
         self.pieSliceWalls = []
@@ -103,10 +91,12 @@ class Robot:
         self.posSensor = []
         self.robotsPieSliceWalls = []
         self.offsetSensorDist = 0.08
-        normFac = 1 / self.radius
-        self.offsetAngle = 2/3 * np.arccos((np.sqrt(2-(self.offsetSensorDist* normFac)**2)-(self.offsetSensorDist* normFac)) / 2)
+        normFacPieSlice = 1 / self.radius
+        self.offsetAnglePieSilce = 2/3 * np.arccos((np.sqrt(2-(self.offsetSensorDist* normFacPieSlice)**2)-(self.offsetSensorDist* normFacPieSlice)) / 2)
 
 
+        self.walls = walls
+        self.circleWalls = circleWalls
         #only use with rectangular targets
         self.collidorStationsWalls = []
         # for pickUp in allStations:
@@ -117,6 +107,8 @@ class Robot:
             if not station is pickUp:
                 self.collidorStationsCircles.append((pickUp.getPosX(), pickUp.getPosY(), pickUp.getRadius()))
 
+
+        self.manuell = args.manually
         if self.manuell:
             self.listener = Listener(on_press=self.on_press, on_release=self.on_release)
             self.listener.start()
@@ -208,6 +200,7 @@ class Robot:
         else:
             self.posSensor = [posX, posY]
 
+
     def resetLidar(self, robots):
         if self.args.mode == 'sonar':
             if self.hasPieSlice:
@@ -234,31 +227,6 @@ class Robot:
         return (data * (limits[1] - limits[0])) + limits[0]
 
 
-    def normalize(self, frame):
-        """
-        normalizes all values of a frame
-
-        :param frame: list -
-            [posX, posY, directionX, directionY, linVel, angVel, goalX, goalY, dist]
-        :return: list -
-            normalized frame with values only between 0 an 1
-        """
-        posX = frame[0] * self.XYnormFact[0]
-        posY = frame[1] * self.XYnormFact[1]
-        directionX = frame[2]
-        directionY = frame[3]
-        linVel = (frame[4] - ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)) /  ((self.maxLinearVelocity - self.minLinearVelocity) * 0.5)
-        #self.maxLinearVelocityFact
-        angVel = (frame[5] - ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)) /  ((self.maxAngularVelocity - self.minAngularVelocity) * 0.5)
-        #self.maxAngularVelocityFact
-        goalX = frame[6] * self.XYnormFact[0]
-        goalY = frame[7] * self.XYnormFact[1]
-        dist = frame[8] * self.maxDistFact
-
-        frame = [posX, posY, directionX, directionY, linVel, angVel, goalX, goalY, dist]
-
-        return frame
-
     def push_frame(self, frame):
         """
         adds the given frame to the end of the objects state list.
@@ -268,14 +236,10 @@ class Robot:
         :param frame: list -
             frame that should be added to the state
         """
-        frame_norm = self.normalize(frame)
-        if len(self.state) >= self.time_steps:
-            self.state.pop(0)
-            self.state.append(frame_norm)
+        if len(self.state_raw) >= self.time_steps:
             self.state_raw.pop(0)
             self.state_raw.append(frame)
         else:
-            self.state.append(frame_norm)
             self.state_raw.append(frame)
 
 
@@ -309,12 +273,9 @@ class Robot:
         posX += deltaPosX
         posY += deltaPosY
 
-
         direction = (self.getDirectionAngle() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
         directionVector = self.directionVectorFromAngle(direction)
         deltaDir = direction - oldDir
-
-
 
         goalDist = math.sqrt((posX-goalX)**2+(posY-goalY)**2)
 
@@ -326,12 +287,13 @@ class Robot:
         else:
             self.posSensor = [posX, posY]
 
+
     def calculatePieSlice(self, dirV):
         offsetSensorDist = self.offsetSensorDist
         posX, posY = self.getPosX(), self.getPosY()
         dirVx, dirVy = dirV
         rearX, rearY = -self.radius * dirVx, -self.radius * dirVy
-        angle = self.offsetAngle
+        angle = self.offsetAnglePieSilce
         offsets = [angle * 1.5, angle * .5, angle * -.5, angle * -1.5]
 
         p0x, p0y = posX + dirVx * offsetSensorDist, posY + dirVy * offsetSensorDist
@@ -352,7 +314,6 @@ class Robot:
             w.updatePos(points[i], points[(i+1)%len(walls)])
 
 
-
     def updatePieSlice(self, deltaAngle, deltaPos):
         points = self.pieSlicePoints
         posX, posY = self.getPosX(), self.getPosY()
@@ -365,14 +326,13 @@ class Robot:
         p = np.atleast_2d(np.asarray(points))
         points = np.squeeze((R @ (p.T - oldPos.T) + newPos.T).T).tolist()
 
-
-
         walls = self.pieSliceWalls
         for i, w in enumerate(walls):
             w.updatePos(points[i], points[(i + 1) % len(walls)])
 
         self.posSensor = points[0]
         self.pieSlicePoints = points
+
 
     def lidarReading(self, robots, stepsLeft, steps):
         """
@@ -495,49 +455,12 @@ class Robot:
             self.stateLidar.append(frame_lidar)
 
 
+    def get_state_lidar(self, reversed = False):
+        tmp_state = self.stateLidar.copy()
+        if reversed:
+             tmp_state.reverse()
+        return tmp_state
 
-    def compute_next_velocity(self, dt, linVel, angVel, tarLinVel, tarAngVel):
-        """
-        DEPRECATED
-
-        :param dt: float -
-            passed (simulated) time since last call
-        :param linVel: float -
-            current linear velocity
-        :param angVel: float -
-            current angular velocity
-        :param tarLinVel: float/ int -
-            target linear velocity
-        :param tarAngVel: float/ int -
-            target angular velocity
-
-        :return: tuple
-            (float - linear velocity, float - angular velocity)
-        """
-
-        # beschleunigen
-        if linVel < tarLinVel:
-            linVel += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
-            if linVel > self.maxLinearVelocity:
-                linVel = self.maxLinearVelocity
-        # bremsen
-        elif linVel > tarLinVel:
-            linVel += self.minLinearAcceleration * dt
-            if linVel < self.minLinearVelocity:
-                linVel = self.minLinearVelocity
-
-        # nach links drehen
-        if angVel < tarAngVel:
-            angVel += self.maxAngularAcceleration * dt
-            if angVel > self.maxAngularVelocity:
-                angVel = self.maxAngularVelocity
-        # nach rechts drehen
-        elif angVel > tarAngVel:
-            angVel += self.minAngularAcceleration * dt
-            if angVel < self.minAngularVelocity:
-                angVel = self.minAngularVelocity
-
-        return linVel, angVel
 
     def computeNextVelocityContinuous(self, dt, linVel, angVel, tarLinVel, tarAngVel):
         """
@@ -562,14 +485,10 @@ class Robot:
         tarLinVel = max(-1, min(tarLinVel, 1))
         tarAngVel = max(-1, min(tarAngVel, 1))
 
+        # mapping the net output range of -1 to 1 onto the velocitiy ranges of the robot
         # tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + (self.maxAngularVelocity + self.minAngularVelocity) * 0.5
         tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)
         tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity)* 0.5) + ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)
-
-
-
-
-
 
         # beschleunigen
         if linVel < tarLinVel:
@@ -611,16 +530,16 @@ class Robot:
 
     def collideWithTargetStationCircular(self):
         """
-
         :return: Boolean
         """
         station = self.station
-        distance2StationCenter = math.sqrt((station.getPosX() - self.getPosX())**2 + (station.getPosY() - self.getPosY())**2) + self.radius
+        distance2StationCenter = math.sqrt((station.getPosX() - self.getPosX())**2 +
+                                           (station.getPosY() - self.getPosY())**2) + self.radius
         return (distance2StationCenter < station.radius)
 
-    def collideWithTargetStation(self):
-        """
 
+    def collideWithTargetStationRectengular(self):
+        """
         :return: Boolean
         """
         station = self.station
@@ -630,9 +549,7 @@ class Robot:
             if self.getPosX()-self.radius < station.getPosX()+station.getWidth():
                 if self.getPosY() + self.radius > station.getPosY():
                     if self.getPosY() - self.radius < station.getPosY() + station.getLength():
-                        #check for corners
                         return True
-
         return False
 
 
@@ -646,16 +563,7 @@ class Robot:
         return math.sqrt((self.getPosX() - self.getGoalX()) ** 2 +
                          (self.getPosY() - self.getGoalY()) ** 2) < r
 
-    def hasGoal(self, station):
-        """
-        Checks whether the robot has reached its target
-        :param station: Station.station -
-            Target station object of the robot
-        :return: Boolean
-        """
-        if self.getGoalX() == station.getPosX() and self.getGoalY() == station.getPosY():
-            return True
-        return False
+
 
     def getPosX(self):
         return self.state_raw[self.time_steps - 1][0]
@@ -688,16 +596,17 @@ class Robot:
         return self.state_raw[self.time_steps - 1][5]
 
     def getLinearVelocityNorm(self):
-        return self.state[self.time_steps - 1][4]
+        return (self.getLinearVelocity() - ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)) / (
+                    (self.maxLinearVelocity - self.minLinearVelocity) * 0.5)
 
     def getAngularVelocityNorm(self):
-        return self.state[self.time_steps - 1][5]
+        return (self.getAngularVelocity() - ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)) / (
+                (self.maxAngularVelocity - self.minAngularVelocity) * 0.5)
 
     def getGoalX(self):
         return self.state_raw[self.time_steps - 1][6]
 
     def getGoalY(self):
-        # return self.denormdata(self.state[self.time_steps - 1][7], [0, self.XYnorm[1]])
         return self.state_raw[self.time_steps - 1][7]
 
     def getVelocity(self):
@@ -707,7 +616,6 @@ class Robot:
         return self.width * .5
 
     def getPieSliceWalls(self):
-
         return self.pieSliceWalls
 
     def isActive(self):

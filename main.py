@@ -31,7 +31,7 @@ memory_size = 10000
 
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0001                 # learning rate
-num_episodes = 150         # the number of epochs (/episodes) that are simulated
+num_episodes = 201         # the number of epochs (/episodes) that are simulated
 steps = 750                 # number of steps per epoch (/episode)
 trainingInterval = 75       # number of steps after which the neural net is trained
 
@@ -47,12 +47,12 @@ timeFrames = 4              # number of past states used as an Input for the neu
 #  wenn die Anzahl der Roboter nicht zum Bild passt und auch bzgl manually, wenn man nur einen Roboter steuern will
 # TODO er scheint auch den numbOfRobotsManual zu nehmen, auch wenn es nicht auf manual ist
 numbOfRobotsManual = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 1     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 12     # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
 #levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg0_tareq.svg']
-levelFiles = ['svg0_tareq.svg','svg1_tareq.svg','svg2_tareq.svg', 'svg3_tareq.svg', 'svg4_tareq.svg', 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'funnle.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
+levelFiles = ['SwapSide.svg', 'Simple.svg', 'Funnel.svg', 'svg2_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
 
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
@@ -66,13 +66,15 @@ filename = 'PPO_21-06-08--18-09_e1'
 filename = 'PPO_21-06-08--18-18_e167'
 filename = 'PPO_21-06-17--18-19_e9'
 #filename = 'PPO_enhanced_perception_21-10-07--12-56'
-filenameChristian = 'ppo_small_continuous_noshared_2020-10-29_12 46_0000010062'
+# filenameChristian = 'ppo_small_continuous_noshared_2020-10-29_12 46_0000010062'
 #filenameChristian = 'kobuki_train'
 #filenameChristian = filename
 # filenameChristian = 'ppo_big_continuous_noshared_2020-01-22_08_47_0002500617_trained_all_world'
 # filenameChristian = 'ppo_big_continuous_noshared_2020-01-19_02_31_0000187103_trained_5_world'
 # filenameChristian = 'PPO_21-06-24--13-04_e11'
 #filename = 'PPO_21-06-01--17-47_e434'
+filename = 'A2C_Network_2021-10-25--17-38_1400'
+filename = 'tranined_model'
 
 
 if __name__ == '__main__':
@@ -90,7 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_interval', type=int, default=trainingInterval, help='The number of steps after which the neural net is trained.')
     parser.add_argument('--net_size', type=str, default='big', choices=['small', 'medium', 'big'], help='Determines the number of filters in the convolutional layers, the overall amount of neurons and the number of layers.')
     parser.add_argument('--shared', type=str2bool, default='True', help='Determines whether actor and aritic share their main network weights.')
-    parser.add_argument('--load_christian', type=bool, default=False, help='Loads the best network ever trained by the master, be hold ... CHRISTIAN.')
+    parser.add_argument('--load_christian', type=bool, default=True, help='Loads the best network ever trained by the master, be hold ... CHRISTIAN.')
 
     # FOR DQN
     parser.add_argument('--target_update', type=int, default=target_update, help='How often is the Agent updated')
@@ -154,8 +156,8 @@ if __name__ == '__main__':
             #args.sim_time_step=loadedArgs.sim_time_step
 
     if args.load_christian:
-        args.load_old = True
-        filename = filenameChristian
+        #args.load_old = True
+        # filename = filenameChristian
         # args.steps = 600
         args.time_frames = 4
         args.time_penalty = False
@@ -240,4 +242,8 @@ if __name__ == '__main__':
 
 
 
+# TODO Roboter State aufräumne um ständiges umbauen zu vermeiden
+#   State rückwärts aufbauen
+# TODO Variable für Netzt bauen ja/ nein --> wenn ja dann den Typ --> falls netz bauen gewichte Laden? ---> wenn bauen Nein ganzes model laden
+# TODO im Roboter nur goal oder station verwenden (für die position der Zielstation)
 

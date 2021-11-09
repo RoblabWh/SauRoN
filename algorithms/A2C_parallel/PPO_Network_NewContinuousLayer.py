@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow.keras as k
+#import tensorflow.keras as k
 
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import mean_squared_error
@@ -44,10 +44,10 @@ class PPO_Network:
         # Passed Time input
         #self._input_timestep = Input(shape=(1,env_dim[0],), dtype='float32', name='input_Timestep')
 
-        tf.compat.v1.enable_eager_execution()
+        # tf.compat.v1.enable_eager_execution()
 
         #tf.config.experimental_run_functions_eagerly(True) # soll man wohl nicht mehr nehmen
-        tf.config.run_functions_eagerly(True)
+        # tf.config.run_functions_eagerly(True)
 
         # Create actor and critic networks
         self.buildNetWithOpti()
@@ -156,37 +156,6 @@ class PPO_Network:
         constructs the neural network and defines the optimizer with its loss function
         """
 
-        # fully_connect = self.buildMainNet("shared" if self._shared else "policy", self._network_size)
-        #
-        # if self._shared:
-        #     fully_connect2 = fully_connect
-        # else:
-        #     fully_connect2 = self.buildMainNet("value", self._network_size)
-        #
-        # # Policy
-        # # mu = Dense(units=2, activation='tanh', name='output_mu')(fully_connect)
-        # # var = ContinuousLayer(name='output_continous')(mu)
-        #
-        # # # actor
-        # self._mu_var = ContinuousLayer()(fully_connect)
-        # mu = Lambda(lambda x: x[:, :2])(self._mu_var)
-        # var = Lambda(lambda x: x[:, -2:])(self._mu_var)
-        #
-        # # Value
-        # if self.args.load_christian:
-        #     value = Dense(units=1, activation='linear', name='out_value')(fully_connect2)
-        # else:
-        #     value = Dense(units=128, activation='relu', name='out_value_dense')(fully_connect2)
-        #     value = Dense(units=1, activation=None, use_bias=False, name='out_value')(value)
-        #
-        # # Create the Keras Model
-        # self._model = Model(inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],
-        #                     outputs=[mu, var, value])
-        #
-        # # Create the Optimizer
-        # self._optimizer = Adam(learning_rate=self.lr, epsilon=1e-5, clipnorm=1.0)
-
-        #self.printSummary()
 
         input_lidar = self._input_laser             #self._create_input_layer(self._config['lidar_size'], 'lidar')
         input_orientation = self._input_orientation #self._create_input_layer(self._config['orientation_size'], 'orientation')
@@ -238,24 +207,16 @@ class PPO_Network:
         # Create the Optimizer
         self._optimizer = Adam(learning_rate=0.0001, epsilon=1e-5, clipnorm=1.0)
 
+
+
     def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
-        a = tf.function(self.predict_function)
-        return a(tf.convert_to_tensor(obs_laser, dtype='float64'), tf.convert_to_tensor(obs_orientation_to_goal, dtype='float64'), tf.convert_to_tensor(obs_distance_to_goal, dtype='float64'),tf.convert_to_tensor(obs_velocity, dtype='float64'))
-
-
-    # TODO Laser Strahlen Anzahl aus args holen
-    @tf.function(input_signature=[tf.TensorSpec((None, 1081, 4), dtype='float64'),
-                                   tf.TensorSpec((None, 2, 4), dtype='float64'),
-                                   tf.TensorSpec((None, 1, 4), dtype='float64'),
-                                   tf.TensorSpec((None, 2, 4), dtype='float64')])
-    def predict_function(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
         '''
         observation: python dict with the keys:
         'laser_0', 'orientation_to_goal', 'distance_to_goal', 'velocity'.
         shape of each key: (num_agents, size_of_the_obs, stack_size).
         For the lidar with stack_size 4 and 2 agents: (2, 1081, 4)
         '''
-        net_out = self._model([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity]) #TODO observation vernuenftig an model übergeben
+        net_out = self._model([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity])
 
         selected_action, neglog = self._postprocess_predictions(*net_out)
 
@@ -288,24 +249,13 @@ class PPO_Network:
                 + 0.5 * tf.math.log(2.0 * np.pi) * cast(shape(action)[-1], dtype='float32') \
                 + reduce_sum(var, axis=-1)
 
+
     def train_net(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity, obs_timestep, rewards,
                   actions, advantage=None, neglog=None, values=None):
-        func = tf.function(self.train_function)
-        func({'laser_0': obs_laser, 'orientation_to_goal': obs_orientation_to_goal, 'distance_to_goal': obs_distance_to_goal, 'velocity': obs_velocity},
-             {'action': actions,  'value': values, 'neglog_policy': neglog, 'reward': rewards,  'advantage': advantage})
 
+        observation = {'laser_0': obs_laser, 'orientation_to_goal': obs_orientation_to_goal, 'distance_to_goal': obs_distance_to_goal, 'velocity': obs_velocity}
+        action = {'action': actions,  'value': values, 'neglog_policy': neglog, 'reward': rewards,  'advantage': advantage}
 
-    # TODO Laser Strahlen Anzahl aus args holen
-    @tf.function(input_signature=[{'laser_0': tf.TensorSpec((None, 1081, 4), dtype='float64'),
-                                   'orientation_to_goal': tf.TensorSpec((None, 2, 4), dtype='float64'),
-                                   'distance_to_goal': tf.TensorSpec((None, 1, 4), dtype='float64'),
-                                   'velocity': tf.TensorSpec((None, 2, 4), dtype='float64')},
-                                  {'action': tf.TensorSpec((None, 2), dtype='float64'),
-                                   'value': tf.TensorSpec((None), dtype='float64'),
-                                   'neglog_policy': tf.TensorSpec((None), dtype='float64'),
-                                   'reward': tf.TensorSpec((None), dtype='float64'),
-                                   'advantage': tf.TensorSpec((None), dtype='float64')}])
-    def train_function(self, observation, action):
         with tf.GradientTape() as tape:
             net_out = self._model(observation.values())
             loss = self.calculate_loss(observation, action, net_out)
@@ -341,10 +291,10 @@ class PPO_Network:
 
         return loss
 
-    @tf.function(input_signature=[tf.TensorSpec((None, 1081, 4), dtype='float64'),
-                                   tf.TensorSpec((None, 2, 4), dtype='float64'),
-                                   tf.TensorSpec((None, 1, 4), dtype='float64'),
-                                   tf.TensorSpec((None, 2, 4), dtype='float64')])
+    # @tf.function(input_signature=[tf.TensorSpec((None, 1081, 4), dtype='float64'),
+    #                                tf.TensorSpec((None, 2, 4), dtype='float64'),
+    #                                tf.TensorSpec((None, 1, 4), dtype='float64'),
+    #                                tf.TensorSpec((None, 2, 4), dtype='float64')])
     def predict_certain(self,  obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
         '''
         observation: python dict with the keys:
@@ -383,10 +333,10 @@ class PPO_Network:
 
 
 
-    @tf.function(input_signature=[tf.TensorSpec((None, 1081, 4), dtype='float64'),
-                                  tf.TensorSpec((None, 2, 4), dtype='float64'),
-                                  tf.TensorSpec((None, 1, 4), dtype='float64'),
-                                  tf.TensorSpec((None, 2, 4), dtype='float64')])
+    # @tf.function(input_signature=[tf.TensorSpec((None, 1081, 4), dtype='float64'),
+    #                               tf.TensorSpec((None, 2, 4), dtype='float64'),
+    #                               tf.TensorSpec((None, 1, 4), dtype='float64'),
+    #                               tf.TensorSpec((None, 2, 4), dtype='float64')])
     def predict_proximity(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
         '''
         observation: python dict with the keys:
@@ -406,6 +356,7 @@ class PPO_Network:
     def saveWeights(self, path):
         self._model.save_weights(path + '.h5')
 
+
     def getWeights(self):
         return  self._model.get_weights()
 
@@ -413,7 +364,9 @@ class PPO_Network:
         self._model.set_weights(weights)
 
     def load_weights(self, path):
-        self._model.load_weights(path)
+        testmodle = tf.keras.models.load_model(path)
+        self._model = testmodle
+        # self._model.load_weights(path)
 
 
     def create_perception_model(self):
@@ -487,12 +440,16 @@ class PPO_Network:
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
 
-        actionCertainFunc = tf.function(self.predict_certain)
+        selected_action, criticValue, neglog = self.predict(np.expand_dims(laser, 0), np.expand_dims(orientation, 0), np.expand_dims(distance, 0),np.expand_dims(velocity, 0))
 
-        action, heatmap = actionCertainFunc(tf.convert_to_tensor(np.expand_dims(laser, axis=0), dtype='float64'), tf.convert_to_tensor(np.expand_dims(orientation, axis=0), dtype='float64'),
-                                   tf.convert_to_tensor(np.expand_dims(distance, axis=0), dtype='float64'),tf.convert_to_tensor(np.expand_dims(velocity, axis=0), dtype='float64'))
+        # actionCertainFunc = tf.function(self.predict_certain)
+        #
+        # action, heatmap = actionCertainFunc(tf.convert_to_tensor(np.expand_dims(laser, axis=0), dtype='float32'), tf.convert_to_tensor(np.expand_dims(orientation, axis=0), dtype='float32'),
+        #                            tf.convert_to_tensor(np.expand_dims(distance, axis=0), dtype='float32'),tf.convert_to_tensor(np.expand_dims(velocity, axis=0), dtype='float32'))
 
-        return (action, heatmap)
+
+
+        return (selected_action, None)
 
 
 ########################################################################

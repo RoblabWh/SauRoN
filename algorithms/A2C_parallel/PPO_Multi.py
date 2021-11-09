@@ -10,18 +10,20 @@ from algorithms.A2C_parallel.A2C_Multi import AverageMeter
 #from algorithms.A2C_parallel.PPO_Network import PPO_Network
 from algorithms.A2C_parallel.PPO_Network_NewContinuousLayer import PPO_Network
 from algorithms.A2C_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
+from algorithms.A2C_parallel.robins.A2C_Network_robin import Robin_Network
 from tqdm import tqdm
 import ray
 import yaml
-#import keras
 import tensorflow
 import matplotlib.pyplot as plt
+import time
 
 
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
-#sys.path.insert(1, '/')
-sys.path.insert(1, 'C:/Users/Jenny/Downloads/aia-trt-inference-master/aia-trt-inference-master/fuzzy_controller')
+
+sys.path.insert(1, '/')
+# sys.path.insert(1, 'C:/Users/Jenny/Downloads/aia-trt-inference-master/aia-trt-inference-master/fuzzy_controller')
 from displayWidget import DisplayWidget
 
 
@@ -49,21 +51,16 @@ class PPO_Multi:
         self.timePenalty = args.time_penalty
         self.av_meter = AverageMeter()
         self.gamma = args.gamma
-#        ray.init()
-
-        # self.app = QApplication(sys.argv)
-        # #self.controlWindow = ControlWindowController.remote(args.parallel_envs)#, act_dim, env_dim, args)  # , model)
-        # self.controlWindow = ControlWindow(args.parallel_envs, self.app)#, act_dim, env_dim, args)  # , model)
-        # self.controlWindow.showandPause()
 
 
-    def prepareTraining(self, loadWeightsPath = ""):
+    def prepare_training(self, loadWeightsPath = ""):
         self.currentEpisode = 0
 
         loadedWeights = None
         if loadWeightsPath != "":
             self.load_net(loadWeightsPath)
-            loadedWeights = self.network.getWeights()
+            #loadedWeights = self.network.getWeights()
+            loadedWeights = self.network.get_model_weights() #Robins
             #keras.backend.clear_session() # TODO Prüfen ob notwendig, da backend evtl. bald nicht mehr geht
             tensorflow.keras.backend.clear_session()
 
@@ -90,14 +87,19 @@ class PPO_Multi:
 
         return (False, levelNames)
 
-    def trainWithFeedbackSteps(self, visibleLevels):
+
+    def train_with_feedback_for_n_steps(self, visibleLevels):
 
         activeActors = self.activeActors
 
         if len(activeActors) > 0:
             futures = [actor.trainSteps.remote(self.args.train_interval) for actor in activeActors]
-            allTrainingResults = ray.get(futures)
-            trainedWeights = self.train_modelsFaster(allTrainingResults, self.multiActors[0])
+            allTrainingResults = ray.get(futures) #Liste mit Listen von Observations aus den Environments
+            # trainedWeights = self.train_modelsFaster(allTrainingResults, self.multiActors[0])
+            # start = time.time()
+            trainedWeights = self.train_models_with_obs(allTrainingResults, self.multiActors[0])
+            # end = time.time()
+            # print(' time used for training: ', end-start)
             for actor in self.multiActors[1:len(self.multiActors)]:
                 actor.setWeights.remote(trainedWeights)
 
@@ -118,27 +120,25 @@ class PPO_Multi:
         else:
             return True
 
-    def trainWithFeedbackEpisodes(self):
-        """ Main PPO Training Algorithm
-        :param loadWeightsPath: The path to the .h5 file containing the pretrained weights.
-         Only required if a pretrained net is used.
+
+    def train_with_feedback_end_of_episode(self):
+        """
+        Called after a full episode of training to collect statistics, reset the active actors list and save weights
         """
         if self.currentEpisode < self.args.nb_episodes:
 
             self.tqdm_e.update(1)
             self.currentEpisode += 1
-            #Start of episode for the parallel PPO actors with their own environment
-            #Hier wird die gesamte Episode durchlaufen und dann erst trainiert
-
-
-            #Training bereits alle n=75 steps mit den zu dem Zeitounkt gesammelten Daten (nur für noch aktive Environments)
+            #reset the active actors list for next episode
             self.activeActors = self.multiActors
 
-            zeit, cumul_reward, done = 0, 0, False
-
+            #save weights in predefined interval
             if (self.currentEpisode+1) % self.args.save_intervall == 0:
                 print('Saving')
                 self.save_weights(self.multiActors[0], self.args.path)
+
+            #build statistics of last episode
+            zeit, cumul_reward, done = 0, 0, False
 
             allReachedTargetList = []
             individualSuccessrate = []
@@ -149,7 +149,6 @@ class PPO_Multi:
 
             targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
             successrate = allReachedTargetList.count(True) / targetDivider
-
 
             # Calculate and display score
             individualLastAverageReward = []
@@ -166,11 +165,11 @@ class PPO_Multi:
             self.tqdm_e.refresh()
             return (False, individualLastAverageReward, individualSuccessrate, self.currentEpisode, successrate)
         else:
+            #If all episodes are finished the current weights are saved
             self.save_weights(self.multiActors[0], self.args.path)
             for actor in self.multiActors:
                 actor.killActor.remote()
             return (True, [], [], self.currentEpisode)
-
 
 
     def train_modelsFaster(self, envsData, masterEnv = None):
@@ -214,107 +213,14 @@ class PPO_Multi:
         return weights
 
 
-    def train_models(self, envsData, masterEnv = None):#, states, actions, rewards): 1 0 2
-        """
-        Update actor and critic networks from experience
-        :param envsData: Collected states of all robots from all used parallel environments. Collected over the last n time steps
-        :param masterEnv: The environment which is used to train the network. all other networks will receive a copy
-        of its weights after the training process.
-        :return: trained weights of the master environments network
-        """
-        # Compute discounted rewards and Advantage (TD. Error)
+    def train_models_with_obs(self, obs_lists, master_env):
+        obs_list_concatenated = []
+        weights= None
+        for exp in obs_lists:
+            # obs_list_concatenated += list
+            weights = ray.get(master_env.train_net_obs.remote(exp))
+        return weights
 
-        discounted_rewards = np.array([])
-        state_values = np.array([])
-        advantages = np.array([])
-        actionsConcatenated = np.array([])
-        statesConcatenatedL = np.array([])
-        statesConcatenatedO = np.array([])
-        statesConcatenatedD = np.array([])
-        statesConcatenatedV = np.array([])
-        statesConcatenatedT = np.array([])
-        neglogsConcatinated = np.array([])
-        for robotsData in envsData:
-            for data in robotsData:
-                actions, states, rewards, dones, evaluations, neglogs = data
-
-                if (actionsConcatenated.size == 0):
-                    actionsConcatenated = np.vstack(actions)
-
-                else:
-                    actionsConcatenated = np.concatenate((actionsConcatenated, np.vstack(actions)))
-
-
-                lasers = []
-                orientations = []
-                distances = []
-                velocities = []
-                usedTimeSteps = []
-
-                for s in states:
-                    laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
-                    orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
-                    distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
-                    velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
-                    usedTimeStep = np.array([np.array(s[i][4]) for i in range(0, len(s))])
-
-                    lasers.append(laser)
-                    orientations.append(orientation)
-                    distances.append(distance)
-                    velocities.append(velocity)
-                    usedTimeSteps.append(usedTimeStep)
-
-                if(statesConcatenatedL.size == 0):
-                    statesConcatenatedL = np.array(lasers)
-                    statesConcatenatedO = np.array(orientations)
-                    statesConcatenatedD = np.array(distances)
-                    statesConcatenatedV = np.array(velocities)
-                    statesConcatenatedT = np.array(usedTimeSteps)
-                    state_values = np.array(evaluations)
-                    neglogsConcatinated = np.array(neglogs)
-                else:
-                    statesConcatenatedL = np.concatenate((statesConcatenatedL, np.array(lasers)))
-                    statesConcatenatedO = np.concatenate((statesConcatenatedO, np.array(orientations)))
-                    statesConcatenatedD = np.concatenate((statesConcatenatedD, np.array(distances)))
-                    statesConcatenatedV = np.concatenate((statesConcatenatedV, np.array(velocities)))
-                    statesConcatenatedT = np.concatenate((statesConcatenatedT, np.array(usedTimeSteps)))
-                    state_values = np.concatenate((state_values, evaluations))
-                    neglogsConcatinated = np.concatenate((neglogsConcatinated, np.array(neglogs)))
-
-                discounted_rewardsTmp = self.discount(rewards)
-                discounted_rewards = np.concatenate((discounted_rewards, discounted_rewardsTmp))
-
-
-
-                advantagesTmp = discounted_rewardsTmp - np.reshape(evaluations, len(evaluations))  # Warum reshape
-                advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)
-                advantages = np.concatenate((advantages, advantagesTmp))
-
-
-                # print("discounted_rewards", discounted_rewards.shape, "state_values", state_values.shape, "advantages",
-                #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
-                # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
-
-        neglogsConcatinated = np.squeeze(neglogsConcatinated)
-        if masterEnv == None:
-            #for i in len(statesConcatenatedL):
-             #   self.network.train_net(statesConcatenatedL[i], statesConcatenatedO[i], statesConcatenatedD[i],statesConcatenatedV[i], statesConcatenatedT[i],discounted_rewards[i], actionsConcatenated[i],advantages[i], neglogsConcatinated[i])
-            self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogsConcatinated)
-            weights = self.network.getWeights()
-        else:
-            weights, var = ray.get(masterEnv.trainNet.remote(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogsConcatinated))
-        return weights , var
-
-    def discount(self, r):
-        """
-        Compute the gamma-discounted rewards over an episode
-        """
-        discounted_r = np.zeros_like(r, dtype=float)
-        cumul_r = 0
-        for t in reversed(range(0, len(r))):
-            cumul_r = r[t] + cumul_r * self.gamma
-            discounted_r[t] = cumul_r
-        return discounted_r
 
     def saveCurrentWeights(self):
         """
@@ -322,6 +228,7 @@ class PPO_Multi:
         """
         print('Saving individual')
         self.save_weights(self.args.path, "_e" + str(self.currentEpisode))
+
 
     def save_weights(self, masterEnv, path, additional=""):
         path += 'PPO' + self.args.model_timestamp + additional
@@ -331,9 +238,14 @@ class PPO_Multi:
         with open(path+'.yml', 'w') as outfile:
             yaml.dump(data, outfile, default_flow_style=False)
 
+
     def load_net(self, path):
-        self.network = PPO_Network(self.act_dim, self.env_dim, self.args)
+        # self.network = PPO_Network(self.act_dim, self.env_dim, self.args)
+        # self.network.load_weights(path)
+        self.network = Robin_Network(self.act_dim, self.env_dim, self.args)
+        self.network.build()
         self.network.load_weights(path)
+        #self.network.load_model(path)
         return True
 
 
@@ -341,9 +253,11 @@ class PPO_Multi:
         if envID < len(self.multiActors):
             self.multiActors[envID].showWindow.remote()
 
+
     def hideEnvWindow(self, envID):
         if envID < len(self.multiActors):
             self.multiActors[envID].hideWindow.remote()
+
 
     def execute(self, args, env_dim):
         """
@@ -357,13 +271,13 @@ class PPO_Multi:
         env.simulation.showWindow(app)
 
         #auskommentieren wenn fuzzy nicht genutzt wird
-        displayWidget = DisplayWidget(9)#9)
-        displayWidget.show()
+        # displayWidget = DisplayWidget(9)#9)
+        # displayWidget.show()
 
         # visualization of chosen actions
         #histogramm = BucketRenderer(20, 0)
         #histogramm.show()
-        liveHistogramRobot = 0
+        #iveHistogramRobot = 0
 
         #robotsCount = self.numbOfRobots #TODO bei jedem neuen Level laden akualisieren
 
@@ -380,31 +294,34 @@ class PPO_Multi:
                 # Actor picks an action (following the policy)
                 for i in range(0, robotsCount):
                     if not robotsDone[i]:
-                        aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0]) #i for selected robot, 0 beause the state is encapsulated once too much
+                        # aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0]) #i for selected robot, 0 beause the state is encapsulated once too much
+                        aTmp, heatmap = self.network.pedict_certain(robotsOldState[i][0]) #robin
                         a = np.ndarray.tolist(aTmp[0].numpy())
 
-                        if i == liveHistogramRobot:
-                            distGraph.plot([i for i in range(heatmap.shape[0])], heatmap)
+                        # if i == liveHistogramRobot:
+                            # distGraph.plot([i for i in range(heatmap.shape[0])], heatmap)
                             # heatmap = np.maximum(heatmap, 0)
                             # heatmap /= np.max(heatmap)
                             # print(heatmap)
                             # plt.plot(heatmap)
                             # # matshow(heatmap)
                             # plt.show()
-                        robotsFuzzy = displayWidget.getRobots()
-                        if i in robotsFuzzy:# and args.use_fuzzy:
-                            obs = []
-                            for e_len in range(len(robotsOldState[i][0][3]) - 1): #aktuelle Frame des states liegt auf 3 nicht 0
-                                entry = robotsOldState[i][0][3][e_len]
-                                sh = np.asarray(entry)
-                                sh = sh.reshape((1, len(sh), 1))
-                                obs.append(sh)
-                            obs = (obs[0], obs[1], obs[2], obs[3]) #[lidarDistances, orientationToGoal, normaizedDistance, [linVel, angVel]]   without currentTimestep
-                            displayWidget.setRobot(i)
-                            aCur = displayWidget.step(obs, aTmp)
 
-                            if displayWidget.aggregated:
-                                a = aCur[0]
+                        #FUZZY
+                        #robotsFuzzy = displayWidget.getRobots()
+                        # if i in robotsFuzzy:# and args.use_fuzzy:
+                        #     obs = []
+                        #     for e_len in range(len(robotsOldState[i][0][3]) - 1): #aktuelle Frame des states liegt auf 3 nicht 0
+                        #         entry = robotsOldState[i][0][3][e_len]
+                        #         sh = np.asarray(entry)
+                        #         sh = sh.reshape((1, len(sh), 1))
+                        #         obs.append(sh)
+                        #     obs = (obs[0], obs[1], obs[2], obs[3]) #[lidarDistances, orientationToGoal, normaizedDistance, [linVel, angVel]]   without currentTimestep
+                        #     displayWidget.setRobot(i)
+                        #     aCur = displayWidget.step(obs, aTmp)
+                        #
+                        #     if displayWidget.aggregated:
+                        #         a = aCur[0]
 
                         #visualization of chosen actions
                         #if i == liveHistogramRobot:

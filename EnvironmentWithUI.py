@@ -43,7 +43,7 @@ class Environment:
         if self.args.mode == 'global':
             return np.asarray(self.simulation.robots[i].state)  # Pos, Geschwindigkeit, Zielposition
         elif self.args.mode == 'sonar':
-            return np.asarray(self.simulation.robots[i].stateLidar)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
+            return np.asarray(self.simulation.robots[i].get_state_lidar(reversed = False))  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
 
 
     def getRobotsProximityCategoryAllObstacles(self, i):
@@ -115,45 +115,6 @@ class Environment:
 
         return 2#[0, 1, 2, 3]  # Links, Rechts, Oben, Unten
 
-    def get_velocity(self, action):
-        """
-        DEPRECATED
-        This method maps the action that has been chosen by the neural net to a certain target linear and angular
-        velocity. This is only used for a discrete action space.
-
-        :param action: the action the neural net has chosen
-        :return: returns the new target linear and angular velocities
-        """
-
-        if(action == None):
-            return (None, None)
-        actualLinVel = self.simulation.robot.getLinearVelocity()
-        actualAngVel = self.simulation.robot.getAngularVelocity()
-
-        tarLinVel = 0 #actualLinVel
-        tarAngVel = 0 #actualAngVel
-
-        # Links drehen mit vorheriger Linear Velocity
-        if action == 0:
-            tarAngVel = self.simulation.robot.minAngularVelocity
-
-        # Rechts drehen mit vorheriger Linear Velocity
-        if action == 1:
-            tarAngVel = self.simulation.robot.maxAngularVelocity
-
-        # Geradeaus fahren mit vorheriger Linear Velocity
-        # if action == 2:
-        #     tarAngVel = 0
-
-        # Beschleunigen auf maximale Linear Velocity, drehen mit vorheriger Angular Velocity
-        if action == 2:
-            tarLinVel = self.simulation.robot.maxLinearVelocity
-
-        # stehen bleiben, Angular Velocity wie vorher
-        if action == 3:
-            tarLinVel = self.simulation.robot.minLinearVelocity
-
-        return tarLinVel, tarAngVel
 
     def is_done(self):
         """
@@ -182,11 +143,6 @@ class Environment:
 
 
         ######## Update der Simulation #######
-
-        #robotsTarVels = []
-        # for action in actions:
-        #     tarLinVel, tarAngVel = action #self.get_velocity(action)
-        #     robotsTarVels.append((tarLinVel, tarAngVel))
 
         robotsTermination = self.simulation.update(actions, self.steps_left, activations, proximity)
         robotsDataCurrentFrame = []
@@ -384,10 +340,10 @@ class Environment:
         :return: returns the result of the fitness function
         """
 
-        distPos = 0.015
-        distNeg = 0.002  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
-        oriPos = 0.0003
-        oriNeg = 0.00002
+        distPos = 0.009#0.015
+        distNeg = -0.02#0.002  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
+        oriPos = 0.0001#.0003
+        oriNeg = -0.00002#0.00002
         lastDistPos = 0.05
         unblViewPos = 0.0003
 

@@ -112,10 +112,6 @@
 <line x1="53.3642" y1 ="424.821" x2="57.2295" y2="429.41" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
 <line x1="57.2295" y1 ="429.41" x2="26.6358" y2="455.179" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
 <line x1="26.6358" y1 ="455.179" x2="22.7705" y2="450.59" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
-<circle id="start_1_1_" cx="422.956" cy ="389.49" r="7" fill="none" stroke = "black" stroke-width = "1"/>
-<circle id="start_2_1_" cx="381.773" cy ="384.268" r="4" fill="none" stroke = "black" stroke-width = "1"/>
-<circle id="goal_1_1_" cx="114.726" cy ="430.347" r="9" fill="none" stroke = "black" stroke-width = "1"/>
-<circle id="goal_2_1_" cx="15" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
 <circle cx="265" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
 <circle cx="295" cy ="65" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
 <circle cx="445" cy ="65" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
