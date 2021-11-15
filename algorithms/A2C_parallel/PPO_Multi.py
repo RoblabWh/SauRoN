@@ -17,6 +17,7 @@ import yaml
 import tensorflow
 import matplotlib.pyplot as plt
 import time
+from random import shuffle
 
 
 import sys
@@ -214,10 +215,42 @@ class PPO_Multi:
 
 
     def train_models_with_obs(self, obs_lists, master_env):
-        obs_list_concatenated = []
-        weights= None
-        for exp in obs_lists:
-            # obs_list_concatenated += list
+        shuffle(obs_lists)
+        numb_of_exp_per_batch = int(2400 / (self.args.train_interval  * 4))
+
+        obs_concatinated = []
+        current_index = -1
+
+        weights = None
+        for i, exp in enumerate(obs_lists):
+            if(i%numb_of_exp_per_batch == 0):
+                current_index += 1
+                obs_concatinated.append(exp)
+            else:
+                # Print structure of dict
+                # for key, value in obs_concatinated[current_index].items():
+                #     print(key, type(value))
+                #     if isinstance(value, dict):
+                #         for key2, value2 in value.items():
+                #             print("└─→", key2, type(value2))
+                #
+                # for key, value in exp.items():
+                #     print(key, type(value))
+                #     if isinstance(value, dict):
+                #         for key2, value2 in value.items():
+                #             print("└─→", key2, type(value2))
+
+
+                # print((obs_concatinated[current_index].items()))
+                for key, value in obs_concatinated[current_index].items():
+                    if type(value) == type(exp):
+                        for key2, value2 in value.items():
+                            obs_concatinated[current_index][key][key2] = np.concatenate((value2, exp[key][key2]))
+                    else:
+                        obs_concatinated[current_index][key] = np.concatenate((value, exp[key]))
+
+
+        for exp in obs_concatinated:
             weights = ray.get(master_env.train_net_obs.remote(exp))
         return weights
 

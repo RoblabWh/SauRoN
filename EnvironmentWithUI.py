@@ -340,11 +340,11 @@ class Environment:
         :return: returns the result of the fitness function
         """
 
-        distPos = 0.009#0.015
-        distNeg = -0.02#0.002  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
+        distPos = 0.02#0.009#0.015
+        distNeg = -0.002#0.002  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
         oriPos = 0.0001#.0003
         oriNeg = -0.00002#0.00002
-        lastDistPos = 0.05
+        lastDistPos = 0.005
         unblViewPos = 0.0003
 
         deltaDist = dist_old - dist_new
