@@ -47,12 +47,13 @@ timeFrames = 4              # number of past states used as an Input for the neu
 #  wenn die Anzahl der Roboter nicht zum Bild passt und auch bzgl manually, wenn man nur einen Roboter steuern will
 # TODO er scheint auch den numbOfRobotsManual zu nehmen, auch wenn es nicht auf manual ist
 numbOfRobotsManual = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 48     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 2     # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
 #levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg0_tareq.svg']
-levelFiles = ['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
+levelFiles = ['Nachbau_der_x.svg']#['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
+#levelFiles = ['SwapSide.svg', 'Simple.svg', 'Funnel.svg', 'svg2_tareq.svg'] #, 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
 
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
@@ -75,7 +76,11 @@ filename = 'PPO_21-06-17--18-19_e9'
 #filename = 'PPO_21-06-01--17-47_e434'
 filename = 'A2C_Network_2021-10-25--17-38_1400'
 filename = 'tranined_model'
-filename = 'PPO_21-11-09--23-11_e21'
+# filename = 'A2C_Network_2021-11-22--00-12_200'
+# filename = 'PPO_21-11-10--16-55'
+# filename = 'A2C_Network_2021-10-25--17-38_1400'
+# filename = 'A2C_Network_2021-11-22--00-12_200'
+#filename = 'PPO_21-11-18--17-54'
 
 if __name__ == '__main__':
     args = None
@@ -118,7 +123,7 @@ if __name__ == '__main__':
     parser.add_argument('--numb_of_robots', type=int, default=numbOfRobotsManual, help='Number of robots acting in one environment')
     parser.add_argument('--sim_time_step', type=float, default=simTimeStep, help='Time between steps')
 
-    parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
+    parser.add_argument('--training', type=bool, default=False, help='Training or Loading trained weights')
     parser.add_argument('--train_perception_only', type=bool, default=False, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
     parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
@@ -157,7 +162,7 @@ if __name__ == '__main__':
 
     if args.load_christian:
         #args.load_old = True
-        # filename = filenameChristian
+        #filename = filenameChristian
         # args.steps = 600
         args.time_frames = 4
         args.time_penalty = False
@@ -236,7 +241,7 @@ if __name__ == '__main__':
             ray.get(model.trainPerception.remote(args, env_dim[0]))
         else:
             print('been here')
-            ray.get(model.load_net.remote(args.path+filename+'.h5'))
+            ray.get(model.load_net.remote(args.path+filename+'.h5'))  # für model Laden .h5 auskommentieren
             print("done that")
             ray.get(model.execute.remote(args, env_dim[0]))
 

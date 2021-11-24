@@ -68,7 +68,7 @@ class Robin_Network(AbstractModel):
         tag = 'body'
 
         # Lidar Convolutions
-        lidar_conv = Conv1D(filters=16, kernel_size=15, strides=7, padding='same', activation='relu', name=tag + '_lidar-conv_1')(input_lidar) # k_s 7 str 3
+        lidar_conv = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu', name=tag + '_lidar-conv_1')(input_lidar) # k_s 7 (15) str 3 (7)
 
         lidar_conv = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu', name=tag + '_lidar-conv_2')(lidar_conv)
         lidar_flat = Flatten()(lidar_conv)
@@ -202,6 +202,7 @@ class Robin_Network(AbstractModel):
         # path = path.replace('\\', '/')
         print(path)
         self._model = tf.keras.models.load_model(path)
+        self.print_summary()
 
     def pedict_certain(self, s):
         """

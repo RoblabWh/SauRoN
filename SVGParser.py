@@ -16,7 +16,7 @@ class SVGLevelParser:
         self.stations, self.robots, self.lines, self.circles = [], [], [], []
 
         dpiFactor = 1/28.35 #72 dotsPerInch converted  into DotsPerCentimeter
-
+        #dpiFactor /= 10
         # svg = SVG.parse(file)
         # list(svg.elements())
         # print(svg.elements())

@@ -277,8 +277,11 @@ class PPO_Multi:
         # self.network.load_weights(path)
         self.network = Robin_Network(self.act_dim, self.env_dim, self.args)
         self.network.build()
-        self.network.load_weights(path)
-        #self.network.load_model(path)
+
+        if 'h5' in path[-2:]:
+            self.network.load_weights(path)
+        else:
+            self.network.load_model(path)
         return True
 
 
