@@ -85,7 +85,7 @@ class Simulation:
                 self.simulationWindow.setRobotRepresentation(self.robots)
                 self.simulationWindow.setStations(self.stations)
                 self.simulationWindow.setCircleWalls(self.circleWalls)
-
+                self.simulationWindow.resize()
 
 
 

@@ -32,8 +32,8 @@ memory_size = 10000
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0001                 # learning rate
 num_episodes = 601         # the number of epochs (/episodes) that are simulated
-steps = 700                 # number of steps per epoch (/episode)
-trainingInterval = 100       # number of steps after which the neural net is trained
+steps = 750                 # number of steps per epoch (/episode)
+trainingInterval = 75       # number of steps after which the neural net is trained
 
 arenaWidth = 22             # Width (X Direction) of the Arena in Meter
 arenaLength = 10            # Length (Y direction) of the Arena in Meter
@@ -47,13 +47,14 @@ timeFrames = 4              # number of past states used as an Input for the neu
 #  wenn die Anzahl der Roboter nicht zum Bild passt und auch bzgl manually, wenn man nur einen Roboter steuern will
 # TODO er scheint auch den numbOfRobotsManual zu nehmen, auch wenn es nicht auf manual ist
 numbOfRobotsManual = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 2     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 20     # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
 #levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg0_tareq.svg']
-levelFiles = ['Nachbau_der_x.svg']#['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
-#levelFiles = ['SwapSide.svg', 'Simple.svg', 'Funnel.svg', 'svg2_tareq.svg'] #, 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
+#levelFiles = ['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
+#levelFiles = ['Nachbau_der_x.svg']#['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
+levelFiles = ['SwapSide.svg', 'Nachbau_der_x.svg', 'svg2_tareq.svg'] #, 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
 
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
@@ -81,6 +82,7 @@ filename = 'tranined_model'
 # filename = 'A2C_Network_2021-10-25--17-38_1400'
 # filename = 'A2C_Network_2021-11-22--00-12_200'
 #filename = 'PPO_21-11-18--17-54'
+filename = 'A2C_Network_2021-11-22--00-12_200'
 
 if __name__ == '__main__':
     args = None
@@ -123,7 +125,7 @@ if __name__ == '__main__':
     parser.add_argument('--numb_of_robots', type=int, default=numbOfRobotsManual, help='Number of robots acting in one environment')
     parser.add_argument('--sim_time_step', type=float, default=simTimeStep, help='Time between steps')
 
-    parser.add_argument('--training', type=bool, default=False, help='Training or Loading trained weights')
+    parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
     parser.add_argument('--train_perception_only', type=bool, default=False, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
     parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')

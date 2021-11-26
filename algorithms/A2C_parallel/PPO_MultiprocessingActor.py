@@ -399,6 +399,7 @@ class PPO_MultiprocessingActor:
         if self.app == None:
             self.app = QApplication(sys.argv)
             self.env.simulation.showWindow(self.app)
+            self.env.setUISaveListener(self)
 
     def hideWindow(self):
         if self.app != None:

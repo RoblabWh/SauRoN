@@ -134,7 +134,7 @@ class PPO_Multi:
             self.activeActors = self.multiActors
 
             #save weights in predefined interval
-            if (self.currentEpisode+1) % self.args.save_intervall == 0:
+            if (self.currentEpisode) % self.args.save_intervall == 0:
                 print('Saving')
                 self.save_weights(self.multiActors[0], self.args.path)
 
@@ -216,7 +216,7 @@ class PPO_Multi:
 
     def train_models_with_obs(self, obs_lists, master_env):
         shuffle(obs_lists)
-        numb_of_exp_per_batch = int(2400 / (self.args.train_interval  * 4))
+        numb_of_exp_per_batch = int(20000 / (self.args.train_interval  * 4))
 
         obs_concatinated = []
         current_index = -1

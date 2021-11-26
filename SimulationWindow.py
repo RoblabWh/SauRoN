@@ -75,10 +75,13 @@ class SimulationWindow(QtWidgets.QMainWindow):
             self.monitorGraph = DistanceGraph.DistanceGraph(application)
 
     def resizeEvent(self, event):
+        QtWidgets.QMainWindow.resizeEvent(self, event)
+        self.resize()  # doof das wir alles anders importieren z.B. Station und RobotRepresentation -> TODO: alles einheitlich importieren
+
+    def resize(self):
         windowHeight = self.geometry().height()
         windowWidth = self.geometry().width()
 
-        QtWidgets.QMainWindow.resizeEvent(self, event)
 
         self.newScaleFactorWidth = windowWidth / self.arenaWidth
 
@@ -91,7 +94,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         for station in self.stations:
             Station.updateScale(station,
-                                self.newScaleFactorWidth)  # doof das wir alles anders importieren z.B. Station und RobotRepresentation -> TODO: alles einheitlich importieren
+                                self.newScaleFactorWidth)
 
     def initUI(self):
         self.btSimulation = QPushButton(self)

@@ -216,10 +216,12 @@ class Robin_Network(AbstractModel):
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0, 1)
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0, 1)
 
-        selected_action, criticValue, neglog = self.predict(np.expand_dims(laser, 0), np.expand_dims(orientation, 0),
-                                                            np.expand_dims(distance, 0), np.expand_dims(velocity, 0))
+        net_out = self._model([np.expand_dims(laser, 0), np.expand_dims(orientation, 0), np.expand_dims(distance, 0), np.expand_dims(velocity, 0)])
 
-        return (selected_action, None)
+       # selected_action, criticValue, neglog = self.predict(np.expand_dims(laser, 0), np.expand_dims(orientation, 0),
+       #                                                     np.expand_dims(distance, 0), np.expand_dims(velocity, 0))
+
+        return (net_out[0], None)
 
 
     def print_summary(self):
