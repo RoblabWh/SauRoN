@@ -37,7 +37,7 @@ trainingInterval = 75       # number of steps after which the neural net is trai
 
 arenaWidth = 22             # Width (X Direction) of the Arena in Meter
 arenaLength = 10            # Length (Y direction) of the Arena in Meter
-simTimeStep = 0.15          # simulated time between two steps in the simulation
+simTimeStep = 0.15 #0,05beste     # simulated time between two steps in the simulation
 
 numberOfRays = 1081          # spacing between two light rays (for distance calculation) in degrees
 fov = 270                   # field of view in degree
@@ -47,14 +47,15 @@ timeFrames = 4              # number of past states used as an Input for the neu
 #  wenn die Anzahl der Roboter nicht zum Bild passt und auch bzgl manually, wenn man nur einen Roboter steuern will
 # TODO er scheint auch den numbOfRobotsManual zu nehmen, auch wenn es nicht auf manual ist
 numbOfRobotsManual = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 20     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 32     # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
 #levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg0_tareq.svg']
 #levelFiles = ['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
 #levelFiles = ['Nachbau_der_x.svg']#['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
-levelFiles = ['SwapSide.svg', 'Nachbau_der_x.svg', 'svg2_tareq.svg'] #, 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
+#levelFiles = ['SwapSide.svg', 'Nachbau_der_x.svg', 'svg2_tareq.svg'] #, 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
+levelFiles = ['Simple.svg', 'SwapSide.svg','Nachbau_der_x.svg']
 
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
@@ -83,6 +84,7 @@ filename = 'tranined_model'
 # filename = 'A2C_Network_2021-11-22--00-12_200'
 #filename = 'PPO_21-11-18--17-54'
 filename = 'A2C_Network_2021-11-22--00-12_200'
+filename = 'PPO_21-12-01--11-45_e27'
 
 if __name__ == '__main__':
     args = None

@@ -216,7 +216,7 @@ class PPO_Multi:
 
     def train_models_with_obs(self, obs_lists, master_env):
         shuffle(obs_lists)
-        numb_of_exp_per_batch = int(20000 / (self.args.train_interval  * 4))
+        numb_of_exp_per_batch = int(1024 / (self.args.train_interval  * 4))
 
         obs_concatinated = []
         current_index = -1

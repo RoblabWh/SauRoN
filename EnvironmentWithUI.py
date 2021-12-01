@@ -43,7 +43,8 @@ class Environment:
         if self.args.mode == 'global':
             return np.asarray(self.simulation.robots[i].state)  # Pos, Geschwindigkeit, Zielposition
         elif self.args.mode == 'sonar':
-            return np.asarray(self.simulation.robots[i].get_state_lidar(reversed = False))  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
+            reversed = self.args.load_christian
+            return np.asarray(self.simulation.robots[i].get_state_lidar(reversed))  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
 
 
     def getRobotsProximityCategoryAllObstacles(self, i):

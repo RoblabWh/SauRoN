@@ -389,14 +389,15 @@ class Robot:
 
         rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.args.field_of_view)
         distances, lidarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
-
+        # if self.args.load_christian:
+        #     distances = np.flip(distances)
+        #     lidarHits = np.flip(lidarHits, axis=0)
 
         circleX = [r[0] for r in collidorCircleAllForTerminations]
         circleY = [r[1] for r in collidorCircleAllForTerminations]
         circleR = [r[2] for r in collidorCircleAllForTerminations]
         circlesPositionsAll = np.array([circleX, circleY])
         self.collisionDistances, self.collisionDistancesRobots = rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colliderLines, circlesPositionsAll, circleR)
-
 
 
         self.lidarHits = (lidarHits)

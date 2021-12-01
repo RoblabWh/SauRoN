@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow import keras
 from algorithms.A2C_parallel.robins.abstract_model import AbstractModel
 import algorithms.A2C_parallel.robins.abstract_model
-from tensorflow.keras.layers import Input, Conv1D, Dense, Flatten, Concatenate
+from tensorflow.keras.layers import Input, Conv1D, Dense, Flatten, Concatenate, Lambda
 from tensorflow.keras.models import Model as KerasModel
 
 from algorithms.A2C_parallel.robins.continous_layer import ContinuousLayer
@@ -30,6 +30,7 @@ class Robin_Network(AbstractModel):
 
         self.config = (config)
         print('Versionen (tf, Keras): ', tf.__version__, keras.__version__)
+        self.oldschool = False
 
     @property
     def config(self):
@@ -96,8 +97,13 @@ class Robin_Network(AbstractModel):
         densed = Dense(units=256, activation='relu', name=tag+'_dense', )(concated)
 
         # Policy
-        mu = Dense(units=2, activation='tanh', name='output_mu')(densed)
-        var = ContinuousLayer(name='output_continous')(mu)
+        if self.oldschool:
+            mu_var = ContinuousLayerOld()(densed)
+            mu = Lambda(lambda x: x[:, :2])(mu_var)
+            var = Lambda(lambda x: x[:, -2:])(mu_var)
+        else:
+            mu = Dense(units=2, activation='tanh', name='output_mu')(densed)
+            var = ContinuousLayer(name='output_continous')(mu)
 
         # Value
         value = Dense(units=128, activation='relu', name='out_value_dense')(densed)
@@ -220,7 +226,7 @@ class Robin_Network(AbstractModel):
 
        # selected_action, criticValue, neglog = self.predict(np.expand_dims(laser, 0), np.expand_dims(orientation, 0),
        #                                                     np.expand_dims(distance, 0), np.expand_dims(velocity, 0))
-
+        print('mu: ', net_out[0], ' | var: ', net_out[1])
         return (net_out[0], None)
 
 
@@ -238,3 +244,34 @@ class Robin_Network(AbstractModel):
 
 
 
+
+from tensorflow.keras.layers import Layer, Dense, Input, concatenate, InputSpec
+import tensorflow.keras as K
+
+class ContinuousLayerOld(Layer):
+    def __init__(self, **kwargs):
+        self._mu = Dense(units=2, activation='tanh', name='mu', kernel_initializer=K.initializers.Orthogonal(gain=1), use_bias=True, bias_initializer='zero')
+        super(ContinuousLayerOld, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        assert len(input_shape) >= 2
+        input_dim = input_shape[-1]
+
+        self._var = self.add_weight(name='kernel',
+                                    shape=(2,),
+                                    initializer='zero',
+                                    trainable=True)
+
+        self.input_spec = InputSpec(min_ndim=2, axes={-1: input_dim})
+        self.built = True
+
+    def call(self, x, **kwargs):
+        tmp = self._mu(x)
+        return concatenate([tmp, tmp * 0.0 + self._var], axis=-1)# I hate keras for this shit
+
+    def compute_output_shape(self, input_shape):
+        assert input_shape and len(input_shape) >= 2
+        assert input_shape[-1]
+        output_shape = list(input_shape)
+        output_shape[-1] = 2
+        return tuple(output_shape)

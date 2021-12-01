@@ -27,7 +27,7 @@ class RobotRepresentation:
         self.posY = y * self.scale
         self.dirV = [0,0]
         self.direction = direction
-        self.radarHits = []
+        self.lidarHits = []
         self.isActive = True
         self.activations = [1 for _ in range(1081)] # TODO 1081 dynamisch einlesen
 
@@ -60,7 +60,7 @@ class RobotRepresentation:
                     posY = self.posY
 
                 beta = 0.2 # determines which percentage of high and low activations are shown
-                for i in range(0, len(self.radarHits)):
+                for i in range(0, len(self.lidarHits)):
                     self.lineColor.setAlphaF(1)
                     color = self.lineColor
                     if self.activations != None:
@@ -73,14 +73,15 @@ class RobotRepresentation:
                             self.lineColor.setAlphaF(0)
                             color = self.lineColor
 
+                    #color = QColor.fromHsv(36, 255, int(i*(255/len(self.lidarHits))))
                     painter.setPen(QPen(color, 1.5, Qt.DotLine))
                     painter.setBrush(QBrush(color, self.brushStyle))
 
                     painter.drawLine(posX,
                                      posY,
-                                     self.radarHits[i][0] * self.scale,
-                                     self.radarHits[i][1] * self.scale)
-                    painter.drawEllipse(self.radarHits[i][0] * self.scale - 3, self.radarHits[i][1] * self.scale - 3, 6, 6)
+                                     self.lidarHits[i][0] * self.scale,
+                                     self.lidarHits[i][1] * self.scale)
+                    painter.drawEllipse(self.lidarHits[i][0] * self.scale - 3, self.lidarHits[i][1] * self.scale - 3, 6, 6)
 
 
 
@@ -119,12 +120,12 @@ class RobotRepresentation:
 
 
 
-    def update(self, x, y, direction, radarHits, simShowing, isActive, dirV, activations, pieSliceBorders = None, sensorPos = None):
+    def update(self, x, y, direction, lidarHits, simShowing, isActive, dirV, activations, pieSliceBorders = None, sensorPos = None):
         if simShowing:
             self.posX = x * self.scale
             self.posY = y * self.scale
             self.direction = direction
-            self.radarHits = radarHits
+            self.lidarHits = lidarHits
             self.isActive = isActive
             self.dirV = dirV
             self.pieSliceBorders = pieSliceBorders
