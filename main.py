@@ -1,25 +1,19 @@
 import argparse
 import math
-import time
-
 import numpy as np
 import os
-
 import ray
 from PyQt5.QtWidgets import QApplication
-
 import yaml
-
-import EnvironmentWithUI
 import sys
-import h5py
 import datetime
 
 from ControlWindow import ControlWindow
-#from algorithms.DQN import DQN
+
 from algorithms.A2C_parallel.A2C_Multi import A2C_Multi
 from algorithms.A2C_parallel.PPO_Multi import PPO_Multi
 from algorithms.utils import str2bool
+
 
 # HYPERPARAMETERS
 batch_size = 40
@@ -43,11 +37,8 @@ numberOfRays = 1081          # spacing between two light rays (for distance calc
 fov = 270                   # field of view in degree
 timeFrames = 4              # number of past states used as an Input for the neural net
 
-# TODO numbOfRobots von SVG überschreiben, weil er sonst mit einem index out of range Fehler reagiert,
-#  wenn die Anzahl der Roboter nicht zum Bild passt und auch bzgl manually, wenn man nur einen Roboter steuern will
-# TODO er scheint auch den numbOfRobotsManual zu nehmen, auch wenn es nicht auf manual ist
-numbOfRobotsManual = 4            # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 32     # parallel environments are used to create more and diverse training experiences
+numbOfRobotsManual = 4     # only change if set to manual do not use more than 4
+numbOfParallelEnvs = 20     # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
@@ -55,7 +46,7 @@ scaleFactor = 65            # scales the simulation window (the window is also r
 #levelFiles = ['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
 #levelFiles = ['Nachbau_der_x.svg']#['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
 #levelFiles = ['SwapSide.svg', 'Nachbau_der_x.svg', 'svg2_tareq.svg'] #, 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
-levelFiles = ['Simple.svg', 'SwapSide.svg','Nachbau_der_x.svg']
+levelFiles = ['Simple.svg', 'SwapSide.svg','Nachbau_der_x.svg', 'svg2_tareq.svg' ]  # einmal mit nur simple load_old weitertrainieren und mit den anderen Welten weitertrainieren
 
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
@@ -84,7 +75,9 @@ filename = 'tranined_model'
 # filename = 'A2C_Network_2021-11-22--00-12_200'
 #filename = 'PPO_21-11-18--17-54'
 filename = 'A2C_Network_2021-11-22--00-12_200'
-filename = 'PPO_21-12-01--11-45_e27'
+
+filename = 'PPO_21-12-01--18-38_e102'
+filename = 'PPO_21-12-02--20-07_e74'
 
 if __name__ == '__main__':
     args = None
@@ -130,7 +123,7 @@ if __name__ == '__main__':
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
     parser.add_argument('--train_perception_only', type=bool, default=False, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
-    parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
+    parser.add_argument('--load_old', type=bool, default=True, help='Improve existing net (by loading pretrained weights and continuing with training)')
     parser.add_argument('--lidar_activation', type=bool, default=True, help='Show Lidar activation')
 
     parser.add_argument('--level_files', type=list, default=levelFiles, help='List of Level Files')

@@ -1,17 +1,11 @@
-from os import name
-import logging  
+import logging
 import tensorflow as tf
 from tensorflow import keras
 from algorithms.A2C_parallel.robins.abstract_model import AbstractModel
-import algorithms.A2C_parallel.robins.abstract_model
-from tensorflow.keras.layers import Input, Conv1D, Dense, Flatten, Concatenate, Lambda
+from tensorflow.keras.layers import Input, Conv1D, Flatten, Concatenate, Lambda
 from tensorflow.keras.models import Model as KerasModel
-
 from algorithms.A2C_parallel.robins.continous_layer import ContinuousLayer
-
 import numpy as np
-from typing import Tuple
-
 
 class Robin_Network(AbstractModel):
     NEEDED_OBSERVATIONS = ['lidar_0', 'orientation_to_goal', 'distance_to_goal', 'velocity']
@@ -30,7 +24,7 @@ class Robin_Network(AbstractModel):
 
         self.config = (config)
         print('Versionen (tf, Keras): ', tf.__version__, keras.__version__)
-        self.oldschool = False
+        self.oldschool = True
 
     @property
     def config(self):
@@ -100,7 +94,7 @@ class Robin_Network(AbstractModel):
         if self.oldschool:
             mu_var = ContinuousLayerOld()(densed)
             mu = Lambda(lambda x: x[:, :2])(mu_var)
-            var = Lambda(lambda x: x[:, -2:])(mu_var)
+            var = Lambda(lambda x: x[:, -2:] / 10)(mu_var)
         else:
             mu = Dense(units=2, activation='tanh', name='output_mu')(densed)
             var = ContinuousLayer(name='output_continous')(mu)
@@ -123,7 +117,6 @@ class Robin_Network(AbstractModel):
         #return clip(mu + exp(var) * random_normal(shape(mu)), -1.0, 1.0)
 
     def _neglog_continuous(self, action, mu, var):
-        # Cast gedöns notwendig?
         return 0.5 * tf.reduce_sum(tf.square((action - mu) / tf.exp(var)), axis=-1) \
                 + 0.5 * tf.math.log(2.0 * np.pi) * tf.cast(tf.shape(action)[-1], dtype='float32') \
                 + tf.reduce_sum(var, axis=-1)
@@ -193,7 +186,6 @@ class Robin_Network(AbstractModel):
         pg_loss_cliped = -action['advantage'] * tf.clip_by_value(ratio, 1.0 - self._config['clipping_range'], 1.0 + self._config['clipping_range'])
 
         pg_loss = tf.reduce_mean(tf.maximum(pg_loss, pg_loss_cliped))
-        #print(tf.squeeze(net_out[2]), net_out[2], action['reward'],  self._config['coefficient_value'])
         value_loss = keras.losses.mean_squared_error(net_out[2], tf.convert_to_tensor(action['reward'], dtype='float32')) * self._config['coefficient_value']
         
         loss = pg_loss + value_loss

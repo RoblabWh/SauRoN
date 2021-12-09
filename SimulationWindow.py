@@ -2,16 +2,15 @@ import time
 
 from PyQt5.QtGui import QPainter, QFont, QPen, QColor
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QLabel, QSlider, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QSlider, QHBoxLayout
 from PyQt5 import QtWidgets
 import RobotRepresentation
 from Station import Station
-from Borders import ColliderLine
 import DistanceGraph
 import numpy as np
 
 
-def initRobots(robots, scaleFactor, mode):
+def initRobots(robots, scaleFactor, mode, args):
     robotRepresentations = []
     for i, robot in enumerate(robots):
         robot_draw = RobotRepresentation.RobotRepresentation(robot.getPosX(),
@@ -21,7 +20,7 @@ def initRobots(robots, scaleFactor, mode):
                                                              robot.length,
                                                              scaleFactor,
                                                              mode,
-                                                             i)
+                                                             i, args)
 
         robotRepresentations.append(robot_draw)
     return robotRepresentations
@@ -50,7 +49,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.setGeometry(200, 100, self.width, self.height)
         # self.setFixedWidth(self.width)
         # self.setFixedHeight(self.height)
-        # TODO scalefactor an fenstergröße binden
+
         self.sonarShowing = True
         self.simShowing = True
         self.SaveNetClicked = False
@@ -60,7 +59,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.delay = 0
         self.selectedCategory = 0
 
-        self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode)
+        self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode, self.args)
         self.stations = stations  # initStations(stations, args.scale_factor)
         self.walls = walls
         self.circleWalls = circleWalls
@@ -76,7 +75,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
     def resizeEvent(self, event):
         QtWidgets.QMainWindow.resizeEvent(self, event)
-        self.resize()  # doof das wir alles anders importieren z.B. Station und RobotRepresentation -> TODO: alles einheitlich importieren
+        self.resize()
 
     def resize(self):
         windowHeight = self.geometry().height()
@@ -99,18 +98,15 @@ class SimulationWindow(QtWidgets.QMainWindow):
     def initUI(self):
         self.btSimulation = QPushButton(self)
         self.btSimulation.clicked.connect(self.clickedSimulation)
-        # self.btSimulation.move(0, 0)
         self.btSimulation.setFixedWidth(150)
 
         self.lbSteps = QLabel(self)
         self.lbSteps.setText("0")
-        # self.lbSteps.move(self.width - 68, 0)
         self.lbSteps.setFont(QFont("Helvetica", 12, QFont.Black, ))
         self.lbSteps.setStyleSheet("color: rgba(0,0 ,0, 96);")
 
         self.btSaveNet = QPushButton(self)
         self.btSaveNet.clicked.connect(self.clickedSaveNet)
-        # self.btSaveNet.move(290, 0)
         self.btSaveNet.setFixedWidth(120)
         self.btSaveNet.setText("Netz speichern")
 
@@ -125,7 +121,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
         if self.mode == 'sonar':
             self.btSonar = QPushButton(self)
             self.btSonar.clicked.connect(self.clickedSonar)
-            # self.btSonar.move(160, 0)
             self.btSonar.setFixedWidth(120)
 
         if self.args.training == False:
@@ -136,7 +131,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
             self.slDelay.setEnabled(True)
             self.slDelay.setFixedWidth(200)
             self.slDelay.valueChanged.connect(self.valueChangesSlider)
-            # self.slDelay.move(360,60)
 
             lbSlTitle = QLabel(self)
             lbSlTitle.setText("Simulation Speed")
@@ -206,14 +200,11 @@ class SimulationWindow(QtWidgets.QMainWindow):
         elif not self.simShowing:
             self.btSimulation.setText("Visualisierung fortsetzen")
 
-        # self.btSimulation.adjustSize()
-
         if self.mode == 'sonar':
             if self.sonarShowing:
                 self.btSonar.setText("Sonar ausblenden")
             elif not self.sonarShowing:
                 self.btSonar.setText("Sonar einblenden")
-            # self.btSonar.adjustSize()
 
     def paintEvent(self, event):
 
@@ -343,7 +334,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.saveButtonListenrs.append(observer)
 
     def setRobotRepresentation(self, robots):
-        self.robotRepresentations = initRobots(robots, self.scaleFactor, self.args.mode)
+        self.robotRepresentations = initRobots(robots, self.scaleFactor, self.args.mode, self.args)
         for robot in self.robotRepresentations:
             RobotRepresentation.RobotRepresentation.updateScale(robot, self.newScaleFactorWidth)
 
@@ -369,4 +360,3 @@ class SimulationWindow(QtWidgets.QMainWindow):
     def updateTrafficLights(self, proximity):
 
         self.selectedCategory = np.argmax(proximity)
-        # print(selectedCategory, proximity[selectedCategory])

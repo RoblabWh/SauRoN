@@ -1,9 +1,7 @@
 import math
 import Simulation
-import time
 import numpy as np
-from old.PlotterWindow import PlotterWindow
-import time
+
 
 class Environment:
     """
@@ -81,7 +79,6 @@ class Environment:
         return self.getMinDistOnVirtualRoadwayWithScan(i, scan)
 
     def getMinDistOnVirtualRoadwayWithScan(self, i, scan):
-        # print("len:",len( scan))
         # scan = self.simulation.robots[i].distances
         scanTransformed = []
         for j, point in enumerate(scan):
@@ -90,7 +87,7 @@ class Environment:
         scanTransformed = np.asarray(scanTransformed)
         x = np.logical_and(scanTransformed[:, 0] > -0.35, scanTransformed[:, 0] < 0.35)
         roadwayIndexSelection = np.argwhere(np.logical_and(x, scanTransformed[:, 1] > 0))
-        # print(np.min(scan[roadwayIndexSelection]))
+
         min = np.min(scan[roadwayIndexSelection])
         if min > 3:
             if i == 0: print(0, self.steps- self.steps_left, min)
@@ -155,9 +152,6 @@ class Environment:
 
         return robotsDataCurrentFrame
 
-
-
-
     def extractRobotData(self, i, terminations):
         """
         Extracts state and calculates reward for the i-th robot
@@ -169,10 +163,10 @@ class Environment:
 
 
         robot = self.simulation.robots[i]
-        outOfArea, reachedPickup, runOutOfTime = terminations
+        collision, reachedPickup, runOutOfTime = terminations
 
         ############ State Robot i ############
-        next_state = self.get_observation(i)  # TODO state von Robot i bekommen
+        next_state = self.get_observation(i)
         next_state = np.expand_dims(next_state, axis=0)
 
 
@@ -193,142 +187,12 @@ class Environment:
             (robot_pos_current_y - goal_pos_y) ** 2)
 
         ########### REWARD CALCULATION ################
-        # reward = self.createReward01(robot, delta_dist, robot_orientation_new,orientation_goal_new, outOfArea, reachedPickup)
-        # reward = self.createReward02(robot, delta_dist, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-        #                              orientation_goal_new, outOfArea, reachedPickup)
-        #reward = self.createReward03(robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-        #                             orientation_goal_new, outOfArea, reachedPickup)
 
-        reward = self.createReward04(robot, distance_new, distance_old, reachedPickup, outOfArea)
+        reward = self.createReward(robot, distance_new, distance_old, reachedPickup, collision)
 
         return (next_state, reward, not robot.isActive(), reachedPickup)
 
-
-    def createReward01(self, robot, delta_dist, robot_orientation, orientation_goal_new, outOfArea, reachedPickup):
-        reward = delta_dist / 5
-        # print("Delta Dist: " + str(delta_dist))
-
-        if delta_dist > 0.0:
-            reward += reward  # * 0.01
-        if delta_dist == 0.0:
-            reward += -0.5
-        if delta_dist < 0.0:
-            reward += reward  # * 0.5 # * 0.001
-
-        anglDeviation = math.fabs(robot_orientation - orientation_goal_new)
-        reward += (anglDeviation * -1 + math.pi/3) * 2
-        if anglDeviation < 0.2 and delta_dist > 0:
-            reward = reward * 2
-
-        # print("angDev: ", anglDeviation, "  Reward-Anteil: ",  (anglDeviation * -1 + 0.35) * 2)
-
-        # if math.fabs(robot_orientation - orientation_goal_new) < 0.001:  # 0.05 0.3
-        #     #if(distance_old - distance_new) > 0:
-        #     reward += 1.0
-        #
-        # if math.fabs(robot_orientation - orientation_goal_new) < 0.05:  # 0.5
-        #     #if(distance_old - distance_new) > 0:
-        #     reward += 0.01
-
-        # else:
-        #     reward += -0.1
-        # if distance_old > distance_new:
-        #     reward += 2
-        # if distance_old < distance_new:
-        #     reward = -1
-        # if distance_old == distance_new:
-        #     reward += -1
-        if robot.isInCircleOfGoal(500):
-            reward += 0.001
-        if robot.isInCircleOfGoal(200):
-            reward += 0.002
-        if robot.isInCircleOfGoal(100):
-            reward += 0.003
-        if outOfArea:
-            reward += -2.0
-
-        if reachedPickup:
-            reward += 2.0
-
-
-
-        # reward -= (self.steps - self.steps_left) / self.steps
-        # if self.steps_left <= 0:
-        #    reward += -1.0
-
-        # reward = factor * distance        # evtl. reward gewichten
-        return reward
-
-    def createReward02(self, robot, delta_dist, robot_orientation_old,orientation_goal_old, robot_orientation_new, orientation_goal_new, outOfArea, reachedPickup):
-
-        reward = delta_dist
-
-        anglDeviation_old = math.fabs(robot_orientation_old - orientation_goal_old)
-        if anglDeviation_old > math.pi:
-            subtractor = 2 * (anglDeviation_old - math.pi)
-            anglDeviation_old = anglDeviation_old-subtractor
-
-        anglDeviation_new = math.fabs(robot_orientation_new - orientation_goal_new)
-        if anglDeviation_new > math.pi:
-            subtractor = 2* (anglDeviation_new - math.pi)
-            anglDeviation_new = anglDeviation_new - subtractor
-
-        if anglDeviation_new < anglDeviation_old:
-            reward += ((math.pi - anglDeviation_new)) /math.pi /6
-        else:
-            reward -= ((anglDeviation_new)) / math.pi /6
-
-        if(anglDeviation_new < 1):
-            reward += ((math.pi - anglDeviation_new)) /math.pi /6
-
-        reward = reward/2
-
-        # print(reward, anglDeviation_new * 180/math.pi, (math.pi-anglDeviation_new)/math.pi /4)
-        # reward+= ((anglDeviation_old - anglDeviation_new)/math.pi)/8
-        # print(reward)
-        # print(anglDeviation_old*180/math.pi,anglDeviation_new*180/math.pi, ((anglDeviation_old - anglDeviation_new)*180/math.pi) )
-
-        if outOfArea:
-            reward += -3.0
-
-        if reachedPickup:
-            reward += 3.0
-
-
-        return reward
-
-    def createReward03(self, robot, delta_dist,distance_new, robot_orientation_old, orientation_goal_old, robot_orientation_new,
-                       orientation_goal_new, outOfArea, reachedPickup):
-        reward = 0
-        deltaDist = delta_dist #bei max Vel von 0.7 und einem 0.1s Timestep ist die max delta_Dist 0.07m --> 7cm
-        # angularDeviation = (abs(robot.angularDeviation / math.pi) *-1) + 0.5
-        angularDeviation = (robot.debugAngle[0]-0.5)
-
-
-        # reward =  (angularDeviation*0.1)
-        reward = (deltaDist)# + (angularDeviation*0.08)
-
-        if outOfArea:
-            reward += -2.0
-
-        if reachedPickup:
-            reward += 2.0
-
-
-        timePenalty = 0
-
-        if(self.args.time_penalty):
-            print("!!!!!TIMEPENALTY!!!")
-            timeInfluence = 0.05
-            bonusTime = 200
-            if(self.steps-self.steps_left > bonusTime):
-                timePenalty = (1/self.steps) * (self.steps+bonusTime - self.steps_left) * timeInfluence
-
-
-
-        return (reward-timePenalty)/2
-
-    def createReward04(self, robot, dist_new, dist_old, reachedPickup, collision):
+    def createReward(self, robot, dist_new, dist_old, reachedPickup, collision):
         """
         Creates a (sparse) reward based on the euklidian distance, if the robot has reached his goal and if the robot
         collided with a wall or another robot.
@@ -362,9 +226,7 @@ class Environment:
         else:
             rewardOrient = angularDeviation * oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
 
-        unblockedViewDistance = (-0.1 / (robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact) ) * unblViewPos
-
-
+        unblockedViewDistance = (-0.1 / (robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact)) * unblViewPos
 
         lastBestDistance = robot.bestDistToGoal
         distGoal = dist_new
@@ -373,8 +235,6 @@ class Environment:
         if distGoal < lastBestDistance:
             rewardLastDist = (lastBestDistance - distGoal) * lastDistPos
             robot.bestDistToGoal = distGoal
-
-
 
         if collision:
             reward = -1

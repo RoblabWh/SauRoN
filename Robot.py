@@ -1,12 +1,6 @@
-import math, random, time
-
-#from tensorflow.python.framework.test_ops import old
-
+import math
 from Borders import ColliderLine
-
-
-# import keyboard
-from pynput.keyboard import Key, Listener
+from pynput.keyboard import Listener
 
 
 class Robot:
@@ -431,7 +425,6 @@ class Robot:
             angularDeviation = angularDeviation*-1
 
         self.angularDeviation = angularDeviation
-        # print(angularDeviation)
 
         anglDeviationV = self.directionVectorFromAngle(angularDeviation)
 

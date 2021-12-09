@@ -1,12 +1,12 @@
-from PyQt5.QtGui import QPainter, QBrush, QPen, QColor
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5 import QtWidgets
+from PyQt5.QtGui import QBrush, QPen, QColor
+from PyQt5.QtCore import Qt
 import math
 import numpy as np
 
 
 class RobotRepresentation:
-    def __init__(self, x, y, direction, width, height, scaleFactor, mode, colorIndex):
+    def __init__(self, x, y, direction, width, height, scaleFactor, mode, colorIndex, args):
+        self.args = args
         self.mode = mode
         self.scale = scaleFactor
         self.width = width #* self.scale
@@ -29,7 +29,7 @@ class RobotRepresentation:
         self.direction = direction
         self.lidarHits = []
         self.isActive = True
-        self.activations = [1 for _ in range(1081)] # TODO 1081 dynamisch einlesen
+        self.activations = [1 for _ in range(self.args.number_of_rays)]
 
         brightness = 235 - (int((colorIndex * 39) / 255) * 80)
         self.lineColor = QColor.fromHsv((colorIndex * 39) % 255, 255, brightness)
@@ -39,15 +39,6 @@ class RobotRepresentation:
 
     def paint(self, painter, sonarShowing):
 
-        # if keyboard.is_pressed('p'):    # show sonar
-        #     self.showSonar = True
-        # if keyboard.is_pressed('o'):    # don't show sonar
-        #     self.showSonar = False
-        #
-        # if keyboard.is_pressed('z'):
-        #     self.showSimulation = True
-        # if keyboard.is_pressed('t'):
-        #     self.showSimulation = False
         if self.mode == 'sonar' and self.isActive:
             if sonarShowing:
 
@@ -137,9 +128,9 @@ class RobotRepresentation:
 
                 actives = (activations + (0-min)) * (1 / (max - min))
 
-                self.activations = [actives[int(i/6)] for i in range(1081)] #activations.shape[0]
+                self.activations = [actives[int(i/6)] for i in range(self.args.number_of_rays)] #activations.shape[0]
             else:
-                self.activations = None # TODO 1081 dynamisch einlesen
+                self.activations = None
 
     def updateScale(self, scaleFactor):
         self.scale = scaleFactor

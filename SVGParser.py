@@ -11,31 +11,21 @@ class SVGLevelParser:
 
     def __init__(self, filename, args):
 
-
         file = 'svg/'+filename
         self.stations, self.robots, self.lines, self.circles = [], [], [], []
 
         dpiFactor = 1/28.35 #72 dotsPerInch converted  into DotsPerCentimeter
         #dpiFactor /= 10
-        # svg = SVG.parse(file)
-        # list(svg.elements())
-        # print(svg.elements())
 
         svg = ET.parse(file)
-        svg = svg.getroot() # kann man weglassen
-        # print(svg.attrib)
-        # print(svg.attrib['width'])
-        # # svg = ET.fromstring("svg/hall.svg")
-        # print(svg)
+        svg = svg.getroot()
+
         rects = svg.findall('.//{http://www.w3.org/2000/svg}rect')
         paths = svg.findall('.//{http://www.w3.org/2000/svg}path')
         polylines = svg.findall('.//{http://www.w3.org/2000/svg}polyline')
         polygons = svg.findall('.//{http://www.w3.org/2000/svg}polygon')
         circles = svg.findall('.//{http://www.w3.org/2000/svg}circle')
         lines = svg.findall('.//{http://www.w3.org/2000/svg}line')
-        # print(rects)
-        # print(paths)
-        # print(circles)
 
         tareq = 'tareq' in filename
 
@@ -55,15 +45,14 @@ class SVGLevelParser:
                 height = float(rect.attrib['height'])*dpiFactor
                 x = float(rect.attrib['x'])*dpiFactor + width*.5
                 y = float(rect.attrib['y'])*dpiFactor + height*.5
-                # print(rect, width, height, x, y)
+
                 if 'transform' in rect.attrib:
                     rectWall = Borders.SquareWall(x, y, width, height)
                     transform = rect.attrib['transform'].split('(')[1:]
                     transform = transform[0].split()
                     rectWall.rotate(float(transform[0]), float(transform[1]), float(transform[2]), float(transform[3]))
-                    # rectWall.rotate(0, -1, 1, 0)
-                    # print(transform)
-                    self.lines+= rectWall.getBorders()
+
+                    self.lines += rectWall.getBorders()
 
                 else:
                     self.lines += Borders.SquareWall(x, y, width, height).getBorders()
@@ -86,7 +75,7 @@ class SVGLevelParser:
                     y1 = float(points[i][1]) * dpiFactor
                     x2 = float(points[(i+1)][0]) * dpiFactor
                     y2 = float(points[(i+1)][1]) * dpiFactor
-                    # print(polyline, x1, y1, x2, y2)
+
                     self.lines += [Borders.ColliderLine(x1, y1, x2, y2)]
 
         for polygon in polygons:
@@ -107,7 +96,7 @@ class SVGLevelParser:
                     y1 = float(points[i][1]) * dpiFactor
                     x2 = float(points[(i-1) % pointsLen][0]) * dpiFactor
                     y2 = float(points[(i-1) % pointsLen][1]) * dpiFactor
-                    # print(polygon, x1, y1, x2, y2)
+
                     self.lines += [Borders.ColliderLine(x1, y1, x2, y2)]
 
 
@@ -124,7 +113,7 @@ class SVGLevelParser:
                 y1 = float(line.attrib['y1']) * dpiFactor
                 x2 = float(line.attrib['x2']) * dpiFactor
                 y2 = float(line.attrib['y2']) * dpiFactor
-                # print(line, id, x1, y1, x2, y2)
+
                 if tareq:
                     self.lines += [Borders.ColliderLine(x2, y2, x1, y1)]
                 else:
@@ -133,6 +122,7 @@ class SVGLevelParser:
         stationsData = []
         self.robotsData = []
         startAndGoalCircles = [] # only used if circles are not defined as start and goal by an ID
+
         for circle in circles:
             attributes = circle.attrib
             show = True
@@ -145,9 +135,8 @@ class SVGLevelParser:
                 cy = float(circle.attrib['cy']) * dpiFactor
                 r = float(circle.attrib['r']) * dpiFactor
                 if 'id' in attributes:
-                    id= circle.attrib['id']
+                    id = circle.attrib['id']
 
-                    # print(circle, cx, cy, r, id)
                     if 'start' in id:
                         self.robotsData += [(cx, cy)]
 
@@ -164,7 +153,7 @@ class SVGLevelParser:
 
         #create goals and starts for 4 roboters by randomly sampling a position defined by the level svg file
         for i in range(4):
-            if len(startAndGoalCircles)>2:
+            if len(startAndGoalCircles) > 2:
                 startIndex = random.randint(0, len(startAndGoalCircles)-1)
                 startR = startAndGoalCircles.pop(startIndex)
                 self.robotsData += [(startR[0], startR[1])]
@@ -173,10 +162,8 @@ class SVGLevelParser:
                 goal = startAndGoalCircles.pop(goalIndex)
                 stationsData += [goal]
 
-
         for i, data in enumerate(stationsData):
             self.stations += [Station.Station(data[0], data[1], data[2], i, args.scale_factor)]
-        # random.shuffle(self.stations)
 
         self.stationsData = [stationsData[i][:-1] for i in range(0,len(stationsData))]
 

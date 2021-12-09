@@ -3,15 +3,12 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import ray
-import sys
-#from algorithms.DQN import DQN
-#from algorithms.A2C_parallel.A2C_Multi import A2C_Multi
 from algorithms.A2C_parallel.PPO_Multi import PPO_Multi
-import EnvironmentWithUI
+
 
 class ControlWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, application, nbOfEnvs, act_dim, env_dim, args, loadWeightsPath = ""): #, model):
+    def __init__(self, application, nbOfEnvs, act_dim, env_dim, args, loadWeightsPath = ""):
         super(ControlWindow, self).__init__()
         ray.init()
         self.app = application
@@ -91,10 +88,6 @@ class ControlWindow(QtWidgets.QMainWindow):
 
     def getTable(self):
         return self.tableWidget
-    #
-    # def getLevelVisibilities(self):
-    #     return self.tableWidget.getVisibilites()
-
 
 
 
@@ -158,17 +151,6 @@ class Table(QWidget):
             self.tabWidget.setItem(env, 3, QTableWidgetItem("0"))
 
 
-
-
-
-        # for env in range(self.nbOfEnvs):
-        #     self.btShowEnv = QPushButton(self)
-        #     self.btShowEnv.setText("Show Env")
-        #     self.tabWidget.setCellWidget(env, 4, self.btShowEnv)
-        #     self.btShowEnv.clicked.connect(lambda *args, row=env, column=4: cellClick(row, column))
-
-
-
     def buttonClicked(self, row, col):
 
         # Change the text of the button
@@ -226,10 +208,6 @@ class Progressbar(QWidget):
         super(Progressbar, self).__init__()
         self.args = args
         self.progressbar = QProgressBar() # evt self übergeben
-        #self.progressbar.setValue(50)
-        #self.progressbar.setFixedWidth(450)
-        #self.progressbar.setGeometry(0,0,300,25)
-        #self.progressbar.setFixedSize(650, 200)
 
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.progressbar)

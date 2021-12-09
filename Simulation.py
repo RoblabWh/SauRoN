@@ -1,19 +1,13 @@
-import Robot
 import SVGParser
-from Station import Station
 import SimulationWindow
 import math, random
 import numpy as np
-from old.PlotterWindow import PlotterWindow
-from Borders import ColliderLine, SquareWall
+from Borders import ColliderLine
 
 class Simulation:
     """
     Defines the simulation with different levels for the robots to train in
     """
-
-    #levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg'] #FuzzyManyRulesMirror2.svg', 'FuzzyManyRules.svg']#'Simple.svg', 'Zipper.svg', 'Funnel.svg']# 'Lab2.svg', 'Simple.svg', 'Zipper.svg', 'Funnel.svg', 'SwapSide.svg']#
-    # levelFiles = ['svg0_tareq.svg', 'svg4_tareq.svg', 'svg1_tareq.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 
     def __init__(self, app, args, timeframes, level):
         """
