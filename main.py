@@ -66,7 +66,8 @@ filename = 'A2C_Network_2021-11-22--00-12_200'
 # Wahrnehmungs_pipeline_training wieder lauffähig machen
 # acivations wieder einbauen
 
-#TODO in readme 2-3 sätze zum aufbau der svgs verlieren (wie muss man die bauen)
+#TODO in readme 2-3 Sätze zum Aufbau der svgs verlieren (wie muss man die bauen)
+# kommentieren und praktikumsaufgabe updaten
 if __name__ == '__main__':
     args = None
     parser = argparse.ArgumentParser(description='Training parameters')
