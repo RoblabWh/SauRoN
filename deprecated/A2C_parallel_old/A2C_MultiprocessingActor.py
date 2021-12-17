@@ -2,8 +2,8 @@ import ray
 import numpy as np
 import yaml
 
-from EnvironmentWithUI import Environment
-from algorithms.A2C_parallel.A2C_Network import A2C_Network
+from simulation.Environment import Environment
+from deprecated.A2C_parallel_old.A2C_Network import A2C_Network
 import sys
 from PyQt5.QtWidgets import QApplication
 import os

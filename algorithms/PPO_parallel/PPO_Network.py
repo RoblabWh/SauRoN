@@ -1,10 +1,10 @@
 import logging
 import tensorflow as tf
 from tensorflow import keras
-from algorithms.A2C_parallel.robins.abstract_model import AbstractModel
+from algorithms.PPO_parallel.abstract_model import AbstractModel
 from tensorflow.keras.layers import Input, Conv1D, Flatten, Concatenate, Lambda
 from tensorflow.keras.models import Model as KerasModel
-from algorithms.A2C_parallel.robins.continous_layer import ContinuousLayer
+from algorithms.PPO_parallel.continous_layer import ContinuousLayer
 import numpy as np
 
 class Robin_Network(AbstractModel):
@@ -24,34 +24,14 @@ class Robin_Network(AbstractModel):
 
         self.config = (config)
         print('Versionen (tf, Keras): ', tf.__version__, keras.__version__)
-        self.oldschool = True
+        self.oldschool = False
 
     @property
     def config(self):
         return self._config
 
-    # @TODO Fix for new env/config
     @config.setter
-    def config(self, config):#config_tuple: Tuple[dict, dict]):
-        #config, agent_config = config_tuple
-       
-        # agent_obs = agent_config.getObservationActive()
-        # Check whether the agent has the reuired observations
-        # if not all(x in agent_obs for x in Robin_Network.NEEDED_OBSERVATIONS):
-        #     raise ValueError(f'The Agents observation needs at least these keys: {Robin_Network.NEEDED_OBSERVATIONS}')
-        
-        # Get stack_size from the agent config an ensure the stack_size of every observation is the same
-        # to do Fix Stacksize check
-        # stack_size = agent_config['laser_0'][1]
-        # assert all([x[1] == stack_size for x in agent_config.values()])
-        # config['stack_size'] = stack_size
-
-        # Extract the observation sizes from the agent config
-        # config['lidar_size'] = #agent_obs['lidar_0'][0][0]
-        # config['orientation_size'] = #agent_obs['orientation_to_goal'][0][0]
-        # config['distance_size'] = #agent_obs['distance_to_goal'][0][0]
-        # config['velocity_size'] = #agent_obs['velocity'][0][0]
-        
+    def config(self, config):
         self._config = config
 
     def build(self):
@@ -94,10 +74,10 @@ class Robin_Network(AbstractModel):
         if self.oldschool:
             mu_var = ContinuousLayerOld()(densed)
             mu = Lambda(lambda x: x[:, :2])(mu_var)
-            var = Lambda(lambda x: x[:, -2:] / 10)(mu_var)
+            var = Lambda(lambda x: x[:, -2:])(mu_var)
         else:
             mu = Dense(units=2, activation='tanh', name='output_mu')(densed)
-            var = ContinuousLayer(name='output_continous')(mu)
+            var = ContinuousLayer(name='output_continous')(mu) # Lambda(lambda x: x/5)
 
         # Value
         value = Dense(units=128, activation='relu', name='out_value_dense')(densed)
@@ -113,7 +93,7 @@ class Robin_Network(AbstractModel):
         return Input(shape=(input_dim, self._config['stack_size']), dtype='float32', name='input_' + name)
 
     def _select_action_continuous_clip(self, mu, var):
-        return tf.clip_by_value(mu + tf.exp(var) * tf.random.normal(tf.shape(mu)), -1.0, 1.0)
+        return tf.clip_by_value(mu + tf.exp(var) * tf.random.normal(tf.shape(mu),0, 0.5), -1.0, 1.0)
         #return clip(mu + exp(var) * random_normal(shape(mu)), -1.0, 1.0)
 
     def _neglog_continuous(self, action, mu, var):
@@ -155,17 +135,6 @@ class Robin_Network(AbstractModel):
         return (selected_action, neglog)        
 
 
-    # def train(self, observation, action):
-    #     with tf.GradientTape() as tape:
-    #         #print(observation["laser_0"].shape)
-    #         net_out = self._model(([observation["laser_0"], observation["orientation_to_goal"],
-    #                                observation["distance_to_goal"], observation["velocity"]]))
-    #         loss = self.calculate_loss(observation, action, net_out)
-    #
-    #     gradients = tape.gradient(loss, self._model.trainable_variables)
-    #     self._optimizer.apply_gradients(zip(gradients, self._model.trainable_variables))
-    #
-    #     return {'loss': loss}
 
     def train(self, observation, action):
         logging.info(f'Tracing train function of {self.__class__}')
@@ -218,7 +187,7 @@ class Robin_Network(AbstractModel):
 
        # selected_action, criticValue, neglog = self.predict(np.expand_dims(laser, 0), np.expand_dims(orientation, 0),
        #                                                     np.expand_dims(distance, 0), np.expand_dims(velocity, 0))
-        print('mu: ', net_out[0], ' | var: ', net_out[1])
+       #  print('mu: ', net_out[0], ' | var: ', net_out[1])
         return (net_out[0], None)
 
 

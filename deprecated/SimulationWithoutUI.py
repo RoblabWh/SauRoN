@@ -1,9 +1,9 @@
-import Robot
+from simulation import Robot
 from deprecated.StationWithoutUI import Station
 
 import math
 
-from Borders import ColliderLine
+from simulation.Borders import ColliderLine
 
 class Simulation:
 
@@ -40,10 +40,10 @@ class Simulation:
         # self.stations = [self.pickUp, self.pickUp3]#, self.pickUp4]
 
 
-        self.robot = Robot.Robot((10.5, 8.8), 3.2*math.pi/2, self.pickUp3, args, timeframes, self.walls, self.stations)
-        self.robot2 = Robot.Robot((4, 8.6), 2.6*math.pi/2, self.pickUp, args, timeframes, self.walls, self.stations)
-        self.robot3 = Robot.Robot((1.1, 8.9), 3.6*math.pi/2, self.pickUp4, args, timeframes, self.walls, self.stations)
-        self.robot4 = Robot.Robot((13.1, 3.9), 3.6*math.pi/2, self.pickUp2, args, timeframes, self.walls, self.stations)
+        self.robot = Robot.Robot((10.5, 8.8), 3.2 * math.pi / 2, self.pickUp3, args, timeframes, self.walls, self.stations)
+        self.robot2 = Robot.Robot((4, 8.6), 2.6 * math.pi / 2, self.pickUp, args, timeframes, self.walls, self.stations)
+        self.robot3 = Robot.Robot((1.1, 8.9), 3.6 * math.pi / 2, self.pickUp4, args, timeframes, self.walls, self.stations)
+        self.robot4 = Robot.Robot((13.1, 3.9), 3.6 * math.pi / 2, self.pickUp2, args, timeframes, self.walls, self.stations)
 
         self.robots = [self.robot2, self.robot, self.robot3, self.robot4]
         # self.robots = [self.robot2]#, self.robot]#, self.robot3]

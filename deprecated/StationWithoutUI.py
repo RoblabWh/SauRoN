@@ -1,4 +1,4 @@
-from Borders import ColliderLine
+from simulation.Borders import ColliderLine
 
 
 class Station:

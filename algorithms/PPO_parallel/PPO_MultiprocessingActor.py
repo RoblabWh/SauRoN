@@ -2,15 +2,12 @@ import ray
 import numpy as np
 import yaml
 
-from EnvironmentWithUI import Environment
-#from algorithms.A2C_parallel.PPO_Network import PPO_Network
-from algorithms.A2C_parallel.PPO_Network_NewContinuousLayer import PPO_Network
-from algorithms.A2C_parallel.robins.A2C_Network_robin import Robin_Network
+from simulation.Environment import Environment
+#from algorithms.PPO_parallel.PPO_Network import PPO_Network
+from algorithms.PPO_parallel.PPO_Network import Robin_Network
 import sys
 from PyQt5.QtWidgets import QApplication
 import os
-import tensorflow as tf
-import time
 
 
 @ray.remote
@@ -71,6 +68,8 @@ class PPO_MultiprocessingActor:
         self.cumul_reward = 0
         self.steps = 0
         self.resetActor()
+        self.closed = False
+
 
 
     def setWeights(self, weights):
@@ -408,3 +407,14 @@ class PPO_MultiprocessingActor:
 
     def isNotShowing(self):
         return self.app == None
+
+    def has_been_closed(self):
+        if self.closed:
+            self.closed = False
+            return True
+        return False
+
+    def window_closed(self):
+        self.hideWindow()
+        self.closed = True
+

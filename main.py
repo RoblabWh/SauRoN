@@ -9,9 +9,8 @@ import sys
 import datetime
 
 from ControlWindow import ControlWindow
-
-from algorithms.A2C_parallel.A2C_Multi import A2C_Multi
-from algorithms.A2C_parallel.PPO_Multi import PPO_Multi
+from deprecated.A2C_parallel_old.A2C_Multi import A2C_Multi
+from algorithms.PPO_parallel.PPO_Multi import PPO_Multi
 from algorithms.utils import str2bool
 
 
@@ -38,47 +37,36 @@ fov = 270                   # field of view in degree
 timeFrames = 4              # number of past states used as an Input for the neural net
 
 numbOfRobotsManual = 4     # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 20     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 15     # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
-#levelFiles = ['FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg0_tareq.svg']
-#levelFiles = ['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
-#levelFiles = ['Nachbau_der_x.svg']#['SwapSide.svg', 'Simple.svg', 'Funnel.svg']# 'svg2_tareq.svg', 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
-#levelFiles = ['SwapSide.svg', 'Nachbau_der_x.svg', 'svg2_tareq.svg'] #, 'Lab.svg', 'svg9_tareq.svg']#, 'svg9_tareq.svg', 'Simple.svg', 'Lab.svg', 'Funnel.svg']#,'FuzzyManyRulesMirror2.svg', 'Lab2.svg', 'Simple.svg', 'svg4_tareq.svg']
-levelFiles = ['Simple.svg', 'SwapSide.svg','Nachbau_der_x.svg', 'svg2_tareq.svg' ]  # einmal mit nur simple load_old weitertrainieren und mit den anderen Welten weitertrainieren
+
+levelFiles = ['Simple.svg', 'SwapSide_a.svg', 'Funnel.svg']
 
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
 
 filename = "" # enter the filename from the models folder (without .h5 or .yml)
-filename = 'PPO_21-05-07--12-26_e580'
-filename = 'PPO_21-05-10--14-58' #das ist jut
-filename = 'PPO_21-05-31--08-03'
-filename = 'PPO_21-05-31--15-43_e644'
-filename = 'PPO_21-06-08--18-09_e1'
-filename = 'PPO_21-06-08--18-18_e167'
-filename = 'PPO_21-06-17--18-19_e9'
-#filename = 'PPO_enhanced_perception_21-10-07--12-56'
-# filenameChristian = 'ppo_small_continuous_noshared_2020-10-29_12 46_0000010062'
-#filenameChristian = 'kobuki_train'
-#filenameChristian = filename
-# filenameChristian = 'ppo_big_continuous_noshared_2020-01-22_08_47_0002500617_trained_all_world'
-# filenameChristian = 'ppo_big_continuous_noshared_2020-01-19_02_31_0000187103_trained_5_world'
-# filenameChristian = 'PPO_21-06-24--13-04_e11'
-#filename = 'PPO_21-06-01--17-47_e434'
-filename = 'A2C_Network_2021-10-25--17-38_1400'
-filename = 'tranined_model'
-# filename = 'A2C_Network_2021-11-22--00-12_200'
-# filename = 'PPO_21-11-10--16-55'
 # filename = 'A2C_Network_2021-10-25--17-38_1400'
-# filename = 'A2C_Network_2021-11-22--00-12_200'
-#filename = 'PPO_21-11-18--17-54'
 filename = 'A2C_Network_2021-11-22--00-12_200'
 
-filename = 'PPO_21-12-01--18-38_e102'
-filename = 'PPO_21-12-02--20-07_e74'
+# filename = 'PPO_21-12-14--14-43' #100 episodes, better reward, oldschool = false, 3 levels, 0.63 success
+# filename = 'PPO_21-12-14--19-02_e304'
+# filename = 'PPO_21-12-14--19-02'
+# filename = 'PPO_21-12-14--19-02_e103'
 
+#TODO die arguments verschlanken
+# Christian case zum standrt machen
+# Case für Netz ohne yml File einabuen
+# Netzparameter (lr, gamma in robins Netz verwenden, mit seinen Werten als default)
+# entfernen: --alg  --shared --netSize  alle DQN-Parameter (arena width und length, noch verwendet?) --time_penalty --use_GPU
+# nice to have:
+# Timestamp in PPO_multi erzeugen und verwalten, nicht in args
+# Wahrnehmungs_pipeline_training wieder lauffähig machen
+# acivations wieder einbauen
+
+#TODO in readme 2-3 sätze zum aufbau der svgs verlieren (wie muss man die bauen)
 if __name__ == '__main__':
     args = None
     parser = argparse.ArgumentParser(description='Training parameters')
@@ -123,7 +111,7 @@ if __name__ == '__main__':
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
     parser.add_argument('--train_perception_only', type=bool, default=False, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
-    parser.add_argument('--load_old', type=bool, default=True, help='Improve existing net (by loading pretrained weights and continuing with training)')
+    parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
     parser.add_argument('--lidar_activation', type=bool, default=True, help='Show Lidar activation')
 
     parser.add_argument('--level_files', type=list, default=levelFiles, help='List of Level Files')
@@ -186,27 +174,7 @@ if __name__ == '__main__':
     # env = EnvironmentWithUI.Environment(app, args, env_dim[0], 0)
 
 
-    act_dim = np.asarray(2)#env.get_actions()) #TODO bei kontinuierlichem 2 actions
-
-    # if args.alg == 'a2c':
-    #     model = A2C_Multi(act_dim, env_dim, args)
-    #     # model = PPO_Multi(act_dim, env_dim, args)
-    #     # model = A2C(act_dim, env_dim, args)
-    # elif args.alg == 'dqn':
-    #     model = DQN(act_dim, env_dim, args)
-    # elif args.alg == 'ppo':
-    #     model = PPO_Multi(act_dim, env_dim, args)
-    #
-    # if args.training:
-    #     if args.load_old:
-    #         model.train(args.path+filename+'.h5')
-    #     model.train()
-    #     # model.trainA3C()
-    # elif not args.training:
-    #     app = QApplication(sys.argv)
-    #     env = EnvironmentWithUI.Environment(app, args, env_dim[0], 0)
-    #     model.load_net(args.path+filename+'.h5')
-    #     model.execute(env, args)
+    act_dim = np.asarray(2)
 
     if(args.training):
 
@@ -232,20 +200,15 @@ if __name__ == '__main__':
 
 
         if args.train_perception_only:
-            print('been here')
             ray.get(model.load_net.remote(args.path + filename + '.h5'))
-            print("done that")
             ray.get(model.trainPerception.remote(args, env_dim[0]))
         else:
-            print('been here')
             ray.get(model.load_net.remote(args.path+filename+'.h5'))  # für model Laden .h5 auskommentieren
-            print("done that")
             ray.get(model.execute.remote(args, env_dim[0]))
 
 
 
-# TODO Roboter State aufräumne um ständiges umbauen zu vermeiden
-#   State rückwärts aufbauen
+
 # TODO Variable für Netzt bauen ja/ nein --> wenn ja dann den Typ --> falls netz bauen gewichte Laden? ---> wenn bauen Nein ganzes model laden
 # TODO im Roboter nur goal oder station verwenden (für die position der Zielstation)
 

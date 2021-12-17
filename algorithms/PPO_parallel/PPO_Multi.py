@@ -1,22 +1,16 @@
-import sys
-
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 
-import EnvironmentWithUI
-from BucketRenderer import BucketRenderer
+from simulation.Environment import Environment
 from DistanceGraph import DistanceGraph
-from algorithms.A2C_parallel.A2C_Multi import AverageMeter
-#from algorithms.A2C_parallel.PPO_Network import PPO_Network
-from algorithms.A2C_parallel.PPO_Network_NewContinuousLayer import PPO_Network
-from algorithms.A2C_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
-from algorithms.A2C_parallel.robins.A2C_Network_robin import Robin_Network
+from deprecated.A2C_parallel_old.A2C_Multi import AverageMeter
+#from algorithms.PPO_parallel.PPO_Network import PPO_Network
+from algorithms.PPO_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
+from algorithms.PPO_parallel.PPO_Network import Robin_Network
 from tqdm import tqdm
 import ray
 import yaml
 import tensorflow
-import matplotlib.pyplot as plt
-import time
 from random import shuffle
 
 
@@ -25,8 +19,6 @@ import sys
 
 sys.path.insert(1, '/')
 # sys.path.insert(1, 'C:/Users/Jenny/Downloads/aia-trt-inference-master/aia-trt-inference-master/fuzzy_controller')
-from displayWidget import DisplayWidget
-
 
 
 @ray.remote
@@ -52,6 +44,7 @@ class PPO_Multi:
         self.timePenalty = args.time_penalty
         self.av_meter = AverageMeter()
         self.gamma = args.gamma
+        self.closed_windows = []
 
 
     def prepare_training(self, loadWeightsPath = ""):
@@ -112,7 +105,10 @@ class PPO_Multi:
 
             for i, show in enumerate(visibleLevels):
                 if show:# and ray.get(self.multiActors[i].isNotShowing.remote()):
-                    self.showEnvWindow(i)
+                    if ray.get(self.multiActors[i].has_been_closed.remote()):
+                        self.closed_windows.append(i)
+                    else:
+                        self.showEnvWindow(i)
                 else:
                     self.hideEnvWindow(i)
             self.activeActors = activeActors
@@ -172,6 +168,11 @@ class PPO_Multi:
                 actor.killActor.remote()
             return (True, [], [], self.currentEpisode)
 
+    def get_closed_windows(self):
+        tmp_list = self.closed_windows.copy()
+        self.closed_windows = []
+        return tmp_list
+
 
     def train_modelsFaster(self, envsData, masterEnv = None):
         statesConcatenatedL = envsData[0][0]
@@ -216,7 +217,7 @@ class PPO_Multi:
 
     def train_models_with_obs(self, obs_lists, master_env):
         shuffle(obs_lists)
-        numb_of_exp_per_batch = int(1024 / (self.args.train_interval  * 4))
+        numb_of_exp_per_batch = len(obs_lists)# int(1024 / (self.args.train_interval  * 4))
 
         obs_concatinated = []
         current_index = -1
@@ -248,6 +249,7 @@ class PPO_Multi:
                             obs_concatinated[current_index][key][key2] = np.concatenate((value2, exp[key][key2]))
                     else:
                         obs_concatinated[current_index][key] = np.concatenate((value, exp[key]))
+
 
 
         for exp in obs_concatinated:
@@ -301,9 +303,8 @@ class PPO_Multi:
         :param env: EnvironmentWithUI.Environment
         :param args: args defined in main
         """
-        print("hello there")
         app = QApplication(sys.argv)
-        env = EnvironmentWithUI.Environment(app, args, env_dim, 0)
+        env = Environment(app, args, env_dim, 0)
         env.simulation.showWindow(app)
 
         #auskommentieren wenn fuzzy nicht genutzt wird
@@ -313,11 +314,9 @@ class PPO_Multi:
         # visualization of chosen actions
         #histogramm = BucketRenderer(20, 0)
         #histogramm.show()
-        #iveHistogramRobot = 0
+        #liveHistogramRobot = 0
 
-        #robotsCount = self.numbOfRobots #TODO bei jedem neuen Level laden akualisieren
-
-        distGraph = DistanceGraph(app)
+        # distGraph = DistanceGraph(app)
         for e in range(18):
             env.reset(e % len(env.simulation.levelFiles))
             robotsCount = env.simulation.getCurrentNumberOfRobots()
@@ -390,7 +389,7 @@ class PPO_Multi:
         :param args: args defined in main
         """
         app = QApplication(sys.argv)
-        env = EnvironmentWithUI.Environment(app, args, env_dim, 0)
+        env = Environment(app, args, env_dim, 0)
         env.simulation.showWindow(app)
         self.network.create_perception_model()
 

@@ -1,6 +1,6 @@
 import sys
 from old import DQN
-from deprecated import Agent, Environment
+from deprecated import Agent, Environment_old
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 from collections import namedtuple
@@ -38,7 +38,7 @@ def main():
     # print(tf.__version__)   # Test für Tensorflow
 
     app = QApplication(sys.argv)
-    env = Environment.Environment(app, steps_left)
+    env = Environment_old.Environment(app, steps_left)
 
     for episode in range(num_episodes):
         env.reset()
@@ -92,7 +92,7 @@ def main2():
     # K.set_session(sess)
 
     app = QApplication(sys.argv)
-    env = Environment.Environment(app, steps_left)
+    env = Environment_old.Environment(app, steps_left)
 
     actor_critic = ActorCritic.ActorCritic(env, lr, eps_start, eps_end, eps_decay, sess, batch_size)
 

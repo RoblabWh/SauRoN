@@ -1,6 +1,6 @@
 from PyQt5.QtGui import QBrush, QPen, QColor
 from PyQt5.QtCore import Qt
-from Borders import ColliderLine
+from simulation.Borders import ColliderLine
 
 
 class Station:

@@ -1,8 +1,8 @@
-import SVGParser
-import SimulationWindow
+import simulation.SVGParser as SVGParser
+import simulation.SimulationWindow as SimulationWindow
 import math, random
 import numpy as np
-from Borders import ColliderLine
+from simulation.Borders import ColliderLine
 
 class Simulation:
     """
@@ -196,7 +196,7 @@ class Simulation:
         return len(self.robots)
 
     def loadLevel(self, levelID):
-        print("LevelID: ", levelID)
+        # print("LevelID: ", levelID)
         selectedLevel = SVGParser.SVGLevelParser(self.levelFiles[levelID], self.args)
         self.robots = selectedLevel.getRobots()
         if self.args.manually:

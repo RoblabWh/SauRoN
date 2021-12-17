@@ -40,7 +40,7 @@ class ColliderLine:
         #Flächen-Normalen der Wände
         painter.setPen(QPen(Qt.magenta))
         painter.drawLine(self.normalOrigin[0]*scaleFactor, self.normalOrigin[1]*scaleFactor,
-                         (self.normalOrigin[0]+ (self.n[0]*0.2)) *scaleFactor, (self.normalOrigin[1]+ (self.n[1]*0.2))*scaleFactor)
+                         (self.normalOrigin[0]+ (self.n[0]*0.125)) *scaleFactor, (self.normalOrigin[1]+ (self.n[1]*0.125))*scaleFactor)
 
 import math
 
@@ -62,7 +62,6 @@ class SquareWall:
         xb = + self.halfW
         ya = - self.halfH
         yb = + self.halfH
-
 
         if(degree):
             rotation = rotation * (math.pi/180)
@@ -97,6 +96,7 @@ class SquareWall:
         c4 = ColliderLine(x0, y0, x3, y3)
         self.borders = [c1, c2, c3, c4]
 
+
     def rotate(self, rot00, rot10, rot01, rot11):
         #-0.5736 0.8191 -0.8191 -0.5736
         # Rot matrix R:
@@ -117,7 +117,6 @@ class SquareWall:
 
         for i, border in enumerate(self.borders):
             border.updatePos(self.corners[(i+1)%4], self.corners[i])
-
 
 
     def getBorders(self):

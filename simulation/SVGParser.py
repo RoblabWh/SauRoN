@@ -2,9 +2,9 @@ import math
 import xml.etree.ElementTree as ET
 import random
 
-import Borders
-import Robot
-import Station
+import simulation.Borders as Borders
+import simulation.Robot as Robot
+import simulation.Station as Station
 
 
 class SVGLevelParser:

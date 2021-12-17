@@ -1,5 +1,5 @@
 import math
-import Simulation
+from simulation.Simulation import Simulation
 import numpy as np
 
 
@@ -19,7 +19,7 @@ class Environment:
         self.args = args
         self.steps = args.steps
         self.steps_left = args.steps
-        self.simulation = Simulation.Simulation(app, args, timeframes, level)
+        self.simulation = Simulation(app, args, timeframes, level)
         self.timeframs = timeframes
         self.total_reward = 0.0
         self.done = False

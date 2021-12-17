@@ -3,10 +3,10 @@ import sys
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 
-import EnvironmentWithUI
+from simulation import Environment
 from BucketRenderer import BucketRenderer
-#from algorithms.A2C_parallel.A2C_Network import A2C_Network
-#from algorithms.A2C_parallel.A2C_MultiprocessingActor import A2C_MultiprocessingActor
+#from algorithms.PPO_parallel.A2C_Network import A2C_Network
+#from algorithms.PPO_parallel.A2C_MultiprocessingActor import A2C_MultiprocessingActor
 from tqdm import tqdm
 import ray
 import yaml
@@ -245,7 +245,7 @@ class A2C_Multi:
         # visualization of chosen actions
 
         app = QApplication(sys.argv)
-        env = EnvironmentWithUI.Environment(app, args, env_dim, 0)
+        env = Environment.Environment(app, args, env_dim, 0)
         env.simulation.showWindow()
 
         histogramm = BucketRenderer(20, 0)

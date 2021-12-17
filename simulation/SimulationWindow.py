@@ -4,8 +4,8 @@ from PyQt5.QtGui import QPainter, QFont, QPen, QColor
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QSlider, QHBoxLayout
 from PyQt5 import QtWidgets
-import RobotRepresentation
-from Station import Station
+import simulation.RobotRepresentation as RobotRepresentation
+from simulation.Station import Station
 import DistanceGraph
 import numpy as np
 
@@ -72,6 +72,12 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         if (False):
             self.monitorGraph = DistanceGraph.DistanceGraph(application)
+
+    def closeEvent(self, event):
+        # print("I just got closed. Goodbye")
+        for observer in self.saveButtonListenrs:
+            observer.window_closed()
+
 
     def resizeEvent(self, event):
         QtWidgets.QMainWindow.resizeEvent(self, event)
@@ -174,6 +180,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.setMenuWidget(self.optionsWidget)
 
         self.updateButtons()
+        self.clickedSonar()
 
     def clickedSonar(self):
         if self.sonarShowing:
@@ -358,5 +365,4 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.setFixedHeight(self.arenaHeight * self.newScaleFactorWidth)
 
     def updateTrafficLights(self, proximity):
-
         self.selectedCategory = np.argmax(proximity)

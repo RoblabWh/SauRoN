@@ -46,3 +46,8 @@ Cuda 10.1 installieren https://developer.nvidia.com/cuda-10.1-download-archive-b
 
 ## Anaconda Umgebung yml File erstellen: 
 conda env export > environment.yml
+
+
+
+Hinweise zum Programm:
+Simulationen bzw Fenster von environments können zeitweuse nicht reagieren, wenn andere environments noch laufen oder gerade das Netz trainiert wird. Einfach kurz abwarten

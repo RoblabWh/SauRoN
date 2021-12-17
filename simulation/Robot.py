@@ -1,5 +1,5 @@
 import math
-from Borders import ColliderLine
+from simulation.Borders import ColliderLine
 from pynput.keyboard import Listener
 
 
@@ -475,7 +475,7 @@ class Robot:
         self.netOutput = (tarAngVel, tarLinVel)
 
         if(tarLinVel>1 or tarAngVel>1 or tarLinVel<-1 or tarLinVel<-1):
-            print(tarLinVel, tarAngVel)
+            print("velocitiy recieved from neural net is out of  bounds. Fix your Cide!  ", tarLinVel, tarAngVel)
         tarLinVel = max(-1, min(tarLinVel, 1))
         tarAngVel = max(-1, min(tarAngVel, 1))
 

@@ -3,7 +3,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import ray
-from algorithms.A2C_parallel.PPO_Multi import PPO_Multi
+from algorithms.PPO_parallel.PPO_Multi import PPO_Multi
 
 
 class ControlWindow(QtWidgets.QMainWindow):
@@ -46,6 +46,8 @@ class ControlWindow(QtWidgets.QMainWindow):
 
         self.setCentralWidget(self.widget)
 
+    def closeEvent(self, event):
+        self.worker.terminate()
 
     def train(self):
         self.startbutton.setEnabled(False)
@@ -62,6 +64,8 @@ class ControlWindow(QtWidgets.QMainWindow):
         self.tableWidget.updateButtons()
 
         if not self.done:
+            closed_windows = ray.get(self.model.get_closed_windows.remote())
+            self.tableWidget.updateButtonsOnWindowClosed(closed_windows)
             if not episodeDone:
                 self.worker.terminate()
                 self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
@@ -161,6 +165,10 @@ class Table(QWidget):
             self.levelVisibilty[row] = False
             self.buttonList[row].setText("Hiding")
 
+    def updateButtonsOnWindowClosed(self, list):
+        for windowIndex in list:
+            self.buttonList[windowIndex].setText("Show Env")
+            self.levelVisibilty[windowIndex] = False
 
     def getVisibilites(self):
         return self.levelVisibilty
