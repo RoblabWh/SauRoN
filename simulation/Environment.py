@@ -41,7 +41,7 @@ class Environment:
         if self.args.mode == 'global':
             return np.asarray(self.simulation.robots[i].state)  # Pos, Geschwindigkeit, Zielposition
         elif self.args.mode == 'sonar':
-            reversed = self.args.load_christian
+            reversed = True #determines the order of the state (reversed = false : current state in last place and the oldest at Index 0)
             return np.asarray(self.simulation.robots[i].get_state_lidar(reversed))  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
 
 
@@ -90,13 +90,13 @@ class Environment:
 
         min = np.min(scan[roadwayIndexSelection])
         if min > 3:
-            if i == 0: print(0, self.steps- self.steps_left, min)
+            # if i == 0: print(0, self.steps- self.steps_left, min)
             return 0 #[1,0,0]
         elif min > 1.25:
-            if i == 0: print(1, self.steps- self.steps_left, min)
+            # if i == 0: print(1, self.steps- self.steps_left, min)
             return 1 #[0,1,0]
         else:
-            if i == 0: print(2, self.steps- self.steps_left, min)
+            # if i == 0: print(2, self.steps- self.steps_left, min)
             return 2 #[0,0,1]
 
 

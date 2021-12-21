@@ -42,8 +42,8 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.args = args
         self.app = application
         self.setWindowTitle("Simulation")
-        self.arenaWidth = arenaSize[0]  # args.arena_width
-        self.arenaHeight = arenaSize[1]  # args.arena_length
+        self.arenaWidth = arenaSize[0]
+        self.arenaHeight = arenaSize[1]
         self.width = int(self.arenaWidth * args.scale_factor)
         self.height = int(self.arenaHeight * args.scale_factor)
         self.setGeometry(200, 100, self.width, self.height)
@@ -226,7 +226,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
                     sonarShowing = False
             robot.paint(self.painter, sonarShowing)
         for wall in self.walls:
-            wall.paint(self.painter, self.scaleFactor)
+            wall.paint(self.painter, self.scaleFactor, self.args.display_normals)
 
         for circleWall in self.circleWalls:
             circleWall.paint(self.painter, self.scaleFactor)
@@ -357,8 +357,8 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.delay = self.slDelay.value() / 500
 
     def setSize(self, arenaSize):
-        self.arenaWidth = arenaSize[0]  # args.arena_width
-        self.arenaHeight = arenaSize[1]  # args.arena_length
+        self.arenaWidth = arenaSize[0]
+        self.arenaHeight = arenaSize[1]
         self.width = int(self.arenaWidth * self.scaleFactor)
         self.height = int(self.arenaHeight * self.scaleFactor)
         self.newScaleFactorWidth = self.geometry().width() / self.arenaWidth

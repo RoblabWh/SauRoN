@@ -26,15 +26,7 @@ class Simulation:
         self.hasUI = app is not None
 
         # Parameter width & length über args
-        self.arenaWidth = args.arena_width
-        self.arenaLength = args.arena_length
 
-        #Wände der Simulation
-        self.walls = []
-        self.walls.append(ColliderLine(0, 0, self.arenaWidth, 0))
-        self.walls.append(ColliderLine(self.arenaWidth, 0, self.arenaWidth, self.arenaLength))
-        self.walls.append(ColliderLine(self.arenaWidth, self.arenaLength, 0, self.arenaLength))
-        self.walls.append(ColliderLine(0, self.arenaLength, 0, 0))
 
 
         self.simulationWindow = None
@@ -49,7 +41,6 @@ class Simulation:
 
         self.simTime = 0  # s
         self.simTimestep = args.sim_time_step  # s
-        # self.simTimestep = 0.25  # FÜR CHRISTIANS NETZ
         # self.plotterWindow = PlotterWindow(app)
 
 
@@ -156,7 +147,6 @@ class Simulation:
                     runOutOfTime = True
 
                 if(np.min(robot.collisionDistances) <= robot.radius + 0.0 ):
-                # if(np.min(robot.distances)<=0.3): # FÜR CHRISTIANS NETZ
                     collision = True
 
                 if robot.collideWithTargetStationCircular():

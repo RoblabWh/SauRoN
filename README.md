@@ -48,6 +48,23 @@ Cuda 10.1 installieren https://developer.nvidia.com/cuda-10.1-download-archive-b
 conda env export > environment.yml
 
 
+## Karten
+Die Karten sind als svg Datein gespeichert.
+
+Eigene Karten können ebenfalls erstellt und geladen werden.
+
+Dabei ist folgendes zu beachten:
+- 1m in Simulation = 1cm in der svg  (Die Map sollte in der Regel eine maximale Diagonale von 20m haben)
+- Roboter müssen als Kreise (circle) mit "start" im Namen (id) erstellt werden
+- Zur Anzahl der Roboter muss eine entsprechnde Anzahl an Zielen (goal im Namen) existieren
+  - Die Zuweisung zwischen Start und Ziel erfolgt beim Laden zufällig
+- Es können Rechtecke, Polylines und Lines zum zeichnen von Wänden und anderen stationären Hindernissen genutzt werden.
+- Kreise ohne start oder goal in der id werden ebenfalls als Hindernisse geladen
+- Es muss eine Außenwand existieren.
+- Die Wände müssen gegen den Uhrzeigersinn erstellt werden, damit die Normalen-Vektoren nach außen gerichtet sind (wenn die Normale nicht in RIchtung des Roboters zeigt wird keine Kollision berechnet). 
+  - Die Normalen lassen sich über die args einblenden
+
+
 
 Hinweise zum Programm:
-Simulationen bzw Fenster von environments können zeitweuse nicht reagieren, wenn andere environments noch laufen oder gerade das Netz trainiert wird. Einfach kurz abwarten
+Simulationen bzw Fenster von environments können zeitweise nicht reagieren, wenn andere environments noch laufen oder gerade das Netz trainiert wird. Einfach kurz abwarten

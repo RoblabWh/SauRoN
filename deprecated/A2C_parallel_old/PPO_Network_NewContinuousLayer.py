@@ -281,7 +281,7 @@ class PPO_Network:
         value_loss = mean_squared_error(tf.squeeze(net_out[2]), action['reward']) * self._coefficient_value
 
         value_loss = tf.cast(value_loss, tf.float32)
-        loss = pg_loss + value_loss  # TODO Was ist mit Entropie? Warum kann die weg? Christian
+        loss = pg_loss + value_loss
 
         # entropy
         # entropy = self.entropy_continuous(self._var)

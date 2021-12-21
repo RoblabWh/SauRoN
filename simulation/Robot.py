@@ -51,27 +51,20 @@ class Robot:
         self.length = 0.35  # m
         self.radius = self.width / 2
 
-        self.maxLinearVelocity = 0.7  # m/s
-        self.minLinearVelocity = -0.7  # m/s
+        self.maxLinearVelocity = 0.6  # m/s
+        self.minLinearVelocity = 0  # m/s
         self.maxLinearAcceleration = 1.5  # m/s^2
         self.minLinearAcceleration = -1.5  # m/s^2
-        self.maxAngularVelocity = 1.5 * math.pi  # rad/s
-        self.minAngularVelocity = -1.5 * math.pi  # rad/s
+        self.maxAngularVelocity = 1.5  # rad/s
+        self.minAngularVelocity = -1.5 # rad/s
         self.maxAngularAcceleration = 1.5 * math.pi   #rad/s^2
         self.minAngularAcceleration = -1.5 * math.pi  #rad/s^2
 
-        if args.load_christian:
-            self.minLinearVelocity = 0
-            self.maxLinearVelocity = 0.6
-            self.maxAngularVelocity = 1.5#* math.pi
-            self.minAngularVelocity = -1.5#* math.pi
 
         #Factors for normalization
         self.maxLinearVelocityFact = 1/self.maxLinearVelocity
         self.maxAngularVelocityFact = 1/self.maxAngularVelocity
         # Maximum distance in laserscan is 20 meters
-        # if args.load_christian: self.maxDistFact = 1/20 #FÜR CHRISTIANS Netz
-        # else: self.maxDistFact = 1/math.sqrt(self.XYnorm[0] ** 2 + self.XYnorm[1] ** 2)
         self.maxDistFact = 1/20
 
 
@@ -383,9 +376,7 @@ class Robot:
 
         rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.args.field_of_view)
         distances, lidarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
-        # if self.args.load_christian:
-        #     distances = np.flip(distances)
-        #     lidarHits = np.flip(lidarHits, axis=0)
+
 
         circleX = [r[0] for r in collidorCircleAllForTerminations]
         circleY = [r[1] for r in collidorCircleAllForTerminations]
@@ -433,8 +424,7 @@ class Robot:
 
 
         distancesNorm = distances* self.maxDistFact
-        if self.args.load_christian:
-            distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)  # FÜR CHRISTIANS SIM
+        distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)
         distancesNorm = distancesNorm.tolist()
 
         currentTimestep = (steps - stepsLeft)/steps #TODO setps im Konstruktor übergeben und einenFaktor draus machen, muss nicht bei jedem Aufruf mit übergeben werden
@@ -767,7 +757,7 @@ class FastCollisionRay:
 
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
 
-        # t1NearestHit = t1NearestHit - (self.ownRadius-sensorOffset) #AUSKOMMENTIEREN FÜR CHRISTIANS NETZ
+        # if sensorOffset<0: t1NearestHit = t1NearestHit - (self.ownRadius-sensorOffset) #CHRISTIANS FRAGEN
 
 
         collisionPoints = np.swapaxes(collisionPoints, 0, 1)#für Rückgabe in x,y-Paaren

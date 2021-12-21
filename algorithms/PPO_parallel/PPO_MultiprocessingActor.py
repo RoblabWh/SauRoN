@@ -4,7 +4,7 @@ import yaml
 
 from simulation.Environment import Environment
 #from algorithms.PPO_parallel.PPO_Network import PPO_Network
-from algorithms.PPO_parallel.PPO_Network import Robin_Network
+from algorithms.PPO_parallel.PPO_Network import PPO_Network
 import sys
 from PyQt5.QtWidgets import QApplication
 import os
@@ -32,22 +32,16 @@ class PPO_MultiprocessingActor:
         :param master: boolean - the master actor is used for training of the network weights and sets the initial weights
         """
 
-        # Tensorflow-GPU: 2.2.0 muss installiert sein
-        # Dafür wird Cuda 10.1 benötigt
-        #     -> Hinweis dafür muss zusätzlich cuDNN für Cuda 10.1 installiert werden
-        #        (die dort enthaltenen Dateien in das Nvidia Toolkit über den Filebrowser einfügen)
-        #        https://medium.com/@sunnydhoke22/how-to-install-cuda-10-and-cudnn-for-tensorflow-gpu-on-windows-10-414c10eabc96
 
         # Ray setzt die env Variable für die GPU selber (auf 0 bei einer GPU).
-        # Soll sie nicht verwendet werden muss sie manuell auf -1 gesetzt werden:
-        if not args.use_gpu:
-            os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
+        # GPU kann nicht fehlerfrei genutzt werden und bietet teilweise keinen Leistungsvorteil während der Simulation
+        os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 
 
         self.args = args
         self.app = None
         #self.network = PPO_Network(act_dim, env_dim, args)
-        self.network = Robin_Network(act_dim, env_dim, args) #Robin
+        self.network = PPO_Network(act_dim, env_dim, args) #Robin
         self.network.build()
         if master:
             self.app = QApplication(sys.argv)
@@ -59,7 +53,6 @@ class PPO_MultiprocessingActor:
         self.env = Environment(self.app, args, env_dim[0], level)
         self.env.setUISaveListener(self)
         self.numbOfRobots = self.env.simulation.getCurrentNumberOfRobots()
-        self.timePenalty = args.time_penalty
         # self.av_meter = AverageMeter()
         self.gamma = args.gamma
         self.reachedTargetList = [False] * 100
@@ -255,7 +248,7 @@ class PPO_MultiprocessingActor:
             orientations = []
             distances = []
             velocities = []
-            usedTimeSteps = []
+            usedTimeSteps = [] # currently not used!
 
             for s in states:
                 laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
@@ -356,14 +349,13 @@ class PPO_MultiprocessingActor:
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
-        timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
+        #timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
         # print(laser.shape, orientation.shape, distance.shape, velocity.shape)
-        if (self.timePenalty):
-            # Hier breaken um zu gucken, ob auch wirklich 4 timeframes hier eingegeben werden oder was genau das kommt
-            return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]),
-                                        np.array([velocity]), np.array([timesteps]))  # Liste mit [actions, value]
-        else:
-            return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]))  # Liste mit [actions, value]
+        # if (self.timePenalty):
+        #     return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]),
+        #                                 np.array([velocity]), np.array([timesteps]))  # Liste mit [actions, value]
+        # else:
+        return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]))  # Liste mit [actions, value]
 
 
     def trainNet(self, statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs, values):

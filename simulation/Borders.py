@@ -34,13 +34,14 @@ class ColliderLine:
     def getEnd(self):
         return self.b
 
-    def paint(self, painter, scaleFactor):
+    def paint(self, painter, scaleFactor, showNormals):
         painter.setPen(QPen(Qt.black, 3))
         painter.drawLine(self.a[0] * scaleFactor, self.a[1] * scaleFactor, self.b[0] * scaleFactor, self.b[1] * scaleFactor)
         #Flächen-Normalen der Wände
         painter.setPen(QPen(Qt.magenta))
-        painter.drawLine(self.normalOrigin[0]*scaleFactor, self.normalOrigin[1]*scaleFactor,
-                         (self.normalOrigin[0]+ (self.n[0]*0.125)) *scaleFactor, (self.normalOrigin[1]+ (self.n[1]*0.125))*scaleFactor)
+        if showNormals:
+            painter.drawLine(self.normalOrigin[0]*scaleFactor, self.normalOrigin[1]*scaleFactor,
+                         (self.normalOrigin[0]+ (self.n[0]*0.15)) *scaleFactor, (self.normalOrigin[1]+ (self.n[1]*0.15))*scaleFactor)
 
 import math
 

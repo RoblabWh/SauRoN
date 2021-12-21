@@ -6,7 +6,7 @@ from DistanceGraph import DistanceGraph
 from deprecated.A2C_parallel_old.A2C_Multi import AverageMeter
 #from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from algorithms.PPO_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
-from algorithms.PPO_parallel.PPO_Network import Robin_Network
+from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from tqdm import tqdm
 import ray
 import yaml
@@ -41,7 +41,6 @@ class PPO_Multi:
         self.env_dim = env_dim
         self.numbOfParallelEnvs = args.parallel_envs
         self.numbOfRobots = args.numb_of_robots
-        self.timePenalty = args.time_penalty
         self.av_meter = AverageMeter()
         self.gamma = args.gamma
         self.closed_windows = []
@@ -52,10 +51,11 @@ class PPO_Multi:
 
         loadedWeights = None
         if loadWeightsPath != "":
+            if self.args.load_weights_only:
+                loadWeightsPath += '.h5'
+
             self.load_net(loadWeightsPath)
-            #loadedWeights = self.network.getWeights()
-            loadedWeights = self.network.get_model_weights() #Robins
-            #keras.backend.clear_session() # TODO Prüfen ob notwendig, da backend evtl. bald nicht mehr geht
+            loadedWeights = self.network.get_model_weights()
             tensorflow.keras.backend.clear_session()
 
         #Create parallel workers with own environment
@@ -275,9 +275,7 @@ class PPO_Multi:
 
 
     def load_net(self, path):
-        # self.network = PPO_Network(self.act_dim, self.env_dim, self.args)
-        # self.network.load_weights(path)
-        self.network = Robin_Network(self.act_dim, self.env_dim, self.args)
+        self.network = PPO_Network(self.act_dim, self.env_dim, self.args)
         self.network.build()
 
         if 'h5' in path[-2:]:
@@ -330,7 +328,7 @@ class PPO_Multi:
                 for i in range(0, robotsCount):
                     if not robotsDone[i]:
                         # aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0]) #i for selected robot, 0 beause the state is encapsulated once too much
-                        aTmp, heatmap = self.network.pedict_certain(robotsOldState[i][0]) #robin
+                        aTmp, heatmap = self.network.pedict_certain(robotsOldState[i][0])
                         a = np.ndarray.tolist(aTmp[0].numpy())
 
                         # if i == liveHistogramRobot:
@@ -410,7 +408,7 @@ class PPO_Multi:
                 proximityCategory = 0
                 for i in range(0, robotsCount):
                     if not robotsDone[i]:
-                        aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0]) #i for selected robot, 0 beause the state is encapsulated once too much
+                        aTmp, heatmap = self.network.pedict_certain(robotsOldState[i][0])
                         a = np.ndarray.tolist(aTmp[0].numpy())
                         traingDataProximityCategories += [env.getMinDistOnVirtualRoadway(i)]
                         # traingDataProximityCategories += [env.getMinDistOnVirtualRoadwayWithScan(i, robotsOldState[i][0][3][0])]
@@ -447,7 +445,7 @@ class PPO_Multi:
                 #Saving enhanced perception model
                 path = self.args.path
                 path += 'PPO_enhanced_perception' + self.args.model_timestamp
-                self.network.saveWeights(path)
+                self.network.save_model_weights(path)
                 data = [self.args]
                 with open(path + '.yml', 'w') as outfile:
                     yaml.dump(data, outfile, default_flow_style=False)

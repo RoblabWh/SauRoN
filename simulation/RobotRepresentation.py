@@ -50,7 +50,7 @@ class RobotRepresentation:
                     posX = self.posX
                     posY = self.posY
 
-                beta = 0.2 # determines which percentage of high and low activations are shown
+                beta = 0.25 # determines which percentage of high and low activations are shown
                 for i in range(0, len(self.lidarHits)):
                     self.lineColor.setAlphaF(1)
                     color = self.lineColor
