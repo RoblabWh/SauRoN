@@ -20,6 +20,7 @@ class Robin_Network(AbstractModel):
             'clipping_range': 0.2,
             'coefficient_value': 0.5
         }
+        self.args = args
         super().__init__(config)
 
         self.config = (config)
@@ -81,7 +82,7 @@ class Robin_Network(AbstractModel):
         self._model = KerasModel(inputs=[input_lidar, input_orientation, input_distance, input_velocity], outputs=[mu, var, value])
 
         # Create the Optimizer
-        self._optimizer = keras.optimizers.Adam(learning_rate=0.0001, epsilon=1e-5, clipnorm=1.0)
+        self._optimizer = keras.optimizers.Adam(learning_rate=self.args.lr, epsilon=1e-5, clipnorm=1.0)
 
     def _create_input_layer(self, input_dim, name) -> Input:
         return Input(shape=(input_dim, self._config['stack_size']), dtype='float32', name='input_' + name)

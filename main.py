@@ -42,7 +42,7 @@ numbOfParallelEnvs = 15     # parallel environments are used to create more and 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
 
-levelFiles = ['Simple.svg', 'SwapSide_a.svg', 'Funnel.svg']
+levelFiles = ['Simple.svg', 'Funnel.svg']  #'SwapSide_a.svg'  fehlt mir
 
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
@@ -51,10 +51,14 @@ filename = "" # enter the filename from the models folder (without .h5 or .yml)
 # filename = 'A2C_Network_2021-10-25--17-38_1400'
 filename = 'A2C_Network_2021-11-22--00-12_200'
 
-# filename = 'PPO_21-12-14--14-43' #100 episodes, better reward, oldschool = false, 3 levels, 0.63 success
-# filename = 'PPO_21-12-14--19-02_e304'
-# filename = 'PPO_21-12-14--19-02'
-# filename = 'PPO_21-12-14--19-02_e103'
+filename = 'PPO_21-12-01--18-38_e102'
+filename = 'PPO_21-12-02--20-07_e74'
+filename = 'PPO_21-12-09--17-16_e88'
+filename = 'PPO_21-12-09--17-16_e29'
+filename = 'PPO_21-12-14--10-26_e29'
+filename = 'PPO_21-12-14--10-26_e90'
+filename = 'PPO_21-12-14--12-06_e45'
+filename = 'PPO_21-12-14--12-48_e103'
 
 #TODO die arguments verschlanken
 # Christian case zum standrt machen
@@ -78,7 +82,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_timestamp', type=str, default=startTime, help='Timestamp from when the model was created')
     parser.add_argument('--alg', type=str, default='ppo', choices=['a2c', 'dqn', 'ppo'], help='Reinforcement Learning Algorithm')
     parser.add_argument('-lr', '--learningrate', type=float, default=lr, help='Learning Rate')
-    parser.add_argument('--gamma', type=float, default=gamma, help='Gamma')
+    parser.add_argument('--gamma', type=float, default=gamma, help='Gamma')  # TODO ist gamma nur für DQN?
     parser.add_argument('--steps', type=int, default=steps, help='Steps in Environment per Episode')
     parser.add_argument('--train_interval', type=int, default=trainingInterval, help='The number of steps after which the neural net is trained.')
     parser.add_argument('--net_size', type=str, default='big', choices=['small', 'medium', 'big'], help='Determines the number of filters in the convolutional layers, the overall amount of neurons and the number of layers.')
@@ -112,7 +116,7 @@ if __name__ == '__main__':
     parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
     parser.add_argument('--train_perception_only', type=bool, default=False, help='Training or Loading trained weights')
     parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPUS with Tensorflow (Cuda 10.1 is needed)')
-    parser.add_argument('--load_old', type=bool, default=False, help='Improve existing net (by loading pretrained weights and continuing with training)')
+    parser.add_argument('--load_old', type=bool, default=True, help='Improve existing net (by loading pretrained weights and continuing with training)')
     parser.add_argument('--lidar_activation', type=bool, default=True, help='Show Lidar activation')
 
     parser.add_argument('--level_files', type=list, default=levelFiles, help='List of Level Files')
