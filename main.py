@@ -31,15 +31,18 @@ fov = 270                   # field of view in degree
 timeFrames = 4              # number of past states used as an Input for the neural net
 
 numbOfRobotsManual = 4     # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 15     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 8     # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
 
-levelFiles = ['Lab_uzs.svg', 'Simple.svg', 'Funnel.svg', 'SwapSide_a.svg', 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
+levelFiles = ['Simple.svg', 'Funnel.svg', 'SwapSide_a.svg', 'Lab.svg']#, 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
+
+
+
 
 filename = "" # enter the filename from the models folder (without .h5 or .yml)
 # filename = 'A2C_Network_2021-10-25--17-38_1400'
@@ -53,10 +56,10 @@ if __name__ == '__main__':
     args = None
     parser = argparse.ArgumentParser(description='Training parameters')
     # Main settings (Mode)
-    parser.add_argument('--training', type=bool, default=False, help='Training or Loading trained weights')
+    parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
     parser.add_argument('--train_perception_only', type=bool, default=False, help='Improve existing net (works only if training is set to false') #Todo checken ob das im moment funktioniert
     parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=False, help='Moving robot manually with wasd')
-    parser.add_argument('--load_old', type=bool, default=True, help='Loading pre-trained weights/ models')
+    parser.add_argument('--load_old', type=bool, default=False, help='Loading pre-trained weights/ models')
     parser.add_argument('--load_weights_only', type=bool, default=True, help='Checks whether a whole keras model is loaded or only weights for the configured network (may be problemetic in execute with show activations)')
 
     # Simulation settings
@@ -80,13 +83,12 @@ if __name__ == '__main__':
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
     parser.add_argument('--model_timestamp', type=str, default=startTime, help='Timestamp from when the model was created')
     parser.add_argument('--scale_factor', type=int, default=scaleFactor, help='Scale Factor for visualisation')
-    parser.add_argument('--display_normals', type=bool, default=True, help='Determines whether the normals of a wall are shown in the map.')
+    parser.add_argument('--display_normals', type=bool, default=False, help='Determines whether the normals of a wall are shown in the map.')
     parser.add_argument('--lidar_activation', type=bool, default=True, help='Show Lidar activation')
-
 
     # Robot settings
     parser.add_argument('--number_of_rays', type=int, default=numberOfRays, help='The number of Rays emittet by the laser')
-    parser.add_argument('--field_of_view', type=int, default=(fov/180 * math.pi), help='The lidars field of view in degree')
+    parser.add_argument('--field_of_view', type=int, default=fov, help='The lidars field of view in degree')
     parser.add_argument('--has_pie_slice',  type=str2bool, default='False', help='Determines if an Object is places on top of the robot to reflect pther robots lidar')
     parser.add_argument('--collide_other_targets', type=str2bool, default=False, help='Determines whether the robot collides with targets of other robots (or passes through them)')  # Global oder Sonar einstellbar
 
@@ -101,6 +103,8 @@ if __name__ == '__main__':
 
     if not os.path.exists(args.path):
         os.makedirs(args.path)
+
+    args.field_of_view = args.field_of_view/180 * math.pi
 
     if args.manually:
         args.steps = 1000000

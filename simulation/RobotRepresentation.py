@@ -106,7 +106,7 @@ class RobotRepresentation:
 
         if self.hasPieSlice and self.pieSliceBorders != None:
             for border in self.pieSliceBorders:
-                border.paint(painter, self.scale)
+                border.paint(painter, self.scale, self.args.display_normals)
 
 
 
