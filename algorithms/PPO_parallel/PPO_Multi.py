@@ -1,10 +1,7 @@
 import numpy as np
 from PyQt5.QtWidgets import QApplication
-
 from simulation.Environment import Environment
-from DistanceGraph import DistanceGraph
 from deprecated.A2C_parallel_old.A2C_Multi import AverageMeter
-#from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from algorithms.PPO_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
 from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from tqdm import tqdm
@@ -18,8 +15,6 @@ import sys
 # insert at 1, 0 is the script path (or '' in REPL)
 
 sys.path.insert(1, '/')
-# sys.path.insert(1, 'C:/Users/Jenny/Downloads/aia-trt-inference-master/aia-trt-inference-master/fuzzy_controller')
-
 
 @ray.remote
 class PPO_Multi:
@@ -36,7 +31,6 @@ class PPO_Multi:
         """
         self.args = args
         self.levelFiles = args.level_files
-        # self.network = PPO_Network(act_dim, env_dim, args)
         self.act_dim = act_dim
         self.env_dim = env_dim
         self.numbOfParallelEnvs = args.parallel_envs
@@ -59,10 +53,8 @@ class PPO_Multi:
             tensorflow.keras.backend.clear_session()
 
         #Create parallel workers with own environment
-        # envLevel = [(i)%4 for i in range(self.numbOfParallelEnvs)]
-        # envLevel = [(i+3)%4 for i in range(self.numbOfParallelEnvs)]
         envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
-        #ray.init()
+
         multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights.remote()
         multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
@@ -89,11 +81,8 @@ class PPO_Multi:
         if len(activeActors) > 0:
             futures = [actor.trainSteps.remote(self.args.train_interval) for actor in activeActors]
             allTrainingResults = ray.get(futures) #Liste mit Listen von Observations aus den Environments
-            # trainedWeights = self.train_modelsFaster(allTrainingResults, self.multiActors[0])
-            # start = time.time()
             trainedWeights = self.train_models_with_obs(allTrainingResults, self.multiActors[0])
-            # end = time.time()
-            # print(' time used for training: ', end-start)
+
             for actor in self.multiActors[1:len(self.multiActors)]:
                 actor.setWeights.remote(trainedWeights)
 
@@ -104,7 +93,7 @@ class PPO_Multi:
 
 
             for i, show in enumerate(visibleLevels):
-                if show:# and ray.get(self.multiActors[i].isNotShowing.remote()):
+                if show:
                     if ray.get(self.multiActors[i].has_been_closed.remote()):
                         self.closed_windows.append(i)
                     else:
@@ -242,7 +231,6 @@ class PPO_Multi:
                 #             print("└─→", key2, type(value2))
 
 
-                # print((obs_concatinated[current_index].items()))
                 for key, value in obs_concatinated[current_index].items():
                     if type(value) == type(exp):
                         for key2, value2 in value.items():
@@ -411,16 +399,11 @@ class PPO_Multi:
                         aTmp, heatmap = self.network.pedict_certain(robotsOldState[i][0])
                         a = np.ndarray.tolist(aTmp[0].numpy())
                         traingDataProximityCategories += [env.getMinDistOnVirtualRoadway(i)]
-                        # traingDataProximityCategories += [env.getMinDistOnVirtualRoadwayWithScan(i, robotsOldState[i][0][3][0])]
-                        # traingDataProximityCategories += [env.getRobotsProximityCategoryOnlyRobots(i)]
-                        # traingDataProximityCategories += [env.getRobotsProximityCategoryAllObstacles(i)]
+
                         traingDataStates += [robotsOldState[i][0]]
                         if i == inspectedRobot:
                             proximityCategory = self.network.make_proximity_prediction(robotsOldState[i][0])[0].numpy()
-                            #foo = env.getMinDistOnVirtualRoadway(0)
-                            # foo = env.getMinDistOnVirtualRoadwayWithScan(0, np.asarray(robotsOldState[i][0][3][0])/env.simulation.robots[0].maxDistFact)
-                            # proximityCategory = [0,0,0]
-                            # proximityCategory[foo] = 1
+
                     else:
                         a = [None, None]
                     robotsActions.append(a)

@@ -209,7 +209,7 @@ class A2C_C:
         return action, values
 
 
-    def policy_action(self, s, successrate):#TODO obs_timestep mit übergeben
+    def policy_action(self, s, successrate):
         """ Use the actor to predict the next action to take, using the policy
         """
         # std = ((1-successrate)**2)*0.55
@@ -229,7 +229,7 @@ class A2C_C:
 
 
 
-    def policy_action_certain(self, s):#TODO obs_timestep mit übergeben
+    def policy_action_certain(self, s):
         """ Use the actor to predict the next action to take, using the policy
         """
         # std = ((1-successrate)**2)*0.55
@@ -359,7 +359,6 @@ class A2C_C:
             zeit, cumul_reward, done = 0, 0, False
 
 
-            #TODO irgendwo anders her bekommen (zentral)
             envsData = []
 
             for j in range(len(envs)):
@@ -405,7 +404,7 @@ class A2C_C:
                         robotsActions.append(a)
 
                         if not None in a:
-                            envsData[j][0][i][0].append(a)#action_onehot) #TODO Tupel mit 2 werten von je -1 bis 1
+                            envsData[j][0][i][0].append(a)#action_onehot)
                             envsData[j][0][i][4].append(c)
 
                     # Retrieve new state, reward, and whether the state is terminal
@@ -517,8 +516,7 @@ class A2C_C:
         for e in range (0,4):
 
             env.reset()
-            #TODO nach erstem Mal auf trainiertem env sowas wie environment.randomizeForTesting() einbauen (alternativ hier ein fester Testsatz)
-            # robotsOldState = [env.get_observation(i) for i in range(0, robotsCount)]
+
             robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
             robotsDone = [False for i in range(0, robotsCount)]
 

@@ -30,7 +30,6 @@ Experience = namedtuple('Experience', ('state', 'action', 'next_state', 'reward'
 def main():
     agent = Agent.Agent(eps_start, eps_end, eps_decay, memory_size)
 
-    # TODO: Netze noch implementieren, target_net ist Kopie vom policy_net
     policy_net = DQN.DQN(lr)
     target_net = DQN.DQN(lr)
     target_net.update_target_net(policy_net)

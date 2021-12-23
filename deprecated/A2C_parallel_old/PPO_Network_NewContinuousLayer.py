@@ -5,7 +5,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import mean_squared_error
 from tensorflow.keras.layers import Input, Conv1D, Dense, Flatten, concatenate, Concatenate, MaxPool1D, Lambda, Layer, InputSpec
 
-from tensorflow import maximum, reduce_mean, exp, function, squeeze, reduce_sum, square, shape, cast, clip_by_value, gradients  # TODO Prüfen ob clip_by_norm richtig ist (und gradients und function)
+from tensorflow import maximum, reduce_mean, exp, function, squeeze, reduce_sum, square, shape, cast, clip_by_value, gradients
 import tensorflow as tf
 from tensorflow.keras.models import Model
 
@@ -370,7 +370,7 @@ class PPO_Network:
 
 
     def create_perception_model(self):
-        layer_name = 'policy_dense_laser'  # TODO schauen ob es wirklich shared ist
+        layer_name = 'policy_dense_laser'
         proximity_predictions = Dense(3, activation='softmax')(self._model.get_layer(layer_name).output)
         self._perception_model = Model(
             inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],

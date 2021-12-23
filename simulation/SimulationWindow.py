@@ -47,8 +47,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.width = int(self.arenaWidth * args.scale_factor)
         self.height = int(self.arenaHeight * args.scale_factor)
         self.setGeometry(200, 100, self.width, self.height)
-        # self.setFixedWidth(self.width)
-        # self.setFixedHeight(self.height)
+
 
         self.sonarShowing = True
         self.simShowing = True

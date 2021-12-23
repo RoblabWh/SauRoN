@@ -339,7 +339,6 @@ class Robot:
 
         dir = (self.getDirectionAngle() - (self.args.field_of_view / 2)) % (2 * math.pi)
 
-        #TODO Collisions von CircleWall berechnen
         colliderLines = self.walls + self.collidorStationsWalls + self.robotsPieSliceWalls
         collidorCirclePosWithoutRobots = [(wall.getPosX(), wall.getPosY(), wall.getRadius()) for wall in self.circleWalls]
         collidorCirclePosOnlyRobots = []
@@ -427,8 +426,7 @@ class Robot:
         distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)
         distancesNorm = distancesNorm.tolist()
 
-        currentTimestep = (steps - stepsLeft)/steps #TODO setps im Konstruktor übergeben und einenFaktor draus machen, muss nicht bei jedem Aufruf mit übergeben werden
-
+        currentTimestep = (steps - stepsLeft)/steps
 
         frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 

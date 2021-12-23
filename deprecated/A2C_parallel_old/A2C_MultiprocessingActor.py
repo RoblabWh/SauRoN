@@ -126,7 +126,7 @@ class A2C_MultiprocessingActor:
                 robotsActions.append(a)
 
                 if not None in a:
-                    robotsData[i][0].append(a)  # action_onehot) #TODO Tupel mit 2 werten von je -1 bis 1
+                    robotsData[i][0].append(a)  # action_onehot)
                     robotsData[i][4].append(c)
 
             # environment makes a step with selected actions
@@ -245,7 +245,7 @@ class A2C_MultiprocessingActor:
     def isActive(self):
         return not self.env.is_done()
 
-    def policy_action(self, s):  # TODO obs_timestep mit übergeben
+    def policy_action(self, s):
         """
         Use the actor to predict the next action to take, using the policy
         :param s: current state of a single robot

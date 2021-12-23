@@ -5,7 +5,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import mean_squared_error
 from tensorflow.keras.layers import Input, Conv1D, Dense, Flatten, concatenate, MaxPool1D, Lambda, Layer, InputSpec
 
-from tensorflow import maximum, reduce_mean, exp, function, squeeze, reduce_sum, square, shape, cast, clip_by_value, gradients  # TODO Prüfen ob clip_by_norm richtig ist (und gradients und function)
+from tensorflow import maximum, reduce_mean, exp, function, squeeze, reduce_sum, square, shape, cast, clip_by_value, gradients
 import tensorflow as tf
 from tensorflow.keras.models import Model
 
@@ -191,8 +191,6 @@ class PPO_Network:
         a = tf.function(self.predict_function)
         return a(tf.convert_to_tensor(obs_laser, dtype='float64'), tf.convert_to_tensor(obs_orientation_to_goal, dtype='float64'), tf.convert_to_tensor(obs_distance_to_goal, dtype='float64'),tf.convert_to_tensor(obs_velocity, dtype='float64'))
 
-
-    # TODO Laser Strahlen Anzahl aus args holen
     @tf.function(input_signature=[tf.TensorSpec((None, 1081, 4), dtype='float64'),
                                    tf.TensorSpec((None, 2, 4), dtype='float64'),
                                    tf.TensorSpec((None, 1, 4), dtype='float64'),
@@ -204,7 +202,7 @@ class PPO_Network:
         shape of each key: (num_agents, size_of_the_obs, stack_size).
         For the lidar with stack_size 4 and 2 agents: (2, 1081, 4)
         '''
-        net_out = self._model([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity]) #TODO observation vernuenftig an model übergeben
+        net_out = self._model([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity])
 
         selected_action, neglog = self._postprocess_predictions(*net_out)
 
@@ -243,8 +241,6 @@ class PPO_Network:
         func({'laser_0': obs_laser, 'orientation_to_goal': obs_orientation_to_goal, 'distance_to_goal': obs_distance_to_goal, 'velocity': obs_velocity},
              {'action': actions,  'value': values, 'neglog_policy': neglog, 'reward': rewards,  'advantage': advantage})
 
-
-    # TODO Laser Strahlen Anzahl aus args holen
     @tf.function(input_signature=[{'laser_0': tf.TensorSpec((None, 1081, 4), dtype='float64'),
                                    'orientation_to_goal': tf.TensorSpec((None, 2, 4), dtype='float64'),
                                    'distance_to_goal': tf.TensorSpec((None, 1, 4), dtype='float64'),
@@ -366,7 +362,7 @@ class PPO_Network:
 
 
     def create_perception_model(self):
-        layer_name = 'policy_dense_laser'  # TODO schauen ob es wirklich shared ist
+        layer_name = 'policy_dense_laser'
         proximity_predictions = Dense(3, activation='softmax')(self._model.get_layer(layer_name).output)
         self._perception_model = Model(
             inputs=[self._input_laser, self._input_orientation, self._input_distance, self._input_velocity],

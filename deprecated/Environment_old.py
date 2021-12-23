@@ -17,7 +17,6 @@ class Environment:
 
 
     def get_observation(self, i):
-        #TODO den richtigen Roboter aus der Liste wählen mit parameter i --> getRobot(i)
         if self.args.mode == 'global':
             return np.asarray(self.simulation.robots[i].state)  # Pos, Geschwindigkeit, Zielposition
         elif self.args.mode == 'sonar':
@@ -99,7 +98,7 @@ class Environment:
         collision, reachedPickup, runOutOfTime = terminantions
 
         ############ State Robot i ############
-        next_state = self.get_observation(i)  # TODO state von Robot i bekommen
+        next_state = self.get_observation(i)
         next_state = np.expand_dims(next_state, axis=0)
 
 
@@ -111,7 +110,7 @@ class Environment:
         robot_pose_old_x = robot.getLastPosX()
         robot_pose_old_y = robot.getLastPosY()
         robot_orientation_old = robot.getDirectionAngle(last=True)
-        #TODO Goal des Robots nutzen
+
         orientation_goal_old = math.atan2(
             (goal_pose_old_y + (self.simulation.getGoalLength() / 2)) - (robot_pose_old_y),
             (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_old_x))
@@ -127,7 +126,7 @@ class Environment:
             (goal_pose_old_x + (self.simulation.getGoalWidth() / 2)) - (robot_pose_current_x))
         if orientation_goal_new < 0:
             orientation_goal_new += (2 * math.pi)
-        # TODO Goal des Robots nutzen
+
         distance_old = math.sqrt((robot_pose_old_x - (goal_pose_old_x + (self.simulation.getGoalWidth() / 2))) ** 2 +
                                  (robot_pose_old_y - (goal_pose_old_y + (self.simulation.getGoalLength() / 2))) ** 2)
         distance_new = math.sqrt(

@@ -50,7 +50,6 @@ class A2C:
     def buildActor(self, network):
         x = Dense(128, activation='relu')(network.output) #128
         out = Dense(self.act_dim, activation='tanh')(x)
-        #TODO hier muss eine Ausgabelayer mit 2 Werten je zwischen -1 und 1 entstehen
         return Model(network.input, out)
 
     def buildCritic(self, network):
@@ -137,10 +136,6 @@ class A2C:
             time, cumul_reward, done = 0, 0, False
             env.reset()
 
-
-            #TODO irgendwo anders her bekommen (zentral)
-
-
             robotsData = []
             robotsOldState = []
 
@@ -177,7 +172,7 @@ class A2C:
                     # action_onehot[a] = 1
 
                     if not None in a:
-                        robotsData[i][0].append(a)#action_onehot) #TODO Tupel mit 2 werten von je -1 bis 1
+                        robotsData[i][0].append(a)#action_onehot)
 
 
                 # Retrieve new state, reward, and whether the state is terminal
