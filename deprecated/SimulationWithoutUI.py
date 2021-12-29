@@ -29,8 +29,6 @@ class Simulation:
         self.walls.append(ColliderLine(self.arenaWidth, self.arenaLength, 0, self.arenaLength))
         self.walls.append(ColliderLine(0, self.arenaLength, 0, 0))
 
-        #TODO mehrere Robots mit eigenen Pickup stationen erstellen
-
         # Erstelle Stationen und Roboter
         self.pickUp = Station(5, 1.2, 0.75, 0.75, 0, self.scaleFactor)
         self.pickUp2 = Station(1, 1.25, 0.75, 0.75, 3, self.scaleFactor)
@@ -88,7 +86,7 @@ class Simulation:
         # time.sleep(0.1)
         self.simTime += self.simTimestep
 
-        for i, robot in enumerate(self.robots): #TODO überall die action Liste iterieren nicht die robeoter
+        for i, robot in enumerate(self.robots):
             if robot.isActive() == True:
                 tarLinVel, tarAngVel = robotsTarVels[i]
                 self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)

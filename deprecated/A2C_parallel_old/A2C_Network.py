@@ -251,7 +251,7 @@ class A2C_Network:
     def load_weights(self, path):
         self._model.load_weights(path)
 
-    def policy_action_certain(self, s):  # TODO obs_timestep mit übergeben
+    def policy_action_certain(self, s):
         """ Use the actor to predict the next action to take, using the policy
         """
         # std = ((1-successrate)**2)*0.55

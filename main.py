@@ -15,50 +15,49 @@ from algorithms.utils import str2bool
 from pathlib import Path
 import warnings
 
+####################################################################
+######  Settings  you have to use/ change during this exercise  ####
+####################################################################
+
+manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe useful for testing rewards in combination with a print ;)  you should also lower the amount of robots during manual testing.)
+filename = "A2C_Network_2021-11-22--00-12_200"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
+training = True  # if training is set to false the trained model defined in the variable filename is loaded
+
 
 
 # HYPERPARAMETERS
 
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0001                 # learning rate
-num_episodes = 601         # the number of epochs (/episodes) that are simulated
+num_episodes = 601          # the number of epochs (/episodes) that are simulated
 steps = 750                 # number of steps per epoch (/episode)
 trainingInterval = 75       # number of steps after which the neural net is trained
 simTimeStep = 0.125         # simulated time between two steps in the simulation
 
-numberOfRays = 1081          # spacing between two light rays (for distance calculation) in degrees
+numberOfRays = 1081         # spacing between two light rays (for distance calculation) in degrees
 fov = 270                   # field of view in degree
 timeFrames = 4              # number of past states used as an Input for the neural net
 
 numbOfRobotsManual = 4     # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 8     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 12    # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
 
-levelFiles = ['Simple.svg', 'Funnel.svg', 'SwapSide_a.svg', 'Lab.svg']#, 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
+levelFiles = ['Simple.svg', 'Funnel.svg', 'SwapSide_a.svg'] #, 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
 
 
 
-
-filename = "" # enter the filename from the models folder (without .h5 or .yml)
-# filename = 'A2C_Network_2021-10-25--17-38_1400'
-filename = 'A2C_Network_2021-11-22--00-12_200'
-# filename = 'PPO_21-12-14--12-48_e103'
-# filename = 'PPO_21-12-14--19-02_e304'
-
-# TODO kommentieren und praktikumsaufgabe updaten
-
 if __name__ == '__main__':
     args = None
     parser = argparse.ArgumentParser(description='Training parameters')
     # Main settings (Mode)
-    parser.add_argument('--training', type=bool, default=True, help='Training or Loading trained weights')
-    parser.add_argument('--train_perception_only', type=bool, default=False, help='Improve existing net (works only if training is set to false') #Todo checken ob das im moment funktioniert
-    parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=False, help='Moving robot manually with wasd')
+    parser.add_argument('--training', type=bool, default=training, help='Training or Loading trained weights')
+    parser.add_argument('--train_perception_only', type=bool, default=False, help='Improve existing net (works only if training is set to false')
+    parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=manual, help='Moving robot manually with wasd')
     parser.add_argument('--load_old', type=bool, default=False, help='Loading pre-trained weights/ models')
     parser.add_argument('--load_weights_only', type=bool, default=True, help='Checks whether a whole keras model is loaded or only weights for the configured network (may be problemetic in execute with show activations)')
 
@@ -161,8 +160,3 @@ if __name__ == '__main__':
         else:
             ray.get(model.load_net.remote(args.path+filename))
             ray.get(model.execute.remote(args, env_dim[0]))
-
-
-
-
-

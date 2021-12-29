@@ -183,7 +183,7 @@ class PPO_Network(AbstractModel):
         else:
             net_out = self._model([np.expand_dims(laser, 0), np.expand_dims(orientation, 0), np.expand_dims(distance, 0),
                                    np.expand_dims(velocity, 0)])
-            #  print('mu: ', net_out[0], ' | var: ', net_out[1])
+
             return (net_out[0], None)
 
     def print_summary(self):
@@ -212,8 +212,7 @@ class PPO_Network(AbstractModel):
         # First, we create a model that maps the input image to the activations
         # of the last conv layer as well as the output predictions
         grad_model = tf.keras.models.Model(
-            [self._model.inputs], [self._model.get_layer('body_lidar-conv_2').output, self._model.output[0]]
-        )
+            [self._model.inputs], [self._model.get_layer('body_lidar-conv_2').output, self._model.output[0]])
 
         # Then, we compute the gradient of the top predicted class for our input image
         # with respect to the activations of the last conv layer
@@ -288,8 +287,7 @@ class PPO_Network(AbstractModel):
                 inputsO = np.append(inputsO, np.expand_dims(orientation, axis=0), axis=0)
                 inputsD = np.append(inputsD, np.expand_dims(distance, axis=0), axis=0)
                 inputsV = np.append(inputsV, np.expand_dims(velocity, axis=0), axis=0)
-        proximity_categories = np.asarray(proximity_categories)  # .astype('float64')
-        # print(inputsL.shape, inputsO.shape, inputsD.shape, inputsV.shape, proximity_categories.shape)
-        # print(proximity_categories)
+        proximity_categories = np.asarray(proximity_categories)
+
         self._perception_model.fit([inputsL, inputsO, inputsD, inputsV], proximity_categories, shuffle=True)
 

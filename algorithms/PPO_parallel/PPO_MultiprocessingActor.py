@@ -40,20 +40,20 @@ class PPO_MultiprocessingActor:
 
         self.args = args
         self.app = None
-        #self.network = PPO_Network(act_dim, env_dim, args)
-        self.network = PPO_Network(act_dim, env_dim, args) #Robin
+
+        self.network = PPO_Network(act_dim, env_dim, args)
         self.network.build()
         if master:
             self.app = QApplication(sys.argv)
-            # self.network.printSummary()
-            self.network.print_summary() #Robin
+
+            self.network.print_summary()
         if weights != None:
-            # self.network.setWeights(weights)
-            self.network.set_model_weights(weights) #Robin
+
+            self.network.set_model_weights(weights)
         self.env = Environment(self.app, args, env_dim[0], level)
         self.env.setUISaveListener(self)
         self.numbOfRobots = self.env.simulation.getCurrentNumberOfRobots()
-        # self.av_meter = AverageMeter()
+
         self.gamma = args.gamma
         self.reachedTargetList = [False] * 100
         self.level = level
@@ -66,16 +66,13 @@ class PPO_MultiprocessingActor:
 
 
     def setWeights(self, weights):
-        # self.network.setWeights(weights)
-        self.network.set_model_weights(weights) #Robins
+        self.network.set_model_weights(weights)
 
     def getWeights(self):
-        # return self.network.getWeights()
-        return self.network.get_model_weights() #Robins
+        return self.network.get_model_weights()
 
     def saveWeights(self, path):
-        # self.network.saveWeights(path)
-        self.network.save_model_weights(path) # Robin
+        self.network.save_model_weights(path)
 
     def saveCurrentWeights(self):
         print('saving individual')
@@ -138,10 +135,10 @@ class PPO_MultiprocessingActor:
                 if not True in robotsData[i][3]:
                     aTmp = self.policy_action(robotsOldState[i][0])
                     a = np.ndarray.tolist(aTmp[0].numpy())[0]  # Tensoren in Numpy in List umwandeln
-                    #a = np.ndarray.tolist(aTmp[0])[0]
+
                     c = np.ndarray.tolist(aTmp[1].numpy())[0]
                     negL = np.ndarray.tolist(aTmp[2].numpy())
-                    # print(aTmp, a, c, neglog)
+
                 else:
                     a = [None, None]
                 robotsActions.append(a)
@@ -158,7 +155,7 @@ class PPO_MultiprocessingActor:
                     results):  # results[1] hat id, die hierfür nicht mehr gebraucht wird
 
                 if not True in robotsData[i][3]:  # [environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
-                    # print("dataCurent Frame 0 of env",results[j][1], dataCurrentFrame[0])
+
                     new_state = dataCurrentFrameSingleRobot[0]
                     r = dataCurrentFrameSingleRobot[1]
                     done = dataCurrentFrameSingleRobot[2]
@@ -177,9 +174,9 @@ class PPO_MultiprocessingActor:
         self.robotsDataBackup = robotsData
         self.robotsOldStateBackup = robotsOldState
         self.cumul_reward += cumul_reward
-        #return robotsData
+
         return self.restructureRobotsData(robotsData)
-        #return self.reformat_observation(robotsData)
+
 
 
     def reformat_observation(self, robotsData):
@@ -206,9 +203,6 @@ class PPO_MultiprocessingActor:
                 action = {'action': actions[j], 'value': evaluations[j], 'neglog_policy': neglogs[j],
                           'reward': discounted_rewards[j], 'advantage': advantages[j]}
                 all_obs_and_actions += [(observation, action)]
-
-        # end = time.time()
-        # print('time for reformatting', self.level, end - start)
 
         return all_obs_and_actions
 
@@ -285,33 +279,14 @@ class PPO_MultiprocessingActor:
 
 
 
-            advantagesTmp = discounted_rewardsTmp - np.reshape(evaluations, len(evaluations))  # Warum reshape
+            advantagesTmp = discounted_rewardsTmp - np.reshape(evaluations, len(evaluations))
             advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)
             advantages = np.concatenate((advantages, advantagesTmp))
 
-
-                # print("discounted_rewards", discounted_rewards.shape, "state_values", state_values.shape, "advantages",
-                #       advantages.shape, "actionsConcatenated", actionsConcatenated.shape, np.vstack(actions).shape)
-                # print(len(statesConcatenatedL), len(statesConcatenatedO), len(statesConcatenatedD), len(statesConcatenatedV), len(discounted_rewards), len(actionsConcatenated), len(advantages))
-
-        # neglogsConcatinated = np.squeeze(neglogsConcatinated)
-
-
-        #statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs)
-        observation = {'lidar_0': statesConcatenatedL, 'orientation_to_goal': statesConcatenatedO, 'distance_to_goal': statesConcatenatedD, 'velocity': statesConcatenatedV} #alternativ viel einzelne observations?
+        observation = {'lidar_0': statesConcatenatedL, 'orientation_to_goal': statesConcatenatedO, 'distance_to_goal': statesConcatenatedD, 'velocity': statesConcatenatedV}
         exp = {'observation': observation, 'action':actionsConcatenated, 'neglog_policy':neglogsConcatinated, 'reward':discounted_rewards, 'advantage':advantages}
-        return exp#(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT, discounted_rewards, actionsConcatenated, advantages, neglogsConcatinated, state_values)
+        return exp
 
-
-
-        # if masterEnv == None:
-        #     #for i in len(statesConcatenatedL):
-        #      #   self.network.train_net(statesConcatenatedL[i], statesConcatenatedO[i], statesConcatenatedD[i],statesConcatenatedV[i], statesConcatenatedT[i],discounted_rewards[i], actionsConcatenated[i],advantages[i], neglogsConcatinated[i])
-        #     self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogsConcatinated)
-        #     weights = self.network.getWeights()
-        # else:
-        #     weights, var = ray.get(masterEnv.trainNet.remote(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogsConcatinated))
-        # return weights , var
 
     def discount(self, r):
         """
@@ -338,7 +313,7 @@ class PPO_MultiprocessingActor:
     def isActive(self):
         return not self.env.is_done()
 
-    def policy_action(self, s):  # TODO obs_timestep mit übergeben
+    def policy_action(self, s):
         """
         Use the actor to predict the next action to take, using the policy
         :param s: current state of a single robot
@@ -359,8 +334,6 @@ class PPO_MultiprocessingActor:
 
 
     def trainNet(self, statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs, values):
-        # self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs, values)
-        #Robins:
         for i in range(len(statesConcatenatedL)):
             observation = {'laser_0': np.expand_dims(np.array(statesConcatenatedL[i]),0),
                            'orientation_to_goal': np.expand_dims(np.array(statesConcatenatedO[i]),0),
@@ -370,13 +343,11 @@ class PPO_MultiprocessingActor:
                       'reward':  discounted_rewards[i], 'advantage': advantages[i]}
             self.network.train(observation, action)
 
-        # return self.network.getWeights()
-        return self.network.get_model_weights() #Robin
+        return self.network.get_model_weights()
 
 
 
     def train_net_obs(self, obs_with_actions_list):
-        # print(len(obs_with_actions_list))
         # for obs_with_actions in obs_with_actions_list:
         #     obs, action = obs_with_actions
         #     self.network.train(obs, action)
