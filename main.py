@@ -19,9 +19,10 @@ import warnings
 ######  Settings  you have to use/ change during this exercise  ####
 ####################################################################
 
-manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe useful for testing rewards in combination with a print ;)  you should also lower the amount of robots during manual testing.)
-filename = "A2C_Network_2021-11-22--00-12_200"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
 training = True  # if training is set to false the trained model defined in the variable filename is loaded
+filename = "A2C_Network_2021-11-22--00-12_200"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
+filename = "PPO_21-12-29--14-27_e7"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
+manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe useful for testing rewards in combination with a print ;)  you should also lower the amount of robots during manual testing.)
 
 
 
@@ -29,23 +30,20 @@ training = True  # if training is set to false the trained model defined in the 
 
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0001                 # learning rate
-num_episodes = 601          # the number of epochs (/episodes) that are simulated
+num_episodes = 101          # the number of epochs (/episodes) that are simulated
 steps = 750                 # number of steps per epoch (/episode)
 trainingInterval = 75       # number of steps after which the neural net is trained
 simTimeStep = 0.125         # simulated time between two steps in the simulation
+numbOfParallelEnvs = 12     # parallel environments are used to create more and diverse training experiences
 
+timeFrames = 4              # number of past states used as an Input for the neural net
 numberOfRays = 1081         # spacing between two light rays (for distance calculation) in degrees
 fov = 270                   # field of view in degree
-timeFrames = 4              # number of past states used as an Input for the neural net
-
 numbOfRobotsManual = 4     # only change if set to manual do not use more than 4
-numbOfParallelEnvs = 12    # parallel environments are used to create more and diverse training experiences
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
-
 levelFiles = ['Simple.svg', 'Funnel.svg', 'SwapSide_a.svg'] #, 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
-
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
 
@@ -55,7 +53,7 @@ if __name__ == '__main__':
     args = None
     parser = argparse.ArgumentParser(description='Training parameters')
     # Main settings (Mode)
-    parser.add_argument('--training', type=bool, default=training, help='Training or Loading trained weights')
+    parser.add_argument('--training', type=str2bool, default=training, help='Training or Loading trained weights')
     parser.add_argument('--train_perception_only', type=bool, default=False, help='Improve existing net (works only if training is set to false')
     parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=manual, help='Moving robot manually with wasd')
     parser.add_argument('--load_old', type=bool, default=False, help='Loading pre-trained weights/ models')
@@ -71,7 +69,7 @@ if __name__ == '__main__':
     # Trainings settings
     parser.add_argument('--parallel_envs', type=int, default=numbOfParallelEnvs, help='Number of parallel environments used during training in addition to the main training process')
     parser.add_argument('--train_interval', type=int, default=trainingInterval, help='The number of steps after which the neural net is trained.')
-    parser.add_argument('--save_intervall', type=int, default=50, help='Save Intervall')
+    parser.add_argument('--save_intervall', type=int, default=25, help='Save Intervall')
 
     # PPO/ Network settings
     parser.add_argument('-lr', '--learningrate', type=float, default=lr, help='Learning Rate')

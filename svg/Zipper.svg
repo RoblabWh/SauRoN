@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 16.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Ebene_3" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="623.619px" height="283.46px" viewBox="0 0 623.619 283.46" enable-background="new 0 0 623.619 283.46"
+	 xml:space="preserve">
+<circle id="start_1_2_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="91.04" cy="186.827" r="7.499"/>
+<circle id="start_2_2_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="51.471" cy="92.221" r="7.5"/>
+<circle id="start_3_2_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="54.487" cy="186.439" r="7.499"/>
+<circle id="start_4_2_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="91.881" cy="92.798" r="7.5"/>
+<circle id="start_5_1_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="92.471" cy="60.555" r="7.5"/>
+<circle id="start_6" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="53.154" cy="221.439" r="7.499"/>
+<circle id="start_7" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="91.04" cy="218.495" r="7.499"/>
+<circle id="start_8" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="52.138" cy="59.221" r="7.5"/>
+<circle id="goal_1_2_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="473.567" cy="59.962" r="13.668"/>
+<circle id="goal_2_2_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="527.89" cy="221.052" r="13.668"/>
+<circle id="goal_3_2_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="524.43" cy="61.558" r="13.99"/>
+<circle id="goal_4_2_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="473.601" cy="221.823" r="13.99"/>
+<circle id="goal_5" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="527.104" cy="184.591" r="13.668"/>
+<circle id="goal_6" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="473.962" cy="101.127" r="13.668"/>
+<circle id="goal_7" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="524.822" cy="102.723" r="13.99"/>
+<circle id="goal_8" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="472.816" cy="185.362" r="13.99"/>
+<polyline fill="none" stroke="#000000" stroke-miterlimit="10" points="131.977,116.563 14.977,116.563 14.977,7.23 131.977,7.23 
+	131.977,79.667 "/>
+<polyline fill="none" stroke="#000000" stroke-miterlimit="10" points="131.977,196.314 131.977,273.23 14.977,273.23 
+	14.977,163.897 131.977,163.897 "/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="131.893" y1="163.917" x2="195.643" y2="141.563"/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="195.643" y1="141.563" x2="131.903" y2="116.542"/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="236.727" y1="159.23" x2="130.977" y2="196.563"/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="131.935" y1="79.563" x2="238.388" y2="122.917"/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="238.31" y1="122.896" x2="434.352" y2="122.896"/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="434.747" y1="159.23" x2="236.643" y2="159.23"/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="434.644" y1="247.897" x2="434.644" y2="159.23"/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="559.31" y1="247.897" x2="434.31" y2="247.897"/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="558.977" y1="35.896" x2="558.977" y2="248.23"/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="433.185" y1="36.23" x2="559.685" y2="36.23"/>
+<line fill="none" stroke="#000000" stroke-miterlimit="10" x1="434.31" y1="122.896" x2="434.31" y2="34.917"/>
+<polygon fill="none" stroke="#000000" stroke-miterlimit="10" points="619.977,279.897 619.977,2.563 3.31,2.563 3.31,279.563 "/>
+</svg>

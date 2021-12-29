@@ -41,6 +41,12 @@ class PPO_Multi:
 
 
     def prepare_training(self, loadWeightsPath = ""):
+        """
+        Will be called before training.
+        creates remote workers for running parallel simulations
+        :param loadWeightsPath: path to pretrained weights. If left empty new random start weights will be created
+        :return: Tupel (False  for not finished training yet, List with names of loaded levels per environment)
+        """
         self.currentEpisode = 0
 
         loadedWeights = None
@@ -75,6 +81,12 @@ class PPO_Multi:
 
 
     def train_with_feedback_for_n_steps(self, visibleLevels):
+        """
+        Runs the simulation in every remote worker for n steps (defined in args)
+        and uses collected Data for training the Network afterwards
+        :param visibleLevels: list with true or false that determines which simulations have to be visualized
+        :return: boolean that stands for beeing still active or done with whole episode
+        """
 
         activeActors = self.activeActors
 
@@ -163,48 +175,14 @@ class PPO_Multi:
         return tmp_list
 
 
-    def train_modelsFaster(self, envsData, masterEnv = None):
-        statesConcatenatedL = envsData[0][0]
-        statesConcatenatedO = envsData[0][1]
-        statesConcatenatedD = envsData[0][2]
-        statesConcatenatedV = envsData[0][3]
-        statesConcatenatedT = envsData[0][4]
-        discounted_rewards = envsData[0][5]
-        actionsConcatenated = envsData[0][6]
-        advantagesConcatenated = envsData[0][7]
-        neglogsConcatinated = envsData[0][8]
-        valuesConcatenated = envsData[0][9]
-
-        for robotsData in envsData[1:]:
-            statesConcatenatedL = np.concatenate((statesConcatenatedL ,robotsData[0]))
-            statesConcatenatedO = np.concatenate((statesConcatenatedO ,robotsData[1]))
-            statesConcatenatedD = np.concatenate((statesConcatenatedD, robotsData[2]))
-            statesConcatenatedV = np.concatenate((statesConcatenatedV, robotsData[3]))
-            statesConcatenatedT = np.concatenate((statesConcatenatedT, robotsData[4]))
-            discounted_rewards = np.concatenate((discounted_rewards, robotsData[5]))
-            actionsConcatenated = np.concatenate((actionsConcatenated, robotsData[6]))
-            advantagesConcatenated = np.concatenate((advantagesConcatenated, robotsData[7]))
-            neglogsConcatinated = np.concatenate((neglogsConcatinated, robotsData[8]))
-            valuesConcatenated = np.concatenate((valuesConcatenated, robotsData[9]))
-
-            i = 0
-        neglogsConcatinated = np.squeeze(neglogsConcatinated)
-
-
-        if masterEnv == None:
-           self.network.train_net(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD, statesConcatenatedV,
-                                   statesConcatenatedT, discounted_rewards, actionsConcatenated, advantagesConcatenated,
-                                   neglogsConcatinated, valuesConcatenated)
-           weights = self.network.getWeights()
-        else:
-            weights = ray.get(
-                masterEnv.trainNet.remote(statesConcatenatedL, statesConcatenatedO, statesConcatenatedD, statesConcatenatedV,
-                                   statesConcatenatedT, discounted_rewards, actionsConcatenated, advantagesConcatenated,
-                                   neglogsConcatinated, valuesConcatenated))
-        return weights
-
-
     def train_models_with_obs(self, obs_lists, master_env):
+        """
+        restructures the collected Data from every remote actor into one batch
+
+        :param obs_lists: list with collected exeriences of every remote actor
+        :param master_env: refernce to the master environment whose network will be used for training
+        :return: trained weights
+        """
         shuffle(obs_lists)
         numb_of_exp_per_batch = len(obs_lists)# int(1024 / (self.args.train_interval  * 4))
 
@@ -237,7 +215,6 @@ class PPO_Multi:
                             obs_concatinated[current_index][key][key2] = np.concatenate((value2, exp[key][key2]))
                     else:
                         obs_concatinated[current_index][key] = np.concatenate((value, exp[key]))
-
 
 
         for exp in obs_concatinated:
@@ -286,8 +263,9 @@ class PPO_Multi:
     def execute(self, args, env_dim):
         """
         executes a trained net (without using the standard deviation in the action selection)
-        :param env: EnvironmentWithUI.Environment
+
         :param args: args defined in main
+        :param env_dim:
         """
         app = QApplication(sys.argv)
         env = Environment(app, args, env_dim, 0)
@@ -371,8 +349,11 @@ class PPO_Multi:
 
     def trainPerception(self, args, env_dim):
         """
-        :param env: EnvironmentWithUI.Environment
+        Trains a pretrained network to detect other robots or obstacles in a straight corridor in front of the robot.
+        During the training only the convolutional layers are optimized
+
         :param args: args defined in main
+        :param env_dim:
         """
         app = QApplication(sys.argv)
         env = Environment(app, args, env_dim, 0)

@@ -179,7 +179,6 @@ class PPO_Network(AbstractModel):
 
         if self.args.lidar_activation:
             return self.make_gradcam_heatmap(laser, orientation, distance, velocity, 1)
-
         else:
             net_out = self._model([np.expand_dims(laser, 0), np.expand_dims(orientation, 0), np.expand_dims(distance, 0),
                                    np.expand_dims(velocity, 0)])
@@ -287,7 +286,7 @@ class PPO_Network(AbstractModel):
                 inputsO = np.append(inputsO, np.expand_dims(orientation, axis=0), axis=0)
                 inputsD = np.append(inputsD, np.expand_dims(distance, axis=0), axis=0)
                 inputsV = np.append(inputsV, np.expand_dims(velocity, axis=0), axis=0)
-        proximity_categories = np.asarray(proximity_categories)
 
+        proximity_categories = np.asarray(proximity_categories)
         self._perception_model.fit([inputsL, inputsO, inputsD, inputsV], proximity_categories, shuffle=True)
 

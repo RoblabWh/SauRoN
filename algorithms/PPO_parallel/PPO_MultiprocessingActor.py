@@ -37,7 +37,6 @@ class PPO_MultiprocessingActor:
         # GPU kann nicht fehlerfrei genutzt werden und bietet teilweise keinen Leistungsvorteil während der Simulation
         os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 
-
         self.args = args
         self.app = None
 
@@ -45,11 +44,11 @@ class PPO_MultiprocessingActor:
         self.network.build()
         if master:
             self.app = QApplication(sys.argv)
-
             self.network.print_summary()
-        if weights != None:
 
+        if weights != None:
             self.network.set_model_weights(weights)
+
         self.env = Environment(self.app, args, env_dim[0], level)
         self.env.setUISaveListener(self)
         self.numbOfRobots = self.env.simulation.getCurrentNumberOfRobots()
@@ -96,6 +95,11 @@ class PPO_MultiprocessingActor:
         return self.env.simulation.getLevelName()
 
     def trainSteps(self, numbrOfSteps):
+        """
+        Executes the simulation for a given number of steps
+        :param numbrOfSteps: int - determines how many steps per robot are executed
+        :return: collected experiences of all robots acting in this simulation
+        """
         stepsLeft , cumul_reward = numbrOfSteps, 0
 
         if self.reset:
@@ -135,7 +139,6 @@ class PPO_MultiprocessingActor:
                 if not True in robotsData[i][3]:
                     aTmp = self.policy_action(robotsOldState[i][0])
                     a = np.ndarray.tolist(aTmp[0].numpy())[0]  # Tensoren in Numpy in List umwandeln
-
                     c = np.ndarray.tolist(aTmp[1].numpy())[0]
                     negL = np.ndarray.tolist(aTmp[2].numpy())
 
@@ -151,8 +154,7 @@ class PPO_MultiprocessingActor:
             # environment makes a step with selected actions
             results = self.env.step(robotsActions)
 
-            for i, dataCurrentFrameSingleRobot in enumerate(
-                    results):  # results[1] hat id, die hierfür nicht mehr gebraucht wird
+            for i, dataCurrentFrameSingleRobot in enumerate(results):
 
                 if not True in robotsData[i][3]:  # [environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
 
@@ -178,44 +180,14 @@ class PPO_MultiprocessingActor:
         return self.restructureRobotsData(robotsData)
 
 
-
-    def reformat_observation(self, robotsData):
-        # start = time.time()
-
-        all_obs_and_actions = []
-        for data in robotsData: #data of a single roboter
-            actions, states, rewards, dones, evaluations, neglogs = data
-            discounted_rewards = self.discount(rewards)
-
-            advantages = discounted_rewards - np.reshape(evaluations, len(evaluations))
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-            for j,s in enumerate(states):
-                laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 1)
-                orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0, 1)
-                distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0, 1)
-                velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0, 1)
-
-                observation = {'laser_0': np.expand_dims(np.array(laser), 0),
-                               'orientation_to_goal': np.expand_dims(np.array(orientation), 0),
-                               'distance_to_goal': np.expand_dims(np.array(distance), 0),
-                               'velocity': np.expand_dims(np.array(velocity), 0)}
-                action = {'action': actions[j], 'value': evaluations[j], 'neglog_policy': neglogs[j],
-                          'reward': discounted_rewards[j], 'advantage': advantages[j]}
-                all_obs_and_actions += [(observation, action)]
-
-        return all_obs_and_actions
-
-
-    def restructureRobotsData(self, robotsData):#, states, actions, rewards): 1 0 2
+    def restructureRobotsData(self, robotsData):
         """
-        Update actor and critic networks from experience
-        :param envsData: Collected states of all robots from all used parallel environments. Collected over the last n time steps
-        :param masterEnv: The environment which is used to train the network. all other networks will receive a copy
-        of its weights after the training process.
-        :return: trained weights of the master environments network
+
+        restructures the collected experiences of every robot in this simulation into a combined experience
+
+        :param robotsData: list with experiences from every robot
+        :return: python dictionary with the collected and restructured experience of this remote actors simulation
         """
-        # Compute discounted rewards and Advantage (TD. Error)
 
         discounted_rewards = np.array([])
         state_values = np.array([])
@@ -324,33 +296,17 @@ class PPO_MultiprocessingActor:
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
-        #timesteps = np.array([np.array(s[i][4]) for i in range(0, len(s))])
-        # print(laser.shape, orientation.shape, distance.shape, velocity.shape)
-        # if (self.timePenalty):
-        #     return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]),
-        #                                 np.array([velocity]), np.array([timesteps]))  # Liste mit [actions, value]
-        # else:
         return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]))  # Liste mit [actions, value]
-
-
-    def trainNet(self, statesConcatenatedL, statesConcatenatedO, statesConcatenatedD,statesConcatenatedV, statesConcatenatedT,discounted_rewards, actionsConcatenated,advantages, neglogs, values):
-        for i in range(len(statesConcatenatedL)):
-            observation = {'laser_0': np.expand_dims(np.array(statesConcatenatedL[i]),0),
-                           'orientation_to_goal': np.expand_dims(np.array(statesConcatenatedO[i]),0),
-                           'distance_to_goal': np.expand_dims(np.array(statesConcatenatedD[i]),0),
-                           'velocity': np.expand_dims(np.array(statesConcatenatedV[i]),0)}
-            action = {'action': actionsConcatenated[i], 'value': values[i], 'neglog_policy': neglogs[i],
-                      'reward':  discounted_rewards[i], 'advantage': advantages[i]}
-            self.network.train(observation, action)
-
-        return self.network.get_model_weights()
 
 
 
     def train_net_obs(self, obs_with_actions_list):
-        # for obs_with_actions in obs_with_actions_list:
-        #     obs, action = obs_with_actions
-        #     self.network.train(obs, action)
+        """
+        Traines the network based on all collected experiences found inside of the observation list
+
+        :param obs_with_actions_list: list with all observations used for training
+        :return: new model weights
+        """
         self.network.train(obs_with_actions_list['observation'], obs_with_actions_list)
         return self.network.get_model_weights()
 
