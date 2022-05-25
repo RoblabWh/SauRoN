@@ -43,11 +43,16 @@ class PPO_Network(AbstractModel):
         tag = 'body'
 
         # Lidar Convolutions
-        lidar_conv = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu', name=tag + '_lidar-conv_1')(input_lidar) # k_s 7 (15) str 3 (7)
+        #lidar_conv = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu', name=tag + '_lidar-conv_1')(input_lidar) # k_s 7 (15) str 3 (7)
+        lidar_conv = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu', name=tag + '_lidar-conv_1')(input_lidar) # k_s 7 (15) str 3 (7)
 
-        lidar_conv = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu', name=tag + '_lidar-conv_2')(lidar_conv)
+        #lidar_conv = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu', name=tag + '_lidar-conv_2')(lidar_conv)
+        lidar_conv = Conv1D(filters=32, kernel_size=3, strides=2, padding='same', activation='relu', name=tag + '_lidar-conv_2')(lidar_conv)
+
         lidar_flat = Flatten()(lidar_conv)
-        lidar_flat = Dense(units=160, activation='relu', name=tag + '_lidar-dense')(lidar_flat)
+        #lidar_flat = Dense(units=160, activation='relu', name=tag + '_lidar-dense')(lidar_flat)
+        lidar_flat = Dense(units=128, activation='relu', name=tag + '_lidar-dense')(lidar_flat)
+
 
 
         # Orientation 
@@ -60,15 +65,19 @@ class PPO_Network(AbstractModel):
         velocity_flat = Flatten(name=tag + '_velocity_flat')(input_velocity)
 
         # Concat layes ¬Lidar
-        concated_some = Concatenate()([orientation_flat, distance_flat, velocity_flat])
-        concated_some = Dense(units=96, activation='relu')(concated_some)
+        #concated_some = Concatenate()([orientation_flat, distance_flat, velocity_flat])
+        #concated_some = Dense(units=96, activation='relu')(concated_some)
+        concated_some = Concatenate()([orientation_flat, distance_flat, velocity_flat, lidar_flat])
+        densed = Dense(units=128, activation='relu')(concated_some)
 
 
         # Concat the layers
-        concated = Concatenate(name=tag + '_concat')([lidar_flat, concated_some])
+        # concated = Concatenate(name=tag + '_concat')([lidar_flat, concated_some])
 
         # Dense all
-        densed = Dense(units=256, activation='relu', name=tag+'_dense', )(concated)
+        #densed = Dense(units=256, activation='relu', name=tag+'_dense', )(concated)
+        #densed = Dense(units=9, activation='relu', name=tag+'_dense', )(concated)
+
 
         # Policy
         mu = Dense(units=2, activation='tanh', name='output_mu')(densed)
@@ -76,6 +85,7 @@ class PPO_Network(AbstractModel):
 
         # Value
         value = Dense(units=128, activation='relu', name='out_value_dense')(densed)
+        # value = Dense(units=5, activation='relu', name='out_value_dense')(densed)
         value = Dense(units=1, activation=None, use_bias=False, name='out_value')(value)
         
         # Create the Keras Model

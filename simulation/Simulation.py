@@ -57,9 +57,11 @@ class Simulation:
 
         for i, s in enumerate(self.stations):
             s.setPos(self.level[2][i])
+
+        random_pos = random.sample(self.level[0], k=len(self.level[0]))
         for i, r in enumerate(self.robots):
             # r.reset(self.stations, self.level[level][0][i], self.level[level][1][i]+(random.uniform(0, math.pi)*self.noiseStrength[level]), self.level[level][3])
-            r.reset(self.stations, self.level[0][i], self.level[1][i]+(random.uniform(0, math.pi)), self.level[3])
+            r.reset(self.stations, random_pos[i], self.level[1][i]+(random.uniform(0, math.pi)), self.level[3])
 
         for robot in self.robots:
             robot.resetLidar(self.robots)

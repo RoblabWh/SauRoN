@@ -38,6 +38,7 @@ class PPO_Multi:
         self.av_meter = AverageMeter()
         self.gamma = args.gamma
         self.closed_windows = []
+        self.successrate = 0
 
 
     def prepare_training(self, loadWeightsPath = ""):
@@ -146,7 +147,7 @@ class PPO_Multi:
                 individualSuccessrate.append(tmpTargetList.count(True) / 100)
 
             targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
-            successrate = allReachedTargetList.count(True) / targetDivider
+            self.successrate = allReachedTargetList.count(True) / targetDivider
 
             # Calculate and display score
             individualLastAverageReward = []
@@ -159,15 +160,16 @@ class PPO_Multi:
 
             cumul_reward = cumul_reward / self.args.parallel_envs
 
-            self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(successrate))
+            self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(self.successrate))
             self.tqdm_e.refresh()
-            return (False, individualLastAverageReward, individualSuccessrate, self.currentEpisode, successrate)
+            return (False, individualLastAverageReward, individualSuccessrate, self.currentEpisode, self.successrate)
         else:
             #If all episodes are finished the current weights are saved
             self.save_weights(self.multiActors[0], self.args.path)
             for actor in self.multiActors:
                 actor.killActor.remote()
-            return (True, [], [], self.currentEpisode)
+            return (True, [], [], self.currentEpisode, self.successrate)
+
 
     def get_closed_windows(self):
         tmp_list = self.closed_windows.copy()
@@ -412,4 +414,5 @@ class PPO_Multi:
                 self.network.save_model_weights(path)
                 data = [self.args]
                 with open(path + '.yml', 'w') as outfile:
+                    print("save model at episode ", e)
                     yaml.dump(data, outfile, default_flow_style=False)

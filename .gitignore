@@ -2,4 +2,4 @@
 __pychache__
 venv
 models
-.idea
+.idea/*

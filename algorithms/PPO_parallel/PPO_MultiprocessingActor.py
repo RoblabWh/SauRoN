@@ -162,6 +162,7 @@ class PPO_MultiprocessingActor:
                     r = dataCurrentFrameSingleRobot[1]
                     done = dataCurrentFrameSingleRobot[2]
                     robotsData[i][1].append(robotsOldState[i][0])
+                    #print(robotsData[i][1][-1])
                     robotsData[i][2].append(r)
                     robotsData[i][3].append(done)
                     if (done):
@@ -170,6 +171,7 @@ class PPO_MultiprocessingActor:
                         self.reachedTargetList.append(reachedPickup)
                     # Update current state
                     robotsOldState[i] = new_state
+                    #print(robotsData[i][1][-1])
                     cumul_reward += r
             stepsLeft -= 1
             self.steps += 1

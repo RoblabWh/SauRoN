@@ -42,7 +42,9 @@ class Environment:
             return np.asarray(self.simulation.robots[i].state)  # Pos, Geschwindigkeit, Zielposition
         elif self.args.mode == 'sonar':
             reversed = True #determines the order of the state (reversed = false : current state in last place and the oldest at Index 0)
-            return np.asarray(self.simulation.robots[i].get_state_lidar(reversed))  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
+            #return np.asarray(self.simulation.robots[i].get_state_lidar(reversed))  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
+            return self.simulation.robots[i].get_state_lidar(reversed)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
+
 
 
     @staticmethod
@@ -150,6 +152,39 @@ class Environment:
         :return: returns the result of the fitness function
         """
 
+        reward = 0
+        r_arrival = 15
+        r_collision = -15
+        w_g = 2.5
+        w_w = -0.1
+
+        if reachedPickup:
+            reward += r_arrival
+        else:
+            reward += w_g * (dist_old - dist_new)
+
+        if collision:
+            reward += r_collision
+
+        abs_ang_vel = np.abs(robot.getAngularVelocity()) 
+        if abs_ang_vel > 0.7:
+            reward += w_w * abs_ang_vel
+
+        return reward
+
+    def createReward2(self, robot, dist_new, dist_old, reachedPickup, collision):
+        """
+        Creates a (sparse) reward based on the euklidian distance, if the robot has reached his goal and if the robot
+        collided with a wall or another robot.
+
+        :param robot: robot
+        :param dist_new: the new distance (after the action has been taken)
+        :param dist_old: the old distance (before the action has been taken)
+        :param reachedPickup: True if the robot reached his goal in this step
+        :param collision: True if the robot collided with a wall or another robot
+        :return: returns the result of the fitness function
+        """
+
         distPos = 0.02#0.009#0.015
         distNeg = -0.002#0.002  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
         oriPos = 0.0001#0.0001#.0003
@@ -187,6 +222,7 @@ class Environment:
             reward = 1 #+ rewardDist + rewardOrient + unblockedViewDistance # + rewardLastDist
         else:
             reward = rewardDist + rewardOrient + unblockedViewDistance #+ rewardLastDist #+  unblockedViewDistance
+            #reward = rewardDist
         return reward
 
     def reset(self, level):
@@ -206,8 +242,6 @@ class Environment:
         """
         if self.simulation.hasUI:
             self.simulation.simulationWindow.setSaveListener(observer)
-
-
 
     def getRobotsProximityCategoryAllObstacles(self, i):
         distances = self.simulation.robots[i].collisionDistances

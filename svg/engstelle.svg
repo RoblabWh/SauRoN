@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Adobe Illustrator 16.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+
+<svg
+   version="1.1"
+   id="Ebene_3"
+   x="0px"
+   y="0px"
+   width="623.619px"
+   height="283.46px"
+   viewBox="0 0 623.619 283.46"
+   enable-background="new 0 0 623.619 283.46"
+   xml:space="preserve"
+   sodipodi:docname="engstelle.svg"
+   inkscape:version="1.1.2 (1:1.1+202202050950+0a00cf5339)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
+   id="namedview22"
+   pagecolor="#505050"
+   bordercolor="#eeeeee"
+   borderopacity="1"
+   inkscape:pageshadow="0"
+   inkscape:pageopacity="0"
+   inkscape:pagecheckerboard="0"
+   showgrid="false"
+   inkscape:zoom="1.9627368"
+   inkscape:cx="311.55476"
+   inkscape:cy="141.63896"
+   inkscape:window-width="1920"
+   inkscape:window-height="1031"
+   inkscape:window-x="0"
+   inkscape:window-y="25"
+   inkscape:window-maximized="1"
+   inkscape:current-layer="Ebene_3" /><defs
+   id="defs890"><inkscape:path-effect
+     effect="bspline"
+     id="path-effect905"
+     is_visible="true"
+     lpeversion="1"
+     weight="33.333333"
+     steps="2"
+     helper_size="0"
+     apply_no_weight="true"
+     apply_with_weight="true"
+     only_selected="false" /><inkscape:path-effect
+     effect="bspline"
+     id="path-effect643"
+     is_visible="true"
+     lpeversion="1"
+     weight="33.333333"
+     steps="2"
+     helper_size="0"
+     apply_no_weight="true"
+     apply_with_weight="true"
+     only_selected="false" /><inkscape:path-effect
+     effect="bspline"
+     id="path-effect310"
+     is_visible="true"
+     lpeversion="1"
+     weight="33.333333"
+     steps="2"
+     helper_size="0"
+     apply_no_weight="true"
+     apply_with_weight="true"
+     only_selected="false" /><inkscape:path-effect
+     effect="bspline"
+     id="path-effect189"
+     is_visible="true"
+     lpeversion="1"
+     weight="33.333333"
+     steps="2"
+     helper_size="0"
+     apply_no_weight="true"
+     apply_with_weight="true"
+     only_selected="false" /><inkscape:path-effect
+     effect="bspline"
+     id="path-effect185"
+     is_visible="true"
+     lpeversion="1"
+     weight="33.333333"
+     steps="2"
+     helper_size="0"
+     apply_no_weight="true"
+     apply_with_weight="true"
+     only_selected="false" /></defs>
+<circle
+   id="start_1_2_"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="498.39819"
+   cy="146.3662"
+   r="7.4990001" />
+<circle
+   id="start_2_2_"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="116.7834"
+   cy="149.42093"
+   r="7.5" />
+<circle
+   id="start_3_2_"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="116.41127"
+   cy="128.14816"
+   r="7.4990001" />
+<circle
+   id="start_4_2_"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="523.49689"
+   cy="147.76903"
+   r="7.5" />
+<circle
+   id="start_5_1_"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="93.980827"
+   cy="128.80243"
+   r="7.5" />
+<circle
+   id="start_6"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="497.68741"
+   cy="122.06485"
+   r="7.4990001" />
+<circle
+   id="start_7"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="522.9422"
+   cy="121.90499"
+   r="7.4990001" />
+<circle
+   id="start_8"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="94.483147"
+   cy="149.36488"
+   r="7.5" />
+<circle
+   id="goal_1_2_"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="434.98721"
+   cy="58.109245"
+   r="13.668" />
+<circle
+   id="goal_2_2_"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="177.71553"
+   cy="212.87444"
+   r="13.668" />
+<circle
+   id="goal_3_2_"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="583.70801"
+   cy="57.861782"
+   r="13.99" />
+<circle
+   id="goal_4_2_"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="45.280453"
+   cy="65.774727"
+   r="13.99" />
+<circle
+   id="goal_5"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="437.72977"
+   cy="212.01416"
+   r="13.668" />
+<circle
+   id="goal_6"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="43.347641"
+   cy="212.03882"
+   r="13.668" />
+<circle
+   id="goal_7"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="584.98553"
+   cy="211.2749"
+   r="13.99" />
+<circle
+   id="goal_8"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="178.81248"
+   cy="65.296455"
+   r="13.99" />
+<polygon
+   fill="none"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   points="619.977,279.897 619.977,2.563 3.31,2.563 3.31,279.563 "
+   id="polygon885" />
+<path
+   style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+   d="m 28.617821,34.150779 c 0,0 176.710149,-1.538444 176.710149,-1.538444 0,0 -1.29674,74.160705 -1.29674,74.160705 0,0 190.58352,3.12282 190.58352,3.12282 0,0 -0.7105,-72.15873 -0.7105,-72.15873"
+   id="path903"
+   inkscape:path-effect="#path-effect905"
+   inkscape:original-d="m 28.617821,34.150779 176.710149,-1.538444 -1.29674,74.160705 190.58352,3.12282 -0.7105,-72.15873" /></svg>

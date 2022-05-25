@@ -152,8 +152,7 @@ class A2C:
             # Robot 0 rewards --> robotsData[0][2]
             # Robot 1 actions --> robotsData[1][0]
             # ...
-            print(robotsData, robotsData[0],
-                  robotsData[0][0])
+            #print(robotsData, robotsData[0], robotsData[0][0])
 
 
             while not env.is_done():

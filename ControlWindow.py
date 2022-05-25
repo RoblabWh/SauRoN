@@ -103,11 +103,16 @@ class WorkerThread(QThread):
         super(WorkerThread, self)
         self.model = model
         self.visibilities = visibilities
+        self.keepRunning = True
 
     def run(self):
-        episodeDoneFuture = self.model.train_with_feedback_for_n_steps.remote(self.visibilities)
-        episodeDone = ray.get(episodeDoneFuture)
-        self.episode_done.emit(episodeDone)
+        if(self.keepRunning):
+            episodeDoneFuture = self.model.train_with_feedback_for_n_steps.remote(self.visibilities)
+            episodeDone = ray.get(episodeDoneFuture)
+            self.episode_done.emit(episodeDone)
+
+    def stop(self):
+        self.keepRunning = False
 
 
 
