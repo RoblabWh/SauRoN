@@ -1,5 +1,6 @@
 *.pyc
 __pychache__
 venv
+scans
 models
 .idea/*

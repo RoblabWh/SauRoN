@@ -219,7 +219,8 @@ class PPO_MultiprocessingActor:
             usedTimeSteps = [] # currently not used!
 
             for s in states:
-                laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
+                #laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
+                laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 2)
                 orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
                 distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
                 velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
@@ -294,10 +295,14 @@ class PPO_MultiprocessingActor:
         :return: [actions, critic]
         """
 
-        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
+        #laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,2)
+        #print("laser_state1: ", laser.shape)
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
+        print(np.array([laser]))
+        print(np.array([laser]).shape)
         return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]))  # Liste mit [actions, value]
 
 

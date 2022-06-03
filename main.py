@@ -19,10 +19,10 @@ import warnings
 ######  Settings  you have to use/ change during this exercise  ####
 ####################################################################
 
-training = False  # if training is set to false the trained model defined in the variable filename is loaded
+training =False  # if training is set to false the trained model defined in the variable filename is loaded
 load_old = False
 #filename = "A2C_Network_2021-11-22--00-12_200"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
-filename = "PPO_22-05-20--13-06"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
+filename = "PPO_22-06-02--18-44_e387"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
 manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe useful for testing rewards in combination with a print ;)  you should also lower the amount of robots during manual testing.)
 
 
@@ -31,23 +31,23 @@ manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe use
 
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0001                 # learning rate
-num_episodes = 101          # the number of epochs (/episodes) that are simulated
+num_episodes = 501          # the number of epochs (/episodes) that are simulated
 steps = 1500 #750                 # number of steps per epoch (/episode)
 trainingInterval = 75       # number of steps after which the neural net is trained
 simTimeStep = 0.125         # simulated time between two steps in the simulation
-numbOfParallelEnvs = 10     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 1     # parallel environments are used to create more and diverse training experiences
 
 timeFrames = 4              # number of past states used as an Input for the neural net
 numberOfRays = 1081         # spacing between two light rays (for distance calculation) in degrees
 fov = 270                   # field of view in degree
-numbOfRobotsManual = 4     # only change if set to manual do not use more than 4
+numbOfRobotsManual = 1     # only change if set to manual do not use more than 4
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
 levelFiles = ['Simple.svg', 'Funnel.svg', 'SwapSide_a.svg'] #, 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 levelFiles = ['Lab.svg', 'Zipper.svg'] #, 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 levelFiles = ['Simple.svg', 'Funnel.svg', 'SwapSide_a.svg', 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
-levelFiles = ['Simple_12.svg']
+levelFiles = ['Simple.svg']
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
 
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_timestamp', type=str, default=startTime, help='Timestamp from when the model was created')
     parser.add_argument('--scale_factor', type=int, default=scaleFactor, help='Scale Factor for visualisation')
     parser.add_argument('--display_normals', type=bool, default=False, help='Determines whether the normals of a wall are shown in the map.')
-    parser.add_argument('--lidar_activation', type=bool, default=True, help='Show Lidar activation')
+    parser.add_argument('--lidar_activation', type=bool, default=False, help='Show Lidar activation')
 
     # Robot settings
     parser.add_argument('--number_of_rays', type=int, default=numberOfRays, help='The number of Rays emittet by the laser')

@@ -2,7 +2,7 @@ import logging
 import tensorflow as tf
 from tensorflow import keras
 from algorithms.PPO_parallel.abstract_model import AbstractModel
-from tensorflow.keras.layers import Input, Conv1D, Flatten, Concatenate, Lambda, Dense
+from tensorflow.keras.layers import Input, Conv1D, Flatten, Concatenate, Lambda, Dense, Conv2D
 from tensorflow.keras.models import Model as KerasModel
 from algorithms.PPO_parallel.continous_layer import ContinuousLayer
 import numpy as np
@@ -35,19 +35,24 @@ class PPO_Network(AbstractModel):
         self._config = config
 
     def build(self):
-        input_lidar = self._create_input_layer(self._config['lidar_size'], 'lidar')
+        #input_lidar = self._create_input_layer(self._config['lidar_size'], 'lidar')
+        input_lidar = Input(shape=(161, 161, self._config['stack_size']), dtype='float32', name='input_lidar')
         input_orientation = self._create_input_layer(self._config['orientation_size'], 'orientation')
         input_distance = self._create_input_layer(self._config['distance_size'], 'distance')
         input_velocity = self._create_input_layer(self._config['velocity_size'], 'velocity')
 
         tag = 'body'
 
+        lidar_conv = Conv2D(32, (3, 3), activation='relu')(input_lidar) 
+        lidar_conv = Conv2D(16, (3, 3), activation='relu')(lidar_conv) 
+
+
         # Lidar Convolutions
         #lidar_conv = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu', name=tag + '_lidar-conv_1')(input_lidar) # k_s 7 (15) str 3 (7)
-        lidar_conv = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu', name=tag + '_lidar-conv_1')(input_lidar) # k_s 7 (15) str 3 (7)
+        #lidar_conv = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu', name=tag + '_lidar-conv_1')(input_lidar) # k_s 7 (15) str 3 (7)
 
         #lidar_conv = Conv1D(filters=32, kernel_size=5, strides=2, padding='same', activation='relu', name=tag + '_lidar-conv_2')(lidar_conv)
-        lidar_conv = Conv1D(filters=32, kernel_size=3, strides=2, padding='same', activation='relu', name=tag + '_lidar-conv_2')(lidar_conv)
+        #lidar_conv = Conv1D(filters=32, kernel_size=3, strides=2, padding='same', activation='relu', name=tag + '_lidar-conv_2')(lidar_conv)
 
         lidar_flat = Flatten()(lidar_conv)
         #lidar_flat = Dense(units=160, activation='relu', name=tag + '_lidar-dense')(lidar_flat)
@@ -182,7 +187,9 @@ class PPO_Network(AbstractModel):
         :param s: state of a single robot
         :return: [actions]
         """
-        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 1)
+        #laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 1)
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,2)
+        #print("laser_state2: ", laser.shape)
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0, 1)
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0, 1)
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0, 1)

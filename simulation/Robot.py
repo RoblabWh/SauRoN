@@ -1,6 +1,11 @@
+from ctypes import pointer
 import math
 from simulation.Borders import ColliderLine
 from pynput.keyboard import Listener
+
+
+import os
+from PIL import Image
 
 
 class Robot:
@@ -376,7 +381,6 @@ class Robot:
         rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.args.field_of_view)
         distances, lidarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
 
-
         circleX = [r[0] for r in collidorCircleAllForTerminations]
         circleY = [r[1] for r in collidorCircleAllForTerminations]
         circleR = [r[2] for r in collidorCircleAllForTerminations]
@@ -426,9 +430,65 @@ class Robot:
         distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)
         distancesNorm = distancesNorm.tolist()
 
+        ## WRAP THIS
+        if False:
+            #print("dist", distances.shape)
+            #print("lidarHIts", lidarHits.shape)
+            #print(self.getDirectionAngle())
+            scanplot = []
+            for i, point in enumerate(distancesNorm):
+                    #angle_min = self.getDirectionAngle() - np.radians(135)
+                    angle_min = 0
+                    angle_increment = np.radians(0.25)
+                    angle = angle_min + (i * angle_increment)
+                    x = point * np.cos(angle)
+                    y = point * np.sin(angle)
+                    scanplot.append([x, y])
+            scanplot = np.asarray(scanplot)
+
+            idx = len(os.listdir("./scans")) - 1
+            frmt = "{0:06d}"
+            idx = frmt.format(idx)
+            file = "./scans/"+idx+"_scan.npy"
+
+            with open(file, 'wb') as f:
+                np.save(f, scanplot)
+                #print(self.getDirectionAngle())
+                np.save(f, np.array([self.getDirectionAngle()]))
+
+        scanplot = []
+        for i, point in enumerate(distancesNorm):
+                #angle_min = self.getDirectionAngle() - np.radians(135)
+                angle_min = 0
+                angle_increment = np.radians(0.25)
+                angle = angle_min + (i * angle_increment)
+                x = point * np.cos(angle)
+                y = point * np.sin(angle)
+                scanplot.append([x, y])
+        scanplot = np.asarray(scanplot)
+        theta = np.radians(-135)
+        rotMatrix = np.array([[np.cos(theta), -np.sin(theta)], 
+                    [np.sin(theta),  np.cos(theta)]])
+        data = np.dot(scanplot, rotMatrix.T)
+        data = ((data * 20) + 20) * 4
+        data = data.astype(int)
+        image = np.zeros((161, 161))
+        image[data[:,0], data[:,1]] = 255
+
+        im = Image.fromarray(image).convert('RGB')
+        frmt = "{0:06d}"
+        idx_ = len(os.listdir("./scans")) - 1
+        idx = frmt.format(idx_)
+        name = "./scans/" + idx + "_scan.png"
+        im.save(name)
+        image[data[:,0], data[:,1]] = 1
+        #print(image.shape)
+        ##
+
         currentTimestep = (steps - stepsLeft)/steps
 
-        frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
+        frame_lidar = [image, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
+        #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateLidar) >= self.time_steps:
             self.stateLidar.pop(0)
@@ -629,8 +689,10 @@ class Robot:
             self.angTast = 0
 
     def on_release(self, key):
-        self.linTast = 0
-        self.angTast = 0
+        if key.char == 'w' or key.char == 's':
+            self.linTast = 0
+        if key.char == 'a' or key.char == 'd':
+            self.angTast = 0
 
 
 
@@ -784,6 +846,8 @@ class FastCollisionRay:
 
             distCircles = np.sqrt((x1-x4)**2 + (y1-y4)**2) - r
             dist = np.concatenate((dist, distCircles))
+        else:
+            distCircles = [] ## WATCH
 
         return dist, distCircles
 
