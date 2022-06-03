@@ -326,7 +326,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
             self.lbSteps.setText(str(stepsLeft))
 
     def paintUpdates(self):
-        self.repaint()
+        self.update()
         self.app.processEvents()
 
 

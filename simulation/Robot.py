@@ -473,14 +473,14 @@ class Robot:
         data = ((data * 20) + 20) * 4
         data = data.astype(int)
         image = np.zeros((161, 161))
-        image[data[:,0], data[:,1]] = 255
+        # image[data[:,0], data[:,1]] = 255
 
-        im = Image.fromarray(image).convert('RGB')
-        frmt = "{0:06d}"
-        idx_ = len(os.listdir("./scans")) - 1
-        idx = frmt.format(idx_)
-        name = "./scans/" + idx + "_scan.png"
-        im.save(name)
+        # im = Image.fromarray(image).convert('RGB')
+        # frmt = "{0:06d}"
+        # idx_ = len(os.listdir("./scans")) - 1
+        # idx = frmt.format(idx_)
+        # name = "./scans/" + idx + "_scan.png"
+        # im.save(name)
         image[data[:,0], data[:,1]] = 1
         #print(image.shape)
         ##

@@ -5,7 +5,6 @@ from deprecated.A2C_parallel_old.A2C_Multi import AverageMeter
 from algorithms.PPO_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
 from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from tqdm import tqdm
-import ray
 import yaml
 import tensorflow
 from random import shuffle
@@ -16,7 +15,7 @@ import sys
 
 sys.path.insert(1, '/')
 
-@ray.remote
+
 class PPO_Multi:
     """
     Defines an Proximal Policy Optimization learning algorithm for neural nets
@@ -62,13 +61,13 @@ class PPO_Multi:
         #Create parallel workers with own environment
         envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
 
-        multiActors = [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
-        startweights = multiActors[0].getWeights.remote()
-        multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
+        multiActors = [PPO_MultiprocessingActor(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
+        startweights = multiActors[0].getWeights()
+        #multiActors += [PPO_MultiprocessingActor(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
 
         levelNames = []
         for i, actor in enumerate(multiActors):
-            levelName = ray.get(actor.setLevel.remote(envLevel[i]))
+            levelName = actor.setLevel(envLevel[i])
             levelNames.append(levelName)
 
         self.multiActors = multiActors
@@ -90,31 +89,30 @@ class PPO_Multi:
         """
 
         activeActors = self.activeActors
-
         if len(activeActors) > 0:
-            futures = [actor.trainSteps.remote(self.args.train_interval) for actor in activeActors]
-            allTrainingResults = ray.get(futures) #Liste mit Listen von Observations aus den Environments
+            futures = [actor.trainSteps(self.args.train_interval) for actor in activeActors]
+            allTrainingResults = futures #Liste mit Listen von Observations aus den Environments
             trainedWeights = self.train_models_with_obs(allTrainingResults, self.multiActors[0])
 
-            for actor in self.multiActors[1:len(self.multiActors)]:
-                actor.setWeights.remote(trainedWeights)
+            self.multiActors[0].setWeights(trainedWeights)
+            #for actor in self.multiActors[1:len(self.multiActors)]:
+            #    actor.setWeights(trainedWeights)
 
             activeActors = []
             for actor in self.multiActors:
-                if ray.get(actor.isActive.remote()):
+                if actor.isActive():
                     activeActors.append(actor)
 
 
             for i, show in enumerate(visibleLevels):
                 if show:
-                    if ray.get(self.multiActors[i].has_been_closed.remote()):
+                    if self.multiActors[i].has_been_closed():
                         self.closed_windows.append(i)
                     else:
                         self.showEnvWindow(i)
                 else:
                     self.hideEnvWindow(i)
             self.activeActors = activeActors
-
             return False
         else:
             return True
@@ -142,7 +140,7 @@ class PPO_Multi:
             allReachedTargetList = []
             individualSuccessrate = []
             for actor in self.multiActors:
-                tmpTargetList = ray.get(actor.getTargetList.remote())
+                tmpTargetList = actor.getTargetList()
                 allReachedTargetList += tmpTargetList
                 individualSuccessrate.append(tmpTargetList.count(True) / 100)
 
@@ -151,9 +149,9 @@ class PPO_Multi:
 
             # Calculate and display score
             individualLastAverageReward = []
-
+            print("Update progrssbar")
             for actor in self.multiActors:
-                (cumRewardActor, steps) = ray.get(actor.resetActor.remote())
+                (cumRewardActor, steps) = actor.resetActor()
                 self.av_meter.update(cumRewardActor, steps)
                 cumul_reward += cumRewardActor
                 individualLastAverageReward.append(cumRewardActor/steps)
@@ -167,7 +165,7 @@ class PPO_Multi:
             #If all episodes are finished the current weights are saved
             self.save_weights(self.multiActors[0], self.args.path)
             for actor in self.multiActors:
-                actor.killActor.remote()
+                actor.killActor()
             return (True, [], [], self.currentEpisode, self.successrate)
 
 
@@ -220,7 +218,7 @@ class PPO_Multi:
 
 
         for exp in obs_concatinated:
-            weights = ray.get(master_env.train_net_obs.remote(exp))
+            weights = master_env.train_net_obs(exp)
         return weights
 
 
@@ -235,7 +233,7 @@ class PPO_Multi:
     def save_weights(self, masterEnv, path, additional=""):
         path += 'PPO' + self.args.model_timestamp + additional
 
-        masterEnv.saveWeights.remote(path)
+        masterEnv.saveWeights(path)
         data = [self.args]
         with open(path+'.yml', 'w') as outfile:
             yaml.dump(data, outfile, default_flow_style=False)
@@ -254,12 +252,12 @@ class PPO_Multi:
 
     def showEnvWindow(self, envID):
         if envID < len(self.multiActors):
-            self.multiActors[envID].showWindow.remote()
+            self.multiActors[envID].showWindow()
 
 
     def hideEnvWindow(self, envID):
         if envID < len(self.multiActors):
-            self.multiActors[envID].hideWindow.remote()
+            self.multiActors[envID].hideWindow()
 
 
     def execute(self, args, env_dim):

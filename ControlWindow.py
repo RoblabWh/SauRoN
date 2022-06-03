@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-import ray
+
 from algorithms.PPO_parallel.PPO_Multi import PPO_Multi
 
 
@@ -10,7 +10,6 @@ class ControlWindow(QtWidgets.QMainWindow):
 
     def __init__(self, application, nbOfEnvs, act_dim, env_dim, args, loadWeightsPath = ""):
         super(ControlWindow, self).__init__()
-        ray.init()
         self.app = application
         self.args = args
 
@@ -18,7 +17,7 @@ class ControlWindow(QtWidgets.QMainWindow):
 
         self.setWindowTitle("Control Panel")
 
-        self.model = PPO_Multi.remote(act_dim, env_dim, args)
+        self.model = PPO_Multi(act_dim, env_dim, args)
         self.currentEpisode = 0
         self.progressbarWidget = Progressbar(self.currentEpisode, self.args)
         self.tableWidget = Table(nbOfEnvs)
@@ -47,44 +46,51 @@ class ControlWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.widget)
 
     def closeEvent(self, event):
+        print("CloseEvent")
         self.worker.terminate()
 
     def train(self):
         self.startbutton.setEnabled(False)
         self.tableWidget.fillTable()
-        futures = self.model.prepare_training.remote(self.loadWeightsPath)
-        self.done, levelNames = ray.get(futures)
+        self.done, levelNames = self.model.prepare_training(self.loadWeightsPath)
         self.tableWidget.addLevelNames(levelNames)
         self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
+        self.worker.go = True
         self.worker.start()
         self.worker.episode_done.connect(self.startNextSteps)
+       
         self.tableWidget.updateButtonsAtStart()
 
     def startNextSteps(self, episodeDone):
         self.tableWidget.updateButtons()
-
+        print("startNextSteps")
         if not self.done:
-            closed_windows = ray.get(self.model.get_closed_windows.remote())
+            closed_windows = self.model.get_closed_windows()
             self.tableWidget.updateButtonsOnWindowClosed(closed_windows)
             if not episodeDone:
-                self.worker.terminate()
-                self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
-                self.worker.start()
-                self.worker.episode_done.connect(self.startNextSteps)
+                self.worker.update(self.model, self.tableWidget.getVisibilites())
+                self.worker.go = True
+                #self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
+                #self.worker.start()
+                #self.worker.episode_done.connect(self.startNextSteps)
             else:
-                doneFuture = self.model.train_with_feedback_end_of_episode.remote()
-                self.done, avrgRewardLastEpisode, successrates, currentEpisode, successAll = ray.get(doneFuture)
+                self.done, avrgRewardLastEpisode, successrates, currentEpisode, successAll = self.model.train_with_feedback_end_of_episode()
                 self.currentEpisode = currentEpisode
                 self.progressbarWidget.updateProgressbar(currentEpisode)
                 self.tableWidget.updateAvrgRewardLastEpisode(avrgRewardLastEpisode)
                 self.tableWidget.updateSuccessrate(successrates)
                 self.successLabel.setText("Success insgesamt: " + str(successAll))
-                self.worker.terminate()
-                self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
-                self.worker.start()
-                self.worker.episode_done.connect(self.startNextSteps)
 
-
+                self.worker.update(self.model, self.tableWidget.getVisibilites())
+                self.worker.go = True
+                #self.worker.start.emit(self.tableWidget.getVisibilites())
+                #self.worker.terminate()
+                #self.worker.wait()
+                #self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
+                #self.worker.start()
+                
+                #self.worker.episode_done.connect(self.startNextSteps)
+        print("end startNextSteps")
 
     def showandPause(self):
         self.show()
@@ -94,6 +100,22 @@ class ControlWindow(QtWidgets.QMainWindow):
         return self.tableWidget
 
 
+class Worker(QObject):
+    def __init__(self, function):
+        super(Worker, self).__init__()
+        self.function = function
+        self.start.connect(self.run)
+
+    def setList(lis):
+        self.lis = lis
+
+    start = pyqtSignal(list)
+    episode_done = pyqtSignal(bool)
+
+    @pyqtSlot()
+    def run(self):
+        print("Worker running")
+        self.episode_done.emit(self.function(self.lis))
 
 class WorkerThread(QThread):
     episode_done = pyqtSignal(bool)
@@ -103,18 +125,21 @@ class WorkerThread(QThread):
         super(WorkerThread, self)
         self.model = model
         self.visibilities = visibilities
-        self.keepRunning = True
+        self.go = False
+
+    def update(self, model, visibilities):
+        self.visibilities = visibilities
+        self.model = model
 
     def run(self):
-        if(self.keepRunning):
-            episodeDoneFuture = self.model.train_with_feedback_for_n_steps.remote(self.visibilities)
-            episodeDone = ray.get(episodeDoneFuture)
-            self.episode_done.emit(episodeDone)
-
-    def stop(self):
-        self.keepRunning = False
+        while True:
+            if self.go is True:
+                episodeDoneFuture = self.model.train_with_feedback_for_n_steps(self.visibilities)
+                self.go = False
+                self.episode_done.emit(episodeDoneFuture)
 
 
+    
 
 class Table(QWidget):
     def __init__(self, nbOfEnvs):
@@ -122,7 +147,6 @@ class Table(QWidget):
         self.nbOfEnvs = nbOfEnvs
         self.headers = ["Env ID", "Level", "Reward", "Success", "Show/Hide Env"]
         self.buttonList = []
-        #self.model = model
         self.setTableLayout()
         self.levelVisibilty = [False for _ in range(nbOfEnvs)]
         self.levelVisibilty[0] = True

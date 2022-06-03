@@ -2,7 +2,6 @@ import argparse
 import math
 import numpy as np
 import os
-import ray
 from PyQt5.QtWidgets import QApplication
 import yaml
 import sys
@@ -19,7 +18,7 @@ import warnings
 ######  Settings  you have to use/ change during this exercise  ####
 ####################################################################
 
-training =False  # if training is set to false the trained model defined in the variable filename is loaded
+training = True  # if training is set to false the trained model defined in the variable filename is loaded
 load_old = False
 #filename = "A2C_Network_2021-11-22--00-12_200"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
 filename = "PPO_22-06-02--18-44_e387"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
@@ -32,7 +31,7 @@ manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe use
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0001                 # learning rate
 num_episodes = 501          # the number of epochs (/episodes) that are simulated
-steps = 1500 #750                 # number of steps per epoch (/episode)
+steps = 80 #750                 # number of steps per epoch (/episode)
 trainingInterval = 75       # number of steps after which the neural net is trained
 simTimeStep = 0.125         # simulated time between two steps in the simulation
 numbOfParallelEnvs = 1     # parallel environments are used to create more and diverse training experiences
@@ -143,6 +142,7 @@ if __name__ == '__main__':
 
     if(args.training):
         app = QApplication(sys.argv)
+        args.parallel_envs = 1
         if args.load_old:
             controlWindow = ControlWindow(app, args.parallel_envs, act_dim, env_dim, args, args.path+filename)  # , model)
         else:
@@ -151,14 +151,13 @@ if __name__ == '__main__':
         app.exec_()
 
     else:
-        ray.init()
-        model = PPO_Multi.remote(act_dim, env_dim, args)
+        model = PPO_Multi(act_dim, env_dim, args)
 
         if args.load_weights_only:
             filename += '.h5'
         if args.train_perception_only:
-            ray.get(model.load_net.remote(args.path + filename))
-            ray.get(model.trainPerception.remote(args, env_dim[0]))
+            model.load_net(args.path + filename)
+            model.trainPerception(args, env_dim[0])
         else:
-            ray.get(model.load_net.remote(args.path+filename))
-            ray.get(model.execute.remote(args, env_dim[0]))
+            model.load_net(args.path+filename)
+            model.execute(args, env_dim[0])

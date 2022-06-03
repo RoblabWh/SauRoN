@@ -1,4 +1,4 @@
-import ray
+
 import numpy as np
 import yaml
 
@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QApplication
 import os
 
 
-@ray.remote
+
 class PPO_MultiprocessingActor:
     """
     The MultiprocessingActor is used during training to create and manage an own environment and simulation.
@@ -100,7 +100,8 @@ class PPO_MultiprocessingActor:
         :param numbrOfSteps: int - determines how many steps per robot are executed
         :return: collected experiences of all robots acting in this simulation
         """
-        stepsLeft , cumul_reward = numbrOfSteps, 0
+        stepsLeft = numbrOfSteps
+        cumul_reward = 0
 
         if self.reset:
             self.reset = False
@@ -109,7 +110,6 @@ class PPO_MultiprocessingActor:
 
             robotsData = []
             robotsOldState = []
-
             for i in range(self.numbOfRobots):
                 old_state = self.env.get_observation(i)
                 robotsOldState.append(np.expand_dims(old_state, axis=0))
@@ -301,8 +301,8 @@ class PPO_MultiprocessingActor:
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
-        print(np.array([laser]))
-        print(np.array([laser]).shape)
+        #print(np.array([laser]))
+        #print(np.array([laser]).shape)
         return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]))  # Liste mit [actions, value]
 
 
@@ -318,7 +318,7 @@ class PPO_MultiprocessingActor:
         return self.network.get_model_weights()
 
     def killActor(self):
-        ray.actor.exit_actor()
+        pass
 
     def showWindow(self):
         if self.app == None:
