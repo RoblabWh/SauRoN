@@ -100,23 +100,6 @@ class ControlWindow(QtWidgets.QMainWindow):
         return self.tableWidget
 
 
-class Worker(QObject):
-    def __init__(self, function):
-        super(Worker, self).__init__()
-        self.function = function
-        self.start.connect(self.run)
-
-    def setList(lis):
-        self.lis = lis
-
-    start = pyqtSignal(list)
-    episode_done = pyqtSignal(bool)
-
-    @pyqtSlot()
-    def run(self):
-        print("Worker running")
-        self.episode_done.emit(self.function(self.lis))
-
 class WorkerThread(QThread):
     episode_done = pyqtSignal(bool)
 

@@ -123,7 +123,6 @@ class PPO_Multi:
         Called after a full episode of training to collect statistics, reset the active actors list and save weights
         """
         if self.currentEpisode < self.args.nb_episodes:
-
             self.tqdm_e.update(1)
             self.currentEpisode += 1
             #reset the active actors list for next episode

@@ -49,6 +49,7 @@ class Simulation:
         Resets the simulation after each epoch
         :param level: int - defines the reset level
         """
+        print("------------->Simulation.py reset<--------------------")
         if self.levelID != level:
             self.loadLevel(level)
             levelChanged = True
@@ -73,6 +74,7 @@ class Simulation:
                 self.simulationWindow.setStations(self.stations)
                 self.simulationWindow.setCircleWalls(self.circleWalls)
                 self.simulationWindow.resize()
+        print("------------->Simulation.py end<--------------------")
 
 
 

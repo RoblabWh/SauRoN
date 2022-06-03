@@ -277,6 +277,7 @@ class PPO_MultiprocessingActor:
 
     def resetActor(self):
         self.env.reset(self.level)
+        print("Reset actor")
         self.reset = True
         self.currentEpisode +=1
         returnCumulReward, returnSteps = self.cumul_reward/4, self.steps
