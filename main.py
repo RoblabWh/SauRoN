@@ -6,7 +6,6 @@ from PyQt5.QtWidgets import QApplication
 import yaml
 import sys
 import datetime
-
 from ControlWindow import ControlWindow
 from deprecated.A2C_parallel_old.A2C_Multi import A2C_Multi
 from algorithms.PPO_parallel.PPO_Multi import PPO_Multi
@@ -30,9 +29,9 @@ manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe use
 
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0001                 # learning rate
-num_episodes = 501          # the number of epochs (/episodes) that are simulated
-steps = 80 #750                 # number of steps per epoch (/episode)
-trainingInterval = 75       # number of steps after which the neural net is trained
+num_episodes = 1          # the number of epochs (/episodes) that are simulated
+steps = 10#750                 # number of steps per epoch (/episode)
+trainingInterval = 10       # number of steps after which the neural net is trained
 simTimeStep = 0.125         # simulated time between two steps in the simulation
 numbOfParallelEnvs = 1     # parallel environments are used to create more and diverse training experiences
 
@@ -43,7 +42,7 @@ numbOfRobotsManual = 1     # only change if set to manual do not use more than 4
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
-levelFiles = ['Simple.svg', 'Funnel.svg', 'SwapSide_a.svg'] #, 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
+levelFiles = ['Simple.svg']#, 'Funnel.svg', 'SwapSide_a.svg'] #, 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 levelFiles = ['Lab.svg', 'Zipper.svg'] #, 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 levelFiles = ['Simple.svg', 'Funnel.svg', 'SwapSide_a.svg', 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 levelFiles = ['Simple.svg']
@@ -83,7 +82,7 @@ if __name__ == '__main__':
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
     parser.add_argument('--model_timestamp', type=str, default=startTime, help='Timestamp from when the model was created')
     parser.add_argument('--scale_factor', type=int, default=scaleFactor, help='Scale Factor for visualisation')
-    parser.add_argument('--display_normals', type=bool, default=False, help='Determines whether the normals of a wall are shown in the map.')
+    parser.add_argument('--display_normals', type=bool, default=True, help='Determines whether the normals of a wall are shown in the map.')
     parser.add_argument('--lidar_activation', type=bool, default=False, help='Show Lidar activation')
 
     # Robot settings

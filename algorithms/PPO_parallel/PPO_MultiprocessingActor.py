@@ -1,6 +1,7 @@
 
 import numpy as np
 import yaml
+from deprecated.SimulationWithoutUI import Simulation
 
 from simulation.Environment import Environment
 #from algorithms.PPO_parallel.PPO_Network import PPO_Network
@@ -277,7 +278,6 @@ class PPO_MultiprocessingActor:
 
     def resetActor(self):
         self.env.reset(self.level)
-        print("Reset actor")
         self.reset = True
         self.currentEpisode +=1
         returnCumulReward, returnSteps = self.cumul_reward/4, self.steps
@@ -319,7 +319,8 @@ class PPO_MultiprocessingActor:
         return self.network.get_model_weights()
 
     def killActor(self):
-        pass
+        self.window_closed()
+        #self.app.quit()       
 
     def showWindow(self):
         if self.app == None:
@@ -328,9 +329,9 @@ class PPO_MultiprocessingActor:
             self.env.setUISaveListener(self)
 
     def hideWindow(self):
-        if self.app != None:
-            self.app = None
+        if self.app is not None:
             self.env.simulation.closeWindow()
+            self.app = None
 
     def isNotShowing(self):
         return self.app == None

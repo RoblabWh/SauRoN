@@ -8,6 +8,7 @@ from tqdm import tqdm
 import yaml
 import tensorflow
 from random import shuffle
+import multiprocessing
 
 
 import sys
@@ -61,10 +62,10 @@ class PPO_Multi:
         #Create parallel workers with own environment
         envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
 
+
         multiActors = [PPO_MultiprocessingActor(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         startweights = multiActors[0].getWeights()
-        #multiActors += [PPO_MultiprocessingActor(self.act_dim, self.env_dim, self.args, startweights, envLevel[i+1], False) for i in range(self.numbOfParallelEnvs-1)]
-
+       
         levelNames = []
         for i, actor in enumerate(multiActors):
             levelName = actor.setLevel(envLevel[i])
@@ -90,8 +91,7 @@ class PPO_Multi:
 
         activeActors = self.activeActors
         if len(activeActors) > 0:
-            futures = [actor.trainSteps(self.args.train_interval) for actor in activeActors]
-            allTrainingResults = futures #Liste mit Listen von Observations aus den Environments
+            allTrainingResults = [actor.trainSteps(self.args.train_interval) for actor in activeActors] #Liste mit Listen von Observations aus den Environments
             trainedWeights = self.train_models_with_obs(allTrainingResults, self.multiActors[0])
 
             self.multiActors[0].setWeights(trainedWeights)
@@ -148,7 +148,7 @@ class PPO_Multi:
 
             # Calculate and display score
             individualLastAverageReward = []
-            print("Update progrssbar")
+            print("Update progressbar")
             for actor in self.multiActors:
                 (cumRewardActor, steps) = actor.resetActor()
                 self.av_meter.update(cumRewardActor, steps)
@@ -159,13 +159,20 @@ class PPO_Multi:
 
             self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(self.successrate))
             self.tqdm_e.refresh()
-            return (False, individualLastAverageReward, individualSuccessrate, self.currentEpisode, self.successrate)
+            return False, individualLastAverageReward, individualSuccessrate, self.currentEpisode, self.successrate
         else:
             #If all episodes are finished the current weights are saved
             self.save_weights(self.multiActors[0], self.args.path)
+            counter = 0
+
             for actor in self.multiActors:
+                print("Killing actor {}".format(counter))
                 actor.killActor()
-            return (True, [], [], self.currentEpisode, self.successrate)
+                del self.multiActors[counter]
+
+                counter += 1
+
+            return True, [], [], self.currentEpisode, self.successrate
 
 
     def get_closed_windows(self):

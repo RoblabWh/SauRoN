@@ -76,6 +76,8 @@ class SimulationWindow(QtWidgets.QMainWindow):
         # print("I just got closed. Goodbye")
         for observer in self.saveButtonListenrs:
             observer.window_closed()
+        self.closed.emit(self)
+        super().closeEvent(event)
 
 
     def resizeEvent(self, event):

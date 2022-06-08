@@ -56,41 +56,40 @@ class ControlWindow(QtWidgets.QMainWindow):
         self.tableWidget.addLevelNames(levelNames)
         self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
         self.worker.go = True
-        self.worker.start()
         self.worker.episode_done.connect(self.startNextSteps)
-       
+        self.worker.start()
+
         self.tableWidget.updateButtonsAtStart()
 
     def startNextSteps(self, episodeDone):
         self.tableWidget.updateButtons()
-        print("startNextSteps")
+        #print("startNextSteps")
         if not self.done:
             closed_windows = self.model.get_closed_windows()
             self.tableWidget.updateButtonsOnWindowClosed(closed_windows)
             if not episodeDone:
                 self.worker.update(self.model, self.tableWidget.getVisibilites())
                 self.worker.go = True
-                #self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
-                #self.worker.start()
-                #self.worker.episode_done.connect(self.startNextSteps)
             else:
                 self.done, avrgRewardLastEpisode, successrates, currentEpisode, successAll = self.model.train_with_feedback_end_of_episode()
+                print("End of episode check")
                 self.currentEpisode = currentEpisode
                 self.progressbarWidget.updateProgressbar(currentEpisode)
                 self.tableWidget.updateAvrgRewardLastEpisode(avrgRewardLastEpisode)
                 self.tableWidget.updateSuccessrate(successrates)
                 self.successLabel.setText("Success insgesamt: " + str(successAll))
 
-                self.worker.update(self.model, self.tableWidget.getVisibilites())
-                self.worker.go = True
-                #self.worker.start.emit(self.tableWidget.getVisibilites())
-                #self.worker.terminate()
-                #self.worker.wait()
-                #self.worker = WorkerThread(self.model, self.tableWidget.getVisibilites())
-                #self.worker.start()
-                
-                #self.worker.episode_done.connect(self.startNextSteps)
-        print("end startNextSteps")
+
+                print(self.done)
+                if self.done is False:
+                    print("Training not done")
+                    self.worker.update(self.model, self.tableWidget.getVisibilites())
+                    self.worker.go = True
+                else:
+                    print("Training done")
+                    self.startbutton.setEnabled(True)
+                    self.worker.terminate()
+        #print("end startNextSteps")
 
     def showandPause(self):
         self.show()

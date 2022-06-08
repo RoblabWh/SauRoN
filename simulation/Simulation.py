@@ -64,8 +64,13 @@ class Simulation:
             # r.reset(self.stations, self.level[level][0][i], self.level[level][1][i]+(random.uniform(0, math.pi)*self.noiseStrength[level]), self.level[level][3])
             r.reset(self.stations, random_pos[i], self.level[1][i]+(random.uniform(0, math.pi)), self.level[3])
 
+        print("Reset Robot lidar")
+        counter = 1
         for robot in self.robots:
+            print("Reset lidar: {}".format(counter))
+            counter += 1
             robot.resetLidar(self.robots)
+
         if self.hasUI and self.simulationWindow != None:
             if levelChanged:
                 self.simulationWindow.setSize(self.arenaSize)
@@ -74,6 +79,7 @@ class Simulation:
                 self.simulationWindow.setStations(self.stations)
                 self.simulationWindow.setCircleWalls(self.circleWalls)
                 self.simulationWindow.resize()
+        
         print("------------->Simulation.py end<--------------------")
 
 
