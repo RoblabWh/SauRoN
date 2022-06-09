@@ -113,7 +113,6 @@ class PPO_Multi:
                     else:
                         self.showEnvWindow(i)
                 else:
-                    print("PPO_Multi hideEnvWindow(i)")
                     self.hideEnvWindow(i)
             self.activeActors = activeActors
             return False
@@ -124,17 +123,18 @@ class PPO_Multi:
         """
         Called after a full episode of training to collect statistics, reset the active actors list and save weights
         """
+
         self.tqdm_e.update(1)
         self.currentEpisode += 1
-        # reset the active actors list for next episode
+        #reset the active actors list for next episode
         self.activeActors = self.multiActors
 
-        # save weights in predefined interval
+        #save weights in predefined interval
         if (self.currentEpisode) % self.args.save_intervall == 0:
             print('Saving')
             self.save_weights(self.multiActors[0], self.args.path)
 
-        # build statistics of last episode
+        #build statistics of last episode
         zeit, cumul_reward, done = 0, 0, False
 
         allReachedTargetList = []
@@ -154,12 +154,11 @@ class PPO_Multi:
             (cumRewardActor, steps) = actor.resetActor()
             self.av_meter.update(cumRewardActor, steps)
             cumul_reward += cumRewardActor
-            individualLastAverageReward.append(cumRewardActor / steps)
+            individualLastAverageReward.append(cumRewardActor/steps)
 
         cumul_reward = cumul_reward / self.args.parallel_envs
 
-        self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(
-            self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(self.successrate))
+        self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(self.successrate))
         self.tqdm_e.refresh()
 
         done = False
