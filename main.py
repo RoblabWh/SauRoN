@@ -30,8 +30,8 @@ manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe use
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0001                 # learning rate
 num_episodes = 1          # the number of epochs (/episodes) that are simulated
-steps = 201#750                 # number of steps per epoch (/episode)
-trainingInterval = 30       # number of steps after which the neural net is trained
+steps = 10#750                 # number of steps per epoch (/episode)
+trainingInterval = 100       # number of steps after which the neural net is trained
 simTimeStep = 0.125         # simulated time between two steps in the simulation
 numbOfParallelEnvs = 1     # parallel environments are used to create more and diverse training experiences
 
@@ -45,7 +45,7 @@ scaleFactor = 65            # scales the simulation window (the window is also r
 levelFiles = ['Simple.svg']#, 'Funnel.svg', 'SwapSide_a.svg'] #, 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 levelFiles = ['Lab.svg', 'Zipper.svg'] #, 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
 levelFiles = ['Simple.svg', 'Funnel.svg', 'SwapSide_a.svg', 'Lab.svg', 'Zipper.svg', 'svg2_tareq.svg', 'svg3_tareq.svg']
-levelFiles = ['Simple.svg'] #['Simple_12.svg']
+levelFiles = ['Simple.svg']
 
 startTime = datetime.datetime.now().strftime("_%y-%m-%d--%H-%M")  # Timestamp used for saving the model
 
@@ -148,6 +148,7 @@ if __name__ == '__main__':
             controlWindow = ControlWindow(app, args.parallel_envs, act_dim, env_dim, args)  # , model)
         controlWindow.show()
         app.exec_()
+        print("Finish!")
 
     else:
         model = PPO_Multi(act_dim, env_dim, args)

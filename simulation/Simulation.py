@@ -31,22 +31,18 @@ class Simulation:
         
         # Parameter width & length über args
 
-
-
         self.simulationWindow = None
         self.loadLevel(level)
 
         self.reset(level)
 
-        self.simTime = 0  # s
-        self.simTimestep = args.sim_time_step  # s
-        # self.plotterWindow = PlotterWindow(app)
-
         if self.hasUI:
             self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls, self.circleWalls, self.arenaSize)
             self.simulationWindow.show()
-            app.exec_()
-        
+
+        self.simTime = 0  # s
+        self.simTimestep = args.sim_time_step  # s
+        # self.plotterWindow = PlotterWindow(app)
 
     def reset(self, level):
         """
@@ -84,8 +80,6 @@ class Simulation:
                 self.simulationWindow.resize()
         
 
-
-
     def isFarEnoughApart(self, stationPositions, randPos, minDist):
         """
         Checks whether random placed stations are far enough apart so the stations don't overlap
@@ -104,7 +98,6 @@ class Simulation:
                 return False
         return True
 
-
     def getGoalWidth(self):
         """
         only for rectangular Stations
@@ -113,7 +106,6 @@ class Simulation:
         goalWidth = self.pickUp.getWidth()
         return goalWidth
 
-
     def getGoalLength(self):
         """
         only for rectangular Stations
@@ -121,7 +113,6 @@ class Simulation:
         """
         goalLength = self.pickUp.getLength()
         return goalLength
-
 
     def update(self, robotsTarVels, stepsLeft, activations, proximity):
         """
@@ -187,14 +178,11 @@ class Simulation:
             self.simulationWindow.show()
             self.hasUI = True
 
-    
     def closeWindow(self):
         if self.hasUI:
             self.simulationWindow.close()
             self.simulationWindow = None
             self.hasUI = False
-
-
 
     def getCurrentNumberOfRobots(self):
         return len(self.robots)
@@ -212,7 +200,6 @@ class Simulation:
         self.level = (selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls, self.circleWalls)
         self.levelID = levelID
         self.arenaSize = selectedLevel.getArenaSize()
-
 
     def getLevelName(self):
         levelNameSVG = self.levelFiles[self.levelID]

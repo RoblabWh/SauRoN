@@ -11,6 +11,7 @@ class ControlWindow(QtWidgets.QMainWindow):
     def __init__(self, application, nbOfEnvs, act_dim, env_dim, args, loadWeightsPath = ""):
         super(ControlWindow, self).__init__()
         #super().__init__()
+        #self.setWindowModality(Qt.ApplicationModal)
         self.app = application
         self.args = args
         self.worker = None
@@ -19,7 +20,7 @@ class ControlWindow(QtWidgets.QMainWindow):
 
         self.setWindowTitle("Control Panel")
 
-        self.model = PPO_Multi(act_dim, env_dim, args)
+        self.model = PPO_Multi(self.app, act_dim, env_dim, args)
         self.currentEpisode = 0
         self.progressbarWidget = Progressbar(self.currentEpisode, self.args)
         self.tableWidget = Table(nbOfEnvs)
@@ -46,11 +47,6 @@ class ControlWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.startbutton)
 
         self.setCentralWidget(self.widget)
-        self.app.aboutToQuit.connect(self.closeEvent)
-
-    def closeEvent(self, event):
-        if self.worker is not None:
-            self.worker.terminate()
 
     def train(self):
         print("clicked")
@@ -82,25 +78,20 @@ class ControlWindow(QtWidgets.QMainWindow):
                 self.tableWidget.updateSuccessrate(successrates)
                 self.successLabel.setText("Success insgesamt: " + str(successAll))
 
-
                 if self.done is False:
+                    print("Episode not done")
                     self.worker.update(self.model, self.tableWidget.getVisibilites())
                     self.worker.go = True
                 else:
-                    print("Training done")
+                    print("Episode done")
                     self.startbutton.setEnabled(True)
                     self.startbutton.setText("Ende")
                     self.startbutton.disconnect()
-                    self.startbutton.clicked.connect(self.closeEvent)
+                    self.startbutton.clicked.connect(self.close)
                     print("Set start True")
                     if self.worker is not None:
                         self.worker.quit()
                         self.worker = None
-        #print("end startNextSteps")
-
-    def showandPause(self):
-        self.show()
-        self.app.exec_()
 
     def getTable(self):
         return self.tableWidget

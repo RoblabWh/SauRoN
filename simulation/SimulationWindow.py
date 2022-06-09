@@ -73,10 +73,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
         if (False):
             self.monitorGraph = DistanceGraph.DistanceGraph(application)
 
-    #def closeEvent(self, event):
-    #    for observer in self.saveButtonListenrs:
-    #        observer.window_closed()
-
 
     def resizeEvent(self, event):
         QtWidgets.QMainWindow.resizeEvent(self, event)
@@ -328,7 +324,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
     def paintUpdates(self):
         self.update()
         self.app.processEvents()
-
 
     def setWalls(self, walls):
         self.walls = walls

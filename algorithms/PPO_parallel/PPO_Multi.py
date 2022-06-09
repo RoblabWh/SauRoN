@@ -22,7 +22,7 @@ class PPO_Multi:
     Defines an Proximal Policy Optimization learning algorithm for neural nets
     """
 
-    def __init__(self, act_dim, env_dim, args):
+    def __init__(self, app, act_dim, env_dim, args):
         """
         :param act_dim: number of available actions
         :param env_dim: (number of past states (including the current one), size of a state) -
@@ -30,6 +30,7 @@ class PPO_Multi:
         :param args:
         """
         self.args = args
+        self.app = app
         self.levelFiles = args.level_files
         self.act_dim = act_dim
         self.env_dim = env_dim
@@ -63,8 +64,9 @@ class PPO_Multi:
         envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
 
 
-        multiActors = [PPO_MultiprocessingActor(self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
-        startweights = multiActors[0].getWeights()
+        multiActors = [PPO_MultiprocessingActor(self.app, self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
+        #startweights = multiActors[0].getWeights()
+        #multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i + 1], False) for i in range(self.numbOfParallelEnvs - 1)]
        
         levelNames = []
         for i, actor in enumerate(multiActors):
@@ -118,70 +120,64 @@ class PPO_Multi:
         else:
             return True
 
-
     def train_with_feedback_end_of_episode(self):
         """
         Called after a full episode of training to collect statistics, reset the active actors list and save weights
         """
-        if self.currentEpisode < self.args.nb_episodes:
-            self.tqdm_e.update(1)
-            self.currentEpisode += 1
-            #reset the active actors list for next episode
-            self.activeActors = self.multiActors
+        self.tqdm_e.update(1)
+        self.currentEpisode += 1
+        # reset the active actors list for next episode
+        self.activeActors = self.multiActors
 
-            #save weights in predefined interval
-            if (self.currentEpisode) % self.args.save_intervall == 0:
-                print('Saving')
-                self.save_weights(self.multiActors[0], self.args.path)
-
-            #build statistics of last episode
-            zeit, cumul_reward, done = 0, 0, False
-
-            allReachedTargetList = []
-            individualSuccessrate = []
-            for actor in self.multiActors:
-                tmpTargetList = actor.getTargetList()
-                allReachedTargetList += tmpTargetList
-                individualSuccessrate.append(tmpTargetList.count(True) / 100)
-
-            targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
-            self.successrate = allReachedTargetList.count(True) / targetDivider
-
-            # Calculate and display score
-            individualLastAverageReward = []
-            print("Update progressbar")
-            for actor in self.multiActors:
-                (cumRewardActor, steps) = actor.resetActor()
-                self.av_meter.update(cumRewardActor, steps)
-                cumul_reward += cumRewardActor
-                individualLastAverageReward.append(cumRewardActor/steps)
-
-            cumul_reward = cumul_reward / self.args.parallel_envs
-
-            self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(self.successrate))
-            self.tqdm_e.refresh()
-            return False, individualLastAverageReward, individualSuccessrate, self.currentEpisode, self.successrate
-        else:
-            #If all episodes are finished the current weights are saved
+        # save weights in predefined interval
+        if (self.currentEpisode) % self.args.save_intervall == 0:
+            print('Saving')
             self.save_weights(self.multiActors[0], self.args.path)
-            counter = 0
+
+        # build statistics of last episode
+        zeit, cumul_reward, done = 0, 0, False
+
+        allReachedTargetList = []
+        individualSuccessrate = []
+        for actor in self.multiActors:
+            tmpTargetList = actor.getTargetList()
+            allReachedTargetList += tmpTargetList
+            individualSuccessrate.append(tmpTargetList.count(True) / 100)
+
+        targetDivider = (self.numbOfParallelEnvs) * 100  # Erfolg der letzten 100
+        self.successrate = allReachedTargetList.count(True) / targetDivider
+
+        # Calculate and display score
+        individualLastAverageReward = []
+        print("Update progressbar")
+        for actor in self.multiActors:
+            (cumRewardActor, steps) = actor.resetActor()
+            self.av_meter.update(cumRewardActor, steps)
+            cumul_reward += cumRewardActor
+            individualLastAverageReward.append(cumRewardActor / steps)
+
+        cumul_reward = cumul_reward / self.args.parallel_envs
+
+        self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(
+            self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(self.successrate))
+        self.tqdm_e.refresh()
+
+        done = False
+        if self.currentEpisode == self.args.nb_episodes:
+            # If all episodes are finished the current weights are saved
+            self.save_weights(self.multiActors[0], self.args.path)
 
             for actor in self.multiActors:
-                #print("Killing actor {}".format(counter))
                 actor.killActor()
-                
-                del self.multiActors[counter]
 
-                counter += 1
-            print("Killing done")
-            return True, [], [], self.currentEpisode, self.successrate
+            done = True
 
+        return done, individualLastAverageReward, individualSuccessrate, self.currentEpisode, self.successrate
 
     def get_closed_windows(self):
         tmp_list = self.closed_windows.copy()
         self.closed_windows = []
         return tmp_list
-
 
     def train_models_with_obs(self, obs_lists, master_env):
         """
@@ -210,11 +206,9 @@ class PPO_Multi:
                     else:
                         obs_concatinated[current_index][key] = np.concatenate((value, exp[key]))
 
-
         for exp in obs_concatinated:
             weights = master_env.train_net_obs(exp)
         return weights
-
 
     def saveCurrentWeights(self):
         """
@@ -223,7 +217,6 @@ class PPO_Multi:
         print('Saving individual')
         self.save_weights(self.args.path, "_e" + str(self.currentEpisode))
 
-
     def save_weights(self, masterEnv, path, additional=""):
         path += 'PPO' + self.args.model_timestamp + additional
 
@@ -231,7 +224,6 @@ class PPO_Multi:
         data = [self.args]
         with open(path+'.yml', 'w') as outfile:
             yaml.dump(data, outfile, default_flow_style=False)
-
 
     def load_net(self, path):
         self.network = PPO_Network(self.act_dim, self.env_dim, self.args)
@@ -243,16 +235,13 @@ class PPO_Multi:
             self.network.load_model(path)
         return True
 
-
     def showEnvWindow(self, envID):
         if envID < len(self.multiActors):
             self.multiActors[envID].showWindow()
 
-
     def hideEnvWindow(self, envID):
         if envID < len(self.multiActors):
             self.multiActors[envID].hideWindow()
-
 
     def execute(self, args, env_dim):
         """

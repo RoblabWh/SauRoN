@@ -22,7 +22,7 @@ class PPO_MultiprocessingActor:
     and the new weights are distributed to all remaining actors.
     """
 
-    def __init__(self, act_dim, env_dim, args, weights, level, master):
+    def __init__(self, app, act_dim, env_dim, args, weights, level, master):
         """
         Creates a multiprocessing actor
         :param act_dim: the number of continuous action dimensions (e.g. 2 for linear and angular velocity)
@@ -39,12 +39,12 @@ class PPO_MultiprocessingActor:
         os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 
         self.args = args
-        self.app = None
+        self.app = app
 
         self.network = PPO_Network(act_dim, env_dim, args)
         self.network.build()
         if master:
-            self.app = QApplication(sys.argv)
+            #self.app = QApplication(sys.argv)
             self.network.print_summary()
 
         if weights != None:
@@ -306,8 +306,6 @@ class PPO_MultiprocessingActor:
         #print(np.array([laser]).shape)
         return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]))  # Liste mit [actions, value]
 
-
-
     def train_net_obs(self, obs_with_actions_list):
         """
         Traines the network based on all collected experiences found inside of the observation list
@@ -321,7 +319,6 @@ class PPO_MultiprocessingActor:
     def killActor(self):
         self.env.simulation.simulationWindow.close()
 
-        
     def showWindow(self):
         self.env.simulation.simulationWindow.show()
         self.env.simulation.hasUI = True
