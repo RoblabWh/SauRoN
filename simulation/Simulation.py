@@ -4,6 +4,8 @@ import math, random
 import numpy as np
 from simulation.Borders import ColliderLine
 
+closedFirst = False
+
 class Simulation:
     """
     Defines the simulation with different levels for the robots to train in
@@ -18,13 +20,15 @@ class Simulation:
         :param timeframes: int -
             the amount of frames saved as a history by the robots to train the neural net
         """
+        global closedFirst
+        closedFirst = False
         self.args = args
         self.levelFiles = args.level_files
         # Skalierungsparameter für Visualisierung
         self.scaleFactor = args.scale_factor
         self.steps = args.steps
         self.hasUI = app is not None
-
+        
         # Parameter width & length über args
 
 
@@ -34,22 +38,21 @@ class Simulation:
 
         self.reset(level)
 
-        if self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls, self.circleWalls, self.arenaSize)
-            self.simulationWindow.show()
-
-
         self.simTime = 0  # s
         self.simTimestep = args.sim_time_step  # s
         # self.plotterWindow = PlotterWindow(app)
 
+        if self.hasUI:
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls, self.circleWalls, self.arenaSize)
+            self.simulationWindow.show()
+            app.exec_()
+        
 
     def reset(self, level):
         """
         Resets the simulation after each epoch
         :param level: int - defines the reset level
         """
-        print("------------->Simulation.py reset<--------------------")
         if self.levelID != level:
             self.loadLevel(level)
             levelChanged = True
@@ -80,7 +83,6 @@ class Simulation:
                 self.simulationWindow.setCircleWalls(self.circleWalls)
                 self.simulationWindow.resize()
         
-        print("------------->Simulation.py end<--------------------")
 
 
 
@@ -185,12 +187,14 @@ class Simulation:
             self.simulationWindow.show()
             self.hasUI = True
 
-
+    
     def closeWindow(self):
         if self.hasUI:
             self.simulationWindow.close()
             self.simulationWindow = None
             self.hasUI = False
+
+
 
     def getCurrentNumberOfRobots(self):
         return len(self.robots)

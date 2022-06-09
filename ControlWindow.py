@@ -10,8 +10,10 @@ class ControlWindow(QtWidgets.QMainWindow):
 
     def __init__(self, application, nbOfEnvs, act_dim, env_dim, args, loadWeightsPath = ""):
         super(ControlWindow, self).__init__()
+        #super().__init__()
         self.app = application
         self.args = args
+        self.worker = None
 
         self.loadWeightsPath = loadWeightsPath
 
@@ -44,12 +46,14 @@ class ControlWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.startbutton)
 
         self.setCentralWidget(self.widget)
+        self.app.aboutToQuit.connect(self.closeEvent)
 
     def closeEvent(self, event):
-        print("CloseEvent")
-        self.worker.terminate()
+        if self.worker is not None:
+            self.worker.terminate()
 
     def train(self):
+        print("clicked")
         self.startbutton.setEnabled(False)
         self.tableWidget.fillTable()
         self.done, levelNames = self.model.prepare_training(self.loadWeightsPath)
@@ -72,7 +76,6 @@ class ControlWindow(QtWidgets.QMainWindow):
                 self.worker.go = True
             else:
                 self.done, avrgRewardLastEpisode, successrates, currentEpisode, successAll = self.model.train_with_feedback_end_of_episode()
-                print("End of episode check")
                 self.currentEpisode = currentEpisode
                 self.progressbarWidget.updateProgressbar(currentEpisode)
                 self.tableWidget.updateAvrgRewardLastEpisode(avrgRewardLastEpisode)
@@ -80,15 +83,19 @@ class ControlWindow(QtWidgets.QMainWindow):
                 self.successLabel.setText("Success insgesamt: " + str(successAll))
 
 
-                print(self.done)
                 if self.done is False:
-                    print("Training not done")
                     self.worker.update(self.model, self.tableWidget.getVisibilites())
                     self.worker.go = True
                 else:
                     print("Training done")
                     self.startbutton.setEnabled(True)
-                    self.worker.terminate()
+                    self.startbutton.setText("Ende")
+                    self.startbutton.disconnect()
+                    self.startbutton.clicked.connect(self.closeEvent)
+                    print("Set start True")
+                    if self.worker is not None:
+                        self.worker.quit()
+                        self.worker = None
         #print("end startNextSteps")
 
     def showandPause(self):

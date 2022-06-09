@@ -69,15 +69,13 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.saveButtonListenrs = []
         self.monitorGraph = None
 
+        self.app.aboutToQuit.connect(self.closeEvent)
         if (False):
             self.monitorGraph = DistanceGraph.DistanceGraph(application)
 
-    def closeEvent(self, event):
-        # print("I just got closed. Goodbye")
-        for observer in self.saveButtonListenrs:
-            observer.window_closed()
-        self.closed.emit(self)
-        super().closeEvent(event)
+    #def closeEvent(self, event):
+    #    for observer in self.saveButtonListenrs:
+    #        observer.window_closed()
 
 
     def resizeEvent(self, event):

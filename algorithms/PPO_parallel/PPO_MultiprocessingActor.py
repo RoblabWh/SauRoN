@@ -319,19 +319,16 @@ class PPO_MultiprocessingActor:
         return self.network.get_model_weights()
 
     def killActor(self):
-        self.window_closed()
-        #self.app.quit()       
+        self.env.simulation.simulationWindow.close()
 
+        
     def showWindow(self):
-        if self.app == None:
-            self.app = QApplication(sys.argv)
-            self.env.simulation.showWindow(self.app)
-            self.env.setUISaveListener(self)
-
+        self.env.simulation.simulationWindow.show()
+        self.env.simulation.hasUI = True
+        
     def hideWindow(self):
-        if self.app is not None:
-            self.env.simulation.closeWindow()
-            self.app = None
+        self.env.simulation.simulationWindow.hide()
+        self.env.simulation.hasUI = False
 
     def isNotShowing(self):
         return self.app == None
@@ -343,6 +340,6 @@ class PPO_MultiprocessingActor:
         return False
 
     def window_closed(self):
-        self.hideWindow()
+        self.env.simulation.simulationWindow.close()
         self.closed = True
 

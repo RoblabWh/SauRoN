@@ -111,6 +111,7 @@ class PPO_Multi:
                     else:
                         self.showEnvWindow(i)
                 else:
+                    print("PPO_Multi hideEnvWindow(i)")
                     self.hideEnvWindow(i)
             self.activeActors = activeActors
             return False
@@ -166,12 +167,13 @@ class PPO_Multi:
             counter = 0
 
             for actor in self.multiActors:
-                print("Killing actor {}".format(counter))
+                #print("Killing actor {}".format(counter))
                 actor.killActor()
+                
                 del self.multiActors[counter]
 
                 counter += 1
-
+            print("Killing done")
             return True, [], [], self.currentEpisode, self.successrate
 
 
@@ -201,20 +203,6 @@ class PPO_Multi:
                 current_index += 1
                 obs_concatinated.append(exp)
             else:
-                # Print structure of dict
-                # for key, value in obs_concatinated[current_index].items():
-                #     print(key, type(value))
-                #     if isinstance(value, dict):
-                #         for key2, value2 in value.items():
-                #             print("└─→", key2, type(value2))
-                #
-                # for key, value in exp.items():
-                #     print(key, type(value))
-                #     if isinstance(value, dict):
-                #         for key2, value2 in value.items():
-                #             print("└─→", key2, type(value2))
-
-
                 for key, value in obs_concatinated[current_index].items():
                     if type(value) == type(exp):
                         for key2, value2 in value.items():
@@ -276,17 +264,6 @@ class PPO_Multi:
         app = QApplication(sys.argv)
         env = Environment(app, args, env_dim, 0)
         env.simulation.showWindow(app)
-
-        #auskommentieren wenn fuzzy nicht genutzt wird
-        # displayWidget = DisplayWidget(9)#9)
-        # displayWidget.show()
-
-        # visualization of chosen actions
-        #histogramm = BucketRenderer(20, 0)
-        #histogramm.show()
-        #liveHistogramRobot = 0
-
-        # distGraph = DistanceGraph(app)
         for e in range(18):
             env.reset(e % len(env.simulation.levelFiles))
             robotsCount = env.simulation.getCurrentNumberOfRobots()
@@ -302,37 +279,6 @@ class PPO_Multi:
                         # aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0]) #i for selected robot, 0 beause the state is encapsulated once too much
                         aTmp, heatmap = self.network.pedict_certain(robotsOldState[i][0])
                         a = np.ndarray.tolist(aTmp[0].numpy())
-
-                        # if i == liveHistogramRobot:
-                            # distGraph.plot([i for i in range(heatmap.shape[0])], heatmap)
-                            # heatmap = np.maximum(heatmap, 0)
-                            # heatmap /= np.max(heatmap)
-                            # print(heatmap)
-                            # plt.plot(heatmap)
-                            # # matshow(heatmap)
-                            # plt.show()
-
-                        #FUZZY
-                        #robotsFuzzy = displayWidget.getRobots()
-                        # if i in robotsFuzzy:# and args.use_fuzzy:
-                        #     obs = []
-                        #     for e_len in range(len(robotsOldState[i][0][3]) - 1): #aktuelle Frame des states liegt auf 3 nicht 0
-                        #         entry = robotsOldState[i][0][3][e_len]
-                        #         sh = np.asarray(entry)
-                        #         sh = sh.reshape((1, len(sh), 1))
-                        #         obs.append(sh)
-                        #     obs = (obs[0], obs[1], obs[2], obs[3]) #[lidarDistances, orientationToGoal, normaizedDistance, [linVel, angVel]]   without currentTimestep
-                        #     displayWidget.setRobot(i)
-                        #     aCur = displayWidget.step(obs, aTmp)
-                        #
-                        #     if displayWidget.aggregated:
-                        #         a = aCur[0]
-
-                        #visualization of chosen actions
-                        #if i == liveHistogramRobot:
-                            #histogramm.add_action(a)
-                            #histogramm.show()
-
                     else:
                         a = [None, None]
                         heatmap = None
