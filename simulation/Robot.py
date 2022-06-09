@@ -736,20 +736,32 @@ class FastCollisionRay:
 
         x1 = self.rayOrigin[0] #originX
         y1 = self.rayOrigin[1] #originY
-        x2V = np.swapaxes(np.array([self.rayDirX for _ in range(len(points1[0]))]),0,1) #directionX
-        y2V = np.swapaxes(np.array([self.rayDirY for _ in range(len(points1[0]))]),0,1) #directionY
+        #x2V = np.swapaxes(np.array([self.rayDirX for _ in range(len(points1[0]))]),0,1) #directionX
+        #y2V = np.swapaxes(np.array([self.rayDirY for _ in range(len(points1[0]))]),0,1) #directionY
+        x2Vswap = np.tile(self.rayDirX, (len(points1[0]), 1))
+        x2V = np.swapaxes(x2Vswap, 0, 1)  # directionX
+        y2Vswap = np.tile(self.rayDirY, (len(points1[0]), 1))
+        y2V = np.swapaxes(y2Vswap, 0, 1)
         x2 = x2V+x1
         y2 = y2V+y1
 
-        nX = np.array([normals[0] for _ in range(len(self.rayDirX))]) #normalsXArray
-        nY = np.array([normals[1] for _ in range(len(self.rayDirX))]) #normalsXArray
+        #nX = np.array([normals[0] for _ in range(len(self.rayDirX))]) #normalsXArray
+        #nY = np.array([normals[1] for _ in range(len(self.rayDirX))]) #normalsXArray
+
+        nX = np.tile(normals[0], (len(self.rayDirX), 1))
+        nY = np.tile(normals[1], (len(self.rayDirX), 1))
 
         skalarProd = nX * x2V + nY * y2V
 
-        x3 = np.array([points1[0] for _ in range(len(self.rayDirX))]) #lineStartXArray
-        y3 = np.array([points1[1] for _ in range(len(self.rayDirX))]) #lineStartYArray
-        x4 = np.array([points2[0] for _ in range(len(self.rayDirX))]) #lineEndXArray
-        y4 = np.array([points2[1] for _ in range(len(self.rayDirX))]) #lineEndYArray
+        #x3 = np.array([points1[0] for _ in range(len(self.rayDirX))]) #lineStartXArray
+        #y3 = np.array([points1[1] for _ in range(len(self.rayDirX))]) #lineStartYArray
+        #x4 = np.array([points2[0] for _ in range(len(self.rayDirX))]) #lineEndXArray
+        #y4 = np.array([points2[1] for _ in range(len(self.rayDirX))]) #lineEndYArray
+
+        x3 = np.tile(points1[0], (len(self.rayDirX), 1))
+        y3 = np.tile(points1[1], (len(self.rayDirX), 1))
+        x4 = np.tile(points2[0], (len(self.rayDirX), 1))
+        y4 = np.tile(points2[1], (len(self.rayDirX), 1))
 
 
         #t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
@@ -780,14 +792,21 @@ class FastCollisionRay:
 
 
         if len(pointsRobots[0]) > 0:
-            qX = np.array([pointsRobots[0] for _ in range(len(collisionPoints[0]))])
-            qY = np.array([pointsRobots[1] for _ in range(len(collisionPoints[0]))])
-            radii = np.array([radius for _ in range(len(collisionPoints[0]))])
+            #qX = np.array([pointsRobots[0] for _ in range(len(collisionPoints[0]))])
+            #qY = np.array([pointsRobots[1] for _ in range(len(collisionPoints[0]))])
+            qX = np.tile(pointsRobots[0], (len(collisionPoints[0]), 1))
+            qY = np.tile(pointsRobots[1], (len(collisionPoints[0]), 1))
+
+            #radii = np.array([radius for _ in range(len(collisionPoints[0]))])
+            radii = np.tile(radius, (len(collisionPoints[0]), 1))
             qX = np.swapaxes(qX,0,1)
             qY = np.swapaxes(qY,0,1)
             radii = np.swapaxes(radii,0,1)
-            colX = np.array([collisionPoints[0] for _ in range(len(pointsRobots[0]))])
-            colY = np.array([collisionPoints[1] for _ in range(len(pointsRobots[0]))])
+            #colX = np.array([collisionPoints[0] for _ in range(len(pointsRobots[0]))])
+            #colY = np.array([collisionPoints[1] for _ in range(len(pointsRobots[0]))])
+
+            colX = np.tile(collisionPoints[0], (len(pointsRobots[0]), 1))
+            colY = np.tile(collisionPoints[1], (len(pointsRobots[0]), 1))
 
 
             vX = colX - x1
