@@ -49,8 +49,9 @@ class ControlWindow(QtWidgets.QMainWindow):
         self.app.aboutToQuit.connect(self.closeEvent)
 
     def closeEvent(self, event):
-        if self.worker is not None:
-            self.worker.terminate()
+        # if self.worker is not None:
+        #     self.worker.quit()
+        exit(0)
 
     def train(self):
         print("clicked")

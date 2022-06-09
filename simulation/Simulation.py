@@ -45,7 +45,6 @@ class Simulation:
         if self.hasUI:
             self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls, self.circleWalls, self.arenaSize)
             self.simulationWindow.show()
-            app.exec_()
         
 
     def reset(self, level):

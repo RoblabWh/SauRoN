@@ -30,8 +30,8 @@ manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe use
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0001                 # learning rate
 num_episodes = 1          # the number of epochs (/episodes) that are simulated
-steps = 201#750                 # number of steps per epoch (/episode)
-trainingInterval = 30       # number of steps after which the neural net is trained
+steps = 21#750                 # number of steps per epoch (/episode)
+trainingInterval = 10       # number of steps after which the neural net is trained
 simTimeStep = 0.125         # simulated time between two steps in the simulation
 numbOfParallelEnvs = 1     # parallel environments are used to create more and diverse training experiences
 

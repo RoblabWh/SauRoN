@@ -111,7 +111,6 @@ class PPO_Multi:
                     else:
                         self.showEnvWindow(i)
                 else:
-                    print("PPO_Multi hideEnvWindow(i)")
                     self.hideEnvWindow(i)
             self.activeActors = activeActors
             return False
