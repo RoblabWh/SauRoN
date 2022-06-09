@@ -148,7 +148,6 @@ class PPO_Multi:
 
             # Calculate and display score
             individualLastAverageReward = []
-            print("Update progressbar")
             for actor in self.multiActors:
                 (cumRewardActor, steps) = actor.resetActor()
                 self.av_meter.update(cumRewardActor, steps)
@@ -166,13 +165,11 @@ class PPO_Multi:
             counter = 0
 
             for actor in self.multiActors:
-                #print("Killing actor {}".format(counter))
                 actor.killActor()
                 
                 del self.multiActors[counter]
 
                 counter += 1
-            print("Killing done")
             return True, [], [], self.currentEpisode, self.successrate
 
 
