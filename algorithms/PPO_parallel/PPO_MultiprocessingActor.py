@@ -27,7 +27,6 @@ class PPO_MultiprocessingActor:
         :param master: boolean - the master actor is used for training of the network weights and sets the initial weights
         """
 
-
         # Ray setzt die env Variable für die GPU selber (auf 0 bei einer GPU).
         # GPU kann nicht fehlerfrei genutzt werden und bietet teilweise keinen Leistungsvorteil während der Simulation
         os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
@@ -37,8 +36,8 @@ class PPO_MultiprocessingActor:
 
         self.network = PPO_Network(act_dim, env_dim, args)
         self.network.build()
-        if master:
-            self.network.print_summary()
+        #if master:
+            #self.network.print_summary()
 
         if weights != None:
             self.network.set_model_weights(weights)

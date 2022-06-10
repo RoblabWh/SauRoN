@@ -105,7 +105,7 @@ if __name__ == '__main__':
         args.steps = 1000000
         args.parallel_envs = 1
 
-    if (args.load_old or not args.training):
+    if args.load_old or not args.training:
         filenameWithYml = filename + '.yml'
         pathToFile = Path(args.path + filenameWithYml)
 
@@ -123,8 +123,6 @@ if __name__ == '__main__':
         else:
             warnings.warn("WARNING --> No YML File found, make sure that your configuration matches the trained model that you are trying to load! ")
 
-
-
     if args.mode == 'sonar':
         states = int((args.number_of_rays) + 7)
 
@@ -135,7 +133,7 @@ if __name__ == '__main__':
 
     act_dim = np.asarray(2)
 
-    if(args.training):
+    if args.training:
         app = QApplication(sys.argv)
         args.parallel_envs = 1
         if args.load_old:

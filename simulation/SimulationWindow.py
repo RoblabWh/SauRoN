@@ -62,7 +62,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.walls = walls
         self.circleWalls = circleWalls
 
-        self.painter = QPainter(self)
+        #self.painter = QPainter(self)
 
         self.initUI()
         self.saveButtonListenrs = []
@@ -208,27 +208,27 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
     def paintEvent(self, event):
 
-        self.painter.begin(self)
+        painter = QPainter(self)
 
         for station in self.stations:
-            station.paint(self.painter)
+            station.paint(painter)
         for i, robot in enumerate(self.robotRepresentations):
             sonarShowing = self.sonarShowing
             if self.args.training == False:
                 if i != self.getActivationRobotIndex():
                     sonarShowing = False
-            robot.paint(self.painter, sonarShowing)
+            robot.paint(painter, sonarShowing)
         for wall in self.walls:
-            wall.paint(self.painter, self.scaleFactor, self.args.display_normals)
+            wall.paint(painter, self.scaleFactor, self.args.display_normals)
 
         for circleWall in self.circleWalls:
-            circleWall.paint(self.painter, self.scaleFactor)
+            circleWall.paint(painter, self.scaleFactor)
 
         if self.args.train_perception_only:
             showProximityCircle = False
             rep = self.robotRepresentations[0]
             pos = (rep.posX, rep.posY)
-            self.painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
+            painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
             if not showProximityCircle:
                 # color = QColor.fromHsv(55, 255, 255)
                 # color.setAlphaF(0.0)
@@ -250,60 +250,60 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
 
                 if self.selectedCategory == 1:
-                    self.painter.setPen(QPen(Qt.red, 2.5, Qt.SolidLine))
+                    painter.setPen(QPen(Qt.red, 2.5, Qt.SolidLine))
                 else:
-                    self.painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
+                    painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
 
-                self.painter.drawLine(lineMiddleTop[0], lineMiddleTop[1], lineMiddleBottom[0], lineMiddleBottom[1])
-                self.painter.drawLine(lineEndTop[0], lineEndTop[1], lineEndBottom[0], lineEndBottom[1])
-                self.painter.drawLine(lineEndTop[0], lineEndTop[1], lineMiddleTop[0], lineMiddleTop[1])
-                self.painter.drawLine(lineEndBottom[0], lineEndBottom[1], lineMiddleBottom[0], lineMiddleBottom[1])
+                painter.drawLine(lineMiddleTop[0], lineMiddleTop[1], lineMiddleBottom[0], lineMiddleBottom[1])
+                painter.drawLine(lineEndTop[0], lineEndTop[1], lineEndBottom[0], lineEndBottom[1])
+                painter.drawLine(lineEndTop[0], lineEndTop[1], lineMiddleTop[0], lineMiddleTop[1])
+                painter.drawLine(lineEndBottom[0], lineEndBottom[1], lineMiddleBottom[0], lineMiddleBottom[1])
 
                 if self.selectedCategory == 2:
-                    self.painter.setPen(QPen(Qt.red, 2.5, Qt.SolidLine))
-                    self.painter.drawLine(lineMiddleTop[0], lineMiddleTop[1], lineMiddleBottom[0], lineMiddleBottom[1])
+                    painter.setPen(QPen(Qt.red, 2.5, Qt.SolidLine))
+                    painter.drawLine(lineMiddleTop[0], lineMiddleTop[1], lineMiddleBottom[0], lineMiddleBottom[1])
                 else:
-                    self.painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
+                    painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
 
-                self.painter.drawLine(lineStartTop[0], lineStartTop[1], lineMiddleTop[0], lineMiddleTop[1])
-                self.painter.drawLine(lineStartBottom[0], lineStartBottom[1], lineMiddleBottom[0], lineMiddleBottom[1])
-                self.painter.drawLine(pos[0], pos[1], lineStartBottom[0], lineStartBottom[1])
-                self.painter.drawLine(pos[0], pos[1], lineStartTop[0], lineStartTop[1])
+                painter.drawLine(lineStartTop[0], lineStartTop[1], lineMiddleTop[0], lineMiddleTop[1])
+                painter.drawLine(lineStartBottom[0], lineStartBottom[1], lineMiddleBottom[0], lineMiddleBottom[1])
+                painter.drawLine(pos[0], pos[1], lineStartBottom[0], lineStartBottom[1])
+                painter.drawLine(pos[0], pos[1], lineStartTop[0], lineStartTop[1])
 
 
             else:
                 if self.selectedCategory == 1:
                     color = QColor.fromHsv(55, 255 ,255)
                     color.setAlphaF(0.5)
-                    self.painter.setBrush(color)
-                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
+                    painter.setBrush(color)
+                    painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
                                              4 * self.scaleFactor)
                     color.setAlphaF(0.0)
-                    self.painter.setBrush(color)
-                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75, 1.5 * self.scaleFactor,
+                    painter.setBrush(color)
+                    painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75, 1.5 * self.scaleFactor,
                                              1.5 * self.scaleFactor)
                 elif self.selectedCategory == 2:
                     color = QColor.fromHsv(0, 255, 255)
                     color.setAlphaF(0.5)
-                    self.painter.setBrush(color)
-                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75,
+                    painter.setBrush(color)
+                    painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75,
                                              1.5 * self.scaleFactor,
                                              1.5 * self.scaleFactor)
                     color.setAlphaF(0.0)
-                    self.painter.setBrush(color)
-                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
+                    painter.setBrush(color)
+                    painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
                                              4 * self.scaleFactor)
                 else:
                     color = QColor.fromHsv(0, 255,255)
                     color.setAlphaF(0.0)
-                    self.painter.setBrush(color)
-                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75,
+                    painter.setBrush(color)
+                    painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75,
                                              1.5 * self.scaleFactor,
                                              1.5 * self.scaleFactor)
-                    self.painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
+                    painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
                                              4 * self.scaleFactor)
 
-        self.painter.end()
+        painter.end()
 
     def updateRobot(self, robot, num, stepsLeft, activations):
         if self.delay > 0: time.sleep(self.delay)
