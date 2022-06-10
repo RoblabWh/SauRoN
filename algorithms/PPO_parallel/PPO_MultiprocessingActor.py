@@ -103,7 +103,7 @@ class PPO_MultiprocessingActor:
             robotsOldState = []
             for i in range(self.numbOfRobots):
                 old_state = self.env.get_observation(i)
-                robotsOldState.append(np.expand_dims(old_state, axis=0))
+                robotsOldState.append(np.expand_dims(np.asarray(old_state, dtype=object), axis=0))
 
                 actions, states, rewards, done, evaluation, neglog = [], [], [], [], [], []
                 robotsData.append((actions, states, rewards, done, evaluation, neglog))
@@ -253,7 +253,6 @@ class PPO_MultiprocessingActor:
         exp = {'observation': observation, 'action':actionsConcatenated, 'neglog_policy':neglogsConcatinated, 'reward':discounted_rewards, 'advantage':advantages}
         return exp
 
-
     def discount(self, r):
         """
         Compute the gamma-discounted rewards over an episode
@@ -264,7 +263,6 @@ class PPO_MultiprocessingActor:
             cumul_r = r[t] + cumul_r * self.gamma
             discounted_r[t] = cumul_r
         return discounted_r
-
 
     def resetActor(self):
         self.env.reset(self.level)

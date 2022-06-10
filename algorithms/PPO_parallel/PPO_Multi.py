@@ -62,7 +62,6 @@ class PPO_Multi:
         #Create parallel workers with own environment
         envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
 
-
         multiActors = [PPO_MultiprocessingActor(self.app, self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         #startweights = multiActors[0].getWeights()
         #multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i + 1], False) for i in range(self.numbOfParallelEnvs - 1)]
@@ -75,11 +74,10 @@ class PPO_Multi:
         self.multiActors = multiActors
         self.activeActors = multiActors
 
-
         # Main Loop
         self.tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
 
-        return (False, levelNames)
+        return False, levelNames
 
 
     def train_with_feedback_for_n_steps(self, visibleLevels):
@@ -103,7 +101,6 @@ class PPO_Multi:
             for actor in self.multiActors:
                 if actor.isActive():
                     activeActors.append(actor)
-
 
             for i, show in enumerate(visibleLevels):
                 if show:
@@ -148,7 +145,8 @@ class PPO_Multi:
 
         # Calculate and display score
         individualLastAverageReward = []
-        print("Update progressbar")
+
+        #print("Update progressbar")
         for actor in self.multiActors:
             (cumRewardActor, steps) = actor.resetActor()
             self.av_meter.update(cumRewardActor, steps)
@@ -285,7 +283,6 @@ class PPO_Multi:
                     if not robotsDone[i]:
                         robotsDone[i] = done
 
-
     def trainPerception(self, args, env_dim):
         """
         Trains a pretrained network to detect other robots or obstacles in a straight corridor in front of the robot.
@@ -327,8 +324,6 @@ class PPO_Multi:
                     else:
                         a = [None, None]
                     robotsActions.append(a)
-
-
 
                 robotsStates = env.step(robotsActions, activations = None, proximity = proximityCategory)
 

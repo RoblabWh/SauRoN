@@ -114,7 +114,7 @@ class Environment:
 
         ############ State Robot i ############
         next_state = self.get_observation(i)
-        next_state = np.expand_dims(next_state, axis=0)
+        next_state = np.expand_dims(np.asarray(next_state, dtype=object), axis=0)
 
 
         ############ Euklidsche Distanz und Orientierung ##############

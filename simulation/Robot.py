@@ -3,6 +3,7 @@ from simulation.Borders import ColliderLine
 from pynput.keyboard import Listener
 
 import os
+import time
 from PIL import Image
 
 
@@ -471,6 +472,8 @@ class Robot:
         data = ((data * 20) + 20) * 4
         data = data.astype(int)
         image = np.zeros((161, 161))
+
+        # comment in to print scans in folder
         # image[data[:,0], data[:,1]] = 255
 
         # im = Image.fromarray(image).convert('RGB')
@@ -479,13 +482,13 @@ class Robot:
         # idx = frmt.format(idx_)
         # name = "./scans/" + idx + "_scan.png"
         # im.save(name)
+        #######################################
+
         image[data[:,0], data[:,1]] = 1
-        #print(image.shape)
-        ##
 
         currentTimestep = (steps - stepsLeft)/steps
 
-        frame_lidar = [image, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
+        frame_lidar = [image.tolist(), orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
         #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateLidar) >= self.time_steps:
@@ -814,18 +817,29 @@ class FastCollisionRay:
             vX= vX * vLengthFact
             vY= vY * vLengthFact
 
-
             # a,b und c als Array zum Berechnen der Diskriminanten
             a = vX * vX + vY * vY # array voll skalarere Werte
             b = 2 * (vX * (x1 - qX) + vY * (y1 - qY))
-            c = (x1**2 + y1**2) + (qX**2 + qY**2) - (2* (x1 * qX + y1*qY)) - radii**2
+            c = (x1**2 + y1**2) + (qX**2 + qY**2) - (2 * (x1 * qX + y1*qY)) - radii**2
 
             disc = b**2 - 4 * a * c
-            denominator = 1/ (2 * a)
-            tc1 = np.where((disc>0), ((-b + np.sqrt(disc)) * denominator), -1) #check if discriminat is negative --> no collision
-            tc2 = np.where((disc>0), ((-b - np.sqrt(disc)) * denominator), -1)
-            tc1 = np.where((tc1>=0), tc1, 2048)
-            tc2 = np.where((tc2>=0), tc2, 2048)
+            denominator = 1 / (2 * a)
+
+            # check if discriminat is negative ==> no collision
+            indices = np.where(disc > 0)
+
+            tc1 = np.full(disc.shape, -1.0)
+            tc1[indices] = (-b[indices] + np.sqrt(disc[indices])) * denominator[indices]
+
+            tc2 = np.full(disc.shape, -1.0)
+            tc2[indices] = (-b[indices] - np.sqrt(disc[indices])) * denominator[indices]
+
+            # throws RunTimewarnings
+            #tc1 = np.where((disc > 0), ((-b + np.sqrt(disc)) * denominator), -1)
+            #tc2 = np.where((disc > 0), ((-b - np.sqrt(disc)) * denominator), -1)
+
+            tc1 = np.where((tc1 >= 0), tc1, 2048)
+            tc2 = np.where((tc2 >= 0), tc2, 2048)
 
             smallestTOfCircle = np.where((tc1<tc2), tc1, tc2)
             smallestTOfCircle = np.amin(smallestTOfCircle, axis=0)

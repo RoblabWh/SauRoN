@@ -48,7 +48,6 @@ class ControlWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.widget)
 
     def train(self):
-        print("clicked")
         self.startbutton.setEnabled(False)
         self.tableWidget.fillTable()
         self.done, levelNames = self.model.prepare_training(self.loadWeightsPath)
@@ -81,7 +80,7 @@ class ControlWindow(QtWidgets.QMainWindow):
                     self.worker.update(self.model, self.tableWidget.getVisibilites())
                     self.worker.go = True
                 else:
-                    print("Episode done")
+                    #print("Episode done")
                     self.startbutton.setEnabled(True)
                     self.startbutton.setText("Ende")
                     self.startbutton.disconnect()
