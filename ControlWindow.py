@@ -11,7 +11,7 @@ class ControlWindow(QtWidgets.QMainWindow):
     def __init__(self, application, nbOfEnvs, act_dim, env_dim, args, loadWeightsPath = ""):
         super(ControlWindow, self).__init__()
         #super().__init__()
-        #self.setWindowModality(Qt.ApplicationModal)
+        self.done = None
         self.app = application
         self.args = args
         self.worker = None
@@ -24,7 +24,6 @@ class ControlWindow(QtWidgets.QMainWindow):
         self.currentEpisode = 0
         self.progressbarWidget = Progressbar(self.currentEpisode, self.args)
         self.tableWidget = Table(nbOfEnvs)
-
 
         self.successLabel = QLabel(self)
         self.successLabel.setFont(QFont("Helvetica", 12, QFont.Black))
@@ -63,7 +62,6 @@ class ControlWindow(QtWidgets.QMainWindow):
 
     def startNextSteps(self, episodeDone):
         self.tableWidget.updateButtons()
-        #print("startNextSteps")
         if not self.done:
             closed_windows = self.model.get_closed_windows()
             self.tableWidget.updateButtonsOnWindowClosed(closed_windows)
@@ -88,7 +86,6 @@ class ControlWindow(QtWidgets.QMainWindow):
                     self.startbutton.setText("Ende")
                     self.startbutton.disconnect()
                     self.startbutton.clicked.connect(self.close)
-                    print("Set start True")
                     if self.worker is not None:
                         self.worker.quit()
                         self.worker = None
@@ -119,18 +116,16 @@ class WorkerThread(QThread):
                 self.episode_done.emit(episodeDoneFuture)
 
 
-    
-
 class Table(QWidget):
     def __init__(self, nbOfEnvs):
         super(Table, self).__init__()
+        self.columns = 4
         self.nbOfEnvs = nbOfEnvs
         self.headers = ["Env ID", "Level", "Reward", "Success", "Show/Hide Env"]
         self.buttonList = []
         self.setTableLayout()
         self.levelVisibilty = [False for _ in range(nbOfEnvs)]
         self.levelVisibilty[0] = True
-
 
     def setTableLayout(self):
         self.tabWidget = QTableWidget()
@@ -143,7 +138,6 @@ class Table(QWidget):
         self.tabWidget.verticalHeader().hide()
         self.tabWidget.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
 
-        self.columns = 4
         for col in range(self.columns):
             self.tabWidget.resizeColumnToContents(col)
 

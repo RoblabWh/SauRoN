@@ -1,6 +1,5 @@
-from PyQt5.QtGui import QBrush, QPen
+from PyQt5.QtGui import QPen
 from PyQt5.QtCore import Qt
-import numpy as np
 
 class ColliderLine:
     def __init__(self,x1, y1, x2, y2, xn = 0, yn = 0):

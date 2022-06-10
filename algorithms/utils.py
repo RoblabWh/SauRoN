@@ -1,4 +1,5 @@
 from pynput.keyboard import Key, Listener
+import argparse
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -17,8 +18,6 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-
-import argparse
 
 def str2bool(v):
     if isinstance(v, bool):

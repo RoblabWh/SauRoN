@@ -194,6 +194,5 @@ class SVGLevelParser:
     def getArenaSize(self):
         return self.arenaSize
 
-
 def getBorders(self):
         return (self.lines, self.circles)

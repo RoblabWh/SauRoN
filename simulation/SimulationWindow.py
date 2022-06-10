@@ -48,7 +48,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.height = int(self.arenaHeight * args.scale_factor)
         self.setGeometry(200, 100, self.width, self.height)
 
-
         self.sonarShowing = True
         self.simShowing = True
         self.SaveNetClicked = False
@@ -72,7 +71,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.app.aboutToQuit.connect(self.closeEvent)
         if (False):
             self.monitorGraph = DistanceGraph.DistanceGraph(application)
-
 
     def resizeEvent(self, event):
         QtWidgets.QMainWindow.resizeEvent(self, event)

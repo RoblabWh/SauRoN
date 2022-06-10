@@ -1,7 +1,7 @@
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 from simulation.Environment import Environment
-from deprecated.A2C_parallel_old.A2C_Multi import AverageMeter
+from algorithms.utils  import AverageMeter
 from algorithms.PPO_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
 from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from tqdm import tqdm
@@ -13,7 +13,6 @@ import multiprocessing
 
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
-
 sys.path.insert(1, '/')
 
 

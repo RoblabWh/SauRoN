@@ -7,7 +7,6 @@ import yaml
 import sys
 import datetime
 from ControlWindow import ControlWindow
-from deprecated.A2C_parallel_old.A2C_Multi import A2C_Multi
 from algorithms.PPO_parallel.PPO_Multi import PPO_Multi
 from algorithms.utils import str2bool
 from pathlib import Path
@@ -23,22 +22,20 @@ load_old = False
 filename = "PPO_22-06-02--18-44_e387"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
 manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe useful for testing rewards in combination with a print ;)  you should also lower the amount of robots during manual testing.)
 
-
-
 # HYPERPARAMETERS
 
 gamma = 0.999               # discount factor for calculating the discounted reward
 lr = 0.0001                 # learning rate
-num_episodes = 1          # the number of epochs (/episodes) that are simulated
-steps = 10#750                 # number of steps per epoch (/episode)
-trainingInterval = 100       # number of steps after which the neural net is trained
+num_episodes = 1            # the number of epochs (/episodes) that are simulated
+steps = 10 #750             # number of steps per epoch (/episode)
+trainingInterval = 100      # number of steps after which the neural net is trained
 simTimeStep = 0.125         # simulated time between two steps in the simulation
-numbOfParallelEnvs = 1     # parallel environments are used to create more and diverse training experiences
+numbOfParallelEnvs = 1      # parallel environments are used to create more and diverse training experiences
 
 timeFrames = 4              # number of past states used as an Input for the neural net
 numberOfRays = 1081         # spacing between two light rays (for distance calculation) in degrees
 fov = 270                   # field of view in degree
-numbOfRobotsManual = 1     # only change if set to manual do not use more than 4
+numbOfRobotsManual = 1      # only change if set to manual do not use more than 4
 
 scaleFactor = 65            # scales the simulation window (the window is also rezisable, only change if your display is low res)
 
@@ -93,7 +90,6 @@ if __name__ == '__main__':
 
     # other settings
     parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  #Global is deprecated and may not work
-
 
     args = parser.parse_args(args)
 

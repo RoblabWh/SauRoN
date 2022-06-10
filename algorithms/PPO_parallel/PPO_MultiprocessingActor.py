@@ -1,15 +1,9 @@
-
 import numpy as np
 import yaml
-from deprecated.SimulationWithoutUI import Simulation
 
 from simulation.Environment import Environment
-#from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from algorithms.PPO_parallel.PPO_Network import PPO_Network
-import sys
-from PyQt5.QtWidgets import QApplication
 import os
-
 
 
 class PPO_MultiprocessingActor:
@@ -44,7 +38,6 @@ class PPO_MultiprocessingActor:
         self.network = PPO_Network(act_dim, env_dim, args)
         self.network.build()
         if master:
-            #self.app = QApplication(sys.argv)
             self.network.print_summary()
 
         if weights != None:
@@ -62,8 +55,6 @@ class PPO_MultiprocessingActor:
         self.steps = 0
         self.resetActor()
         self.closed = False
-
-
 
     def setWeights(self, weights):
         self.network.set_model_weights(weights)

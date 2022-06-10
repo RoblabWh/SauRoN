@@ -1,8 +1,6 @@
-from ctypes import pointer
 import math
 from simulation.Borders import ColliderLine
 from pynput.keyboard import Listener
-
 
 import os
 from PIL import Image
