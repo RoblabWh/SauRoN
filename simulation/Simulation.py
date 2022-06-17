@@ -131,6 +131,7 @@ class Simulation:
             if robot.isActive() == True:
                 tarLinVel = 0
                 tarAngVel = 0
+                #TODO:
                 try:
                     tarLinVel, tarAngVel = robotsTarVels[i]
                     self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)

@@ -356,7 +356,7 @@ class Model(nn.Module):
 
         mu = F.tanh(self.mu(densed))
         #var = self.continuous(mu)
-        var = mu
+        var = torch.FloatTensor([0.0]) #TODO:
 
         value = F.relu(self.value_temp(densed))
         value = F.relu(self.value(value))
@@ -457,7 +457,8 @@ class PPO_Network():
     def train(self, observation, action):
         logging.info(f'Tracing train function of {self.__class__}')
 
-        net_out = self._model.forward(observation.values().to(self.device)).to('cpu')
+        #net_out = self._model.forward(observation.values().to(self.device)).to('cpu')
+        net_out = self._model.forward(observation.values()).to('cpu')
         loss = self.calculate_loss(observation, action, net_out)
 
         #self.optimizer.zero_grad()

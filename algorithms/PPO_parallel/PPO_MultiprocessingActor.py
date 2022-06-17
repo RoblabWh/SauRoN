@@ -128,11 +128,13 @@ class PPO_MultiprocessingActor:
             robotsActions = []  # actions of every Robot in the selected environment
             for i in range(0, len(robotsData)):  # iterating over every robot
                 if not True in robotsData[i][3]:
-                    print(robotsData[i][3])
                     aTmp = self.policy_action(robotsOldState[i][0])
                     a = np.ndarray.tolist(aTmp[0].detach().numpy())[0]  # Tensoren in Numpy in List umwandeln
-                    c = np.ndarray.tolist(aTmp[1].detach().numpy())[0] #Check if this is angular velocity -> update() in Simulation
+                    c = np.ndarray.tolist(aTmp[1].detach().numpy())[0] #TODO: Check if this is angular velocity -> update() in Simulation
                     negL = np.ndarray.tolist(aTmp[2].detach().numpy())
+                    print(a)
+                    print(c)
+                    print(negL)
                     robotsData[i][0].append(a)
                     robotsData[i][4].append(c)
                     robotsData[i][5].append(negL)
