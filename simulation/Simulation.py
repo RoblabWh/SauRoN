@@ -4,7 +4,6 @@ import math, random
 import numpy as np
 from simulation.Borders import ColliderLine
 
-closedFirst = False
 
 class Simulation:
     """
@@ -20,8 +19,6 @@ class Simulation:
         :param timeframes: int -
             the amount of frames saved as a history by the robots to train the neural net
         """
-        global closedFirst
-        closedFirst = False
         self.args = args
         self.levelFiles = args.level_files
         # Skalierungsparameter für Visualisierung
@@ -132,9 +129,13 @@ class Simulation:
 
         for i, robot in enumerate(self.robots):
             if robot.isActive() == True:
-                print(robotsTarVels[i])
-                tarLinVel, tarAngVel = robotsTarVels[i]
-                self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
+                tarLinVel = 0
+                tarAngVel = 0
+                try:
+                    tarLinVel, tarAngVel = robotsTarVels[i]
+                    self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
+                except:
+                    self.robots[i].update(self.simTimestep, 0.0, 0.0)
 
 
         if self.args.mode == 'sonar':
