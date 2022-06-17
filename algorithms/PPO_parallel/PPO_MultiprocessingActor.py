@@ -131,7 +131,7 @@ class PPO_MultiprocessingActor:
                     print(robotsData[i][3])
                     aTmp = self.policy_action(robotsOldState[i][0])
                     a = np.ndarray.tolist(aTmp[0].detach().numpy())[0]  # Tensoren in Numpy in List umwandeln
-                    c = np.ndarray.tolist(aTmp[1].detach().numpy())[0]
+                    c = np.ndarray.tolist(aTmp[1].detach().numpy())[0] #Check if this is angular velocity -> update() in Simulation
                     negL = np.ndarray.tolist(aTmp[2].detach().numpy())
                     robotsData[i][0].append(a)
                     robotsData[i][4].append(c)
