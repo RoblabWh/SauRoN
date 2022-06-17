@@ -128,19 +128,27 @@ class PPO_MultiprocessingActor:
             robotsActions = []  # actions of every Robot in the selected environment
             for i in range(0, len(robotsData)):  # iterating over every robot
                 if not True in robotsData[i][3]:
+                    print(robotsData[i][3])
                     aTmp = self.policy_action(robotsOldState[i][0])
-                    a = np.ndarray.tolist(aTmp[0].numpy())[0]  # Tensoren in Numpy in List umwandeln
-                    c = np.ndarray.tolist(aTmp[1].numpy())[0]
-                    negL = np.ndarray.tolist(aTmp[2].numpy())
-
-                else:
-                    a = [None, None]
-                robotsActions.append(a)
-
-                if not None in a:
+                    a = np.ndarray.tolist(aTmp[0].detach().numpy())[0]  # Tensoren in Numpy in List umwandeln
+                    c = np.ndarray.tolist(aTmp[1].detach().numpy())[0]
+                    negL = np.ndarray.tolist(aTmp[2].detach().numpy())
                     robotsData[i][0].append(a)
                     robotsData[i][4].append(c)
                     robotsData[i][5].append(negL)
+                else:
+                    a = [None, None]
+                    robotsData[i][0].append(a)
+                    robotsData[i][4].append(c)
+                    robotsData[i][5].append(negL)
+                robotsActions.append(a)
+
+            
+                # if not None in a:
+                    # robotsData[i][0].append(a)
+                    # robotsData[i][4].append(c)
+                    # robotsData[i][5].append(negL)
+                
 
             # environment makes a step with selected actions
             results = self.env.step(robotsActions)

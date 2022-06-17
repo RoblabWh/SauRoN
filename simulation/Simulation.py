@@ -44,6 +44,7 @@ class Simulation:
         self.simTimestep = args.sim_time_step  # s
         # self.plotterWindow = PlotterWindow(app)
 
+    
     def reset(self, level):
         """
         Resets the simulation after each epoch
@@ -131,6 +132,7 @@ class Simulation:
 
         for i, robot in enumerate(self.robots):
             if robot.isActive() == True:
+                print(robotsTarVels[i])
                 tarLinVel, tarAngVel = robotsTarVels[i]
                 self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
 
