@@ -340,6 +340,9 @@ class Model(nn.Module):
         # Value
         self.value_temp = nn.Linear(out_features=128, in_features=96)
         self.value = nn.Linear(out_features=1, in_features=128, bias=False)
+    
+
+
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         laser = F.relu(self.lidar_conv1(laser))
@@ -458,7 +461,14 @@ class PPO_Network():
         logging.info(f'Tracing train function of {self.__class__}')
 
         #net_out = self._model.forward(observation.values().to(self.device)).to('cpu')
-        net_out = self._model.forward(observation.values()).to('cpu')
+        obs_laser = torch.from_numpy(observation['lidar_0']).float()
+        print(obs_laser.shape)
+        obs_laser = obs_laser.transpose(1, 3)
+        print(obs_laser.shape)
+        obs_orientation_to_goal = torch.from_numpy(observation['orientation_to_goal']).float()
+        obs_distance_to_goal = torch.from_numpy(observation['distance_to_goal']).float()
+        obs_velocity = torch.from_numpy(observation['velocity']).float()
+        net_out = self._model.forward(obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity) #.to('cpu')
         loss = self.calculate_loss(observation, action, net_out)
 
         #self.optimizer.zero_grad()
