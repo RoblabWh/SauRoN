@@ -43,8 +43,8 @@
 
 #         tag = 'body'
 
-#         lidar_conv = Conv2D(32, (3, 3), activation='relu')(input_lidar) 
-#         lidar_conv = Conv2D(16, (3, 3), activation='relu')(lidar_conv) 
+#         lidar_conv = Conv2D(32, (3, 3), activation='relu')(input_lidar)
+#         lidar_conv = Conv2D(16, (3, 3), activation='relu')(lidar_conv)
 
 
 #         # Lidar Convolutions
@@ -60,13 +60,13 @@
 
 
 
-#         # Orientation 
+#         # Orientation
 #         orientation_flat = Flatten(name=tag + 'orientation_flat')(input_orientation)
 
 #         # Distance
 #         distance_flat = Flatten(name=tag + '_distance_flat')(input_distance)
 
-#         # Velocity 
+#         # Velocity
 #         velocity_flat = Flatten(name=tag + '_velocity_flat')(input_velocity)
 
 #         # Concat layes ¬Lidar
@@ -92,7 +92,7 @@
 #         value = Dense(units=128, activation='relu', name='out_value_dense')(densed)
 #         # value = Dense(units=5, activation='relu', name='out_value_dense')(densed)
 #         value = Dense(units=1, activation=None, use_bias=False, name='out_value')(value)
-        
+
 #         # Create the Keras Model
 #         self._model = KerasModel(inputs=[input_lidar, input_orientation, input_distance, input_velocity], outputs=[mu, var, value])
 
@@ -115,13 +115,13 @@
 #     def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
 #         '''
 #         observation: python dict with the keys:
-#         'laser_0', 'orientation_to_goal', 'distance_to_goal', 'velocity'. 
+#         'laser_0', 'orientation_to_goal', 'distance_to_goal', 'velocity'.
 #         shape of each key: (num_agents, size_of_the_obs, stack_size).
 #         For the lidar with stack_size 4 and 2 agents: (2, 1081, 4)
 #         '''
 #         logging.info(f'Tracing predict function of {self.__class__}')
 #         net_out = self._model([obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity])
-        
+
 #         selected_action, neglog = self._postprocess_predictions(*net_out)
 
 #         return [selected_action, net_out[2], neglog]
@@ -142,7 +142,7 @@
 #         """
 #         selected_action = self._select_action_continuous_clip(mu, var)
 #         neglog = self._neglog_continuous(selected_action, mu, var)
-#         return (selected_action, neglog)        
+#         return (selected_action, neglog)
 
 
 
@@ -159,14 +159,14 @@
 
 #     def calculate_loss(self, observation, action, net_out):
 #         neglogp = self._neglog_continuous(action['action'], net_out[0], net_out[1])
-            
+
 #         ratio = tf.exp(action['neglog_policy'] - neglogp)
 #         pg_loss = -action['advantage'] * ratio
 #         pg_loss_cliped = -action['advantage'] * tf.clip_by_value(ratio, 1.0 - self._config['clipping_range'], 1.0 + self._config['clipping_range'])
 
 #         pg_loss = tf.reduce_mean(tf.maximum(pg_loss, pg_loss_cliped))
 #         value_loss = keras.losses.mean_squared_error(net_out[2], tf.convert_to_tensor(action['reward'], dtype='float32')) * self._config['coefficient_value']
-        
+
 #         loss = pg_loss + value_loss
 
 #         return loss
@@ -314,22 +314,14 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import datetime
+import math
 
 class Model(nn.Module):
 
     def __init__(self, config):
         super(Model, self).__init__()
-        #input_lidar = Input(shape=(161, 161, self._config['stack_size']), dtype='float32', name='input_lidar')
-        #input_orientation = self._create_input_layer(self._config['orientation_size'], 'orientation')
-        #input_distance = self._create_input_layer(self._config['distance_size'], 'distance')
-        #input_velocity = self._create_input_layer(self._config['velocity_size'], 'velocity')
-        #lidar_conv = Conv2D(32, (3, 3), activation='relu')(input_lidar) 
-        #lidar_conv = Conv2D(16, (3, 3), activation='relu')(lidar_conv)
         self.lidar_conv1 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=3)
         self.lidar_conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3)
-        # self.lidar_conv1 = nn.Conv1d(out_channels=16, in_channels=config["lidar_size"], kernel_size=7, stride=3,
-        #                             padding='valid')
-        # self.lidar_conv2 = nn.Conv1d(out_channels=32, in_channels=16, kernel_size=5, stride=2, padding='valid')
         self.lidar_flat = nn.Linear(in_features=788768, out_features=160)
         self.concated_some = nn.Linear(in_features=180, out_features=96)
 
@@ -359,8 +351,7 @@ class Model(nn.Module):
 
         mu = F.tanh(self.mu(densed))
         #var = self.continuous(mu)
-        var = torch.FloatTensor([0.0]) #TODO:
-
+        var = torch.FloatTensor([0.0, 0.0]) #TODO:
         value = F.relu(self.value_temp(densed))
         value = F.relu(self.value(value))
 
@@ -407,13 +398,11 @@ class PPO_Network():
         pass
 
     def _select_action_continuous_clip(self, mu, var):
-        #return mu.clamp_(mu + torch.exp(var) * mu.normal_(0, 0.5), -1.0, 1.0)
         return torch.clamp(mu + torch.exp(var) * mu.normal_(0, 0.5), -1.0, 1.0)
         
     def _neglog_continuous(self, action, mu, var):
-        import math
         return 0.5 * torch.sum(torch.square(action - mu) / torch.exp(var)) + 0.5 * math.log(2.0 * torch.pi) \
-               * torch.FloatTensor(action.shape[-1]) + torch.sum(var)
+               * torch.FloatTensor([2.0]) + torch.sum(var)
 
 
 

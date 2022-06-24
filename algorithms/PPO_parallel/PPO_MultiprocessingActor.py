@@ -129,12 +129,13 @@ class PPO_MultiprocessingActor:
             for i in range(0, len(robotsData)):  # iterating over every robot
                 if not True in robotsData[i][3]:
                     aTmp = self.policy_action(robotsOldState[i][0])
-                    a = np.ndarray.tolist(aTmp[0].detach().numpy())[0]  # Tensoren in Numpy in List umwandeln
-                    c = np.ndarray.tolist(aTmp[1].detach().numpy())[0] #TODO: Check if this is angular velocity -> update() in Simulation
-                    negL = np.ndarray.tolist(aTmp[2].detach().numpy())
-                    print(a)
-                    print(c)
-                    print(negL)
+                    a = np.ndarray.tolist(aTmp[0].detach().numpy()) 
+                    c = np.ndarray.tolist(aTmp[1].detach().numpy())[0]
+                    negL = np.ndarray.tolist(aTmp[2].detach().numpy())[0]
+                    #print(a)
+                    #print(c)
+                    #print(negL)
+                    #print('-------------------------------------------')
                     robotsData[i][0].append(a)
                     robotsData[i][4].append(c)
                     robotsData[i][5].append(negL)
@@ -293,15 +294,12 @@ class PPO_MultiprocessingActor:
         :param s: current state of a single robot
         :return: [actions, critic]
         """
-
         #laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,1)
         laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,2)
-        #print("laser_state1: ", laser.shape)
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
-        #print(np.array([laser]))
-        #print(np.array([laser]).shape)
+
         return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]))  # Liste mit [actions, value]
 
     def train_net_obs(self, obs_with_actions_list):
