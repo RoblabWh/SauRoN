@@ -349,7 +349,7 @@ class Model(nn.Module):
         concat = torch.cat([orientation_flat, distance_flat, velocity_flat, laser_flat])
         densed = F.relu(self.concated_some(concat))
 
-        mu = F.tanh(self.mu(densed))
+        mu = torch.tanh(self.mu(densed))
         #var = self.continuous(mu)
         var = torch.FloatTensor([0.0, 0.0]) #TODO:
         value = F.relu(self.value_temp(densed))
@@ -379,6 +379,7 @@ class PPO_Network():
         self._start_time = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M")
         self.args = args
         self.config = (config)
+        self.loss_fn = nn.MSELoss()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print("Uploading model to {}".format(self.device))
         self._model = Model(self.config).to(self.device)
@@ -448,17 +449,20 @@ class PPO_Network():
 
     def train(self, observation, action):
         logging.info(f'Tracing train function of {self.__class__}')
-
-        #net_out = self._model.forward(observation.values().to(self.device)).to('cpu')
         obs_laser = torch.from_numpy(observation['lidar_0']).float()
-        print(obs_laser.shape)
         obs_laser = obs_laser.transpose(1, 3)
-        print(obs_laser.shape)
         obs_orientation_to_goal = torch.from_numpy(observation['orientation_to_goal']).float()
         obs_distance_to_goal = torch.from_numpy(observation['distance_to_goal']).float()
         obs_velocity = torch.from_numpy(observation['velocity']).float()
-        net_out = self._model.forward(obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity) #.to('cpu')
-        loss = self.calculate_loss(observation, action, net_out)
+
+        net_out = []
+        for i in range(obs_laser.shape[0]):
+            net_out.append(self._model.forward(obs_laser[i].unsqueeze(0), obs_orientation_to_goal[i].unsqueeze(0), obs_distance_to_goal[i].unsqueeze(0), obs_velocity[i].unsqueeze(0))) #.to('cpu')
+        #self._model.train()
+        #net_out = self._model.forward(obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity)
+
+        loss = self.calculate_loss(action, net_out)          # Fuction just works for 1 element
+        loss.backward()
 
         #self.optimizer.zero_grad()
         #self.loss.backward()
@@ -466,15 +470,16 @@ class PPO_Network():
 
         return {'loss': loss}
 
-    def calculate_loss(self, observation, action, net_out):
-        neglogp = self._neglog_continuous(action['action'], net_out[0], net_out[1])
+    def calculate_loss(self, action, net_out):
+        neglogp = self._neglog_continuous(torch.FloatTensor(action['action'][0]), net_out[0][0], net_out[0][1])
             
-        ratio = torch.exp(action['neglog_policy'] - neglogp)
-        pg_loss = -action['advantage'] * ratio
-        pg_loss_cliped = -action['advantage'] * torch.clamp(ratio, 1.0 - self._config['clipping_range'], 1.0 + self._config['clipping_range'])
+        ratio = torch.exp(torch.FloatTensor([action['neglog_policy'][0]]) - neglogp)
+        pg_loss = -torch.FloatTensor([action['advantage'][0]]) * ratio
+        pg_loss_cliped = -torch.FloatTensor([action['advantage'][0]]) * torch.clamp(ratio, 1.0 - self._config['clipping_range'], 1.0 + self._config['clipping_range'])
 
         pg_loss = torch.mean(torch.max(pg_loss, pg_loss_cliped))
-        value_loss = nn.MSELoss(net_out[2], torch.from_numpy(action['reward'])) * self._config['coefficient_value']
+
+        value_loss = self.loss_fn(net_out[0][2], torch.FloatTensor([action['reward'][0]])) * self._config['coefficient_value']
         
         loss = pg_loss + value_loss
 
@@ -513,13 +518,15 @@ class PPO_Network():
         self._model.summary()
 
     def set_model_weights(self, weights):
-        self._model.set_weights(weights)
+        self._model.load_state_dict(weights) #.set_weights(weights)
 
     def get_model_weights(self):
-        return self._model.parameters()
+        return self._model.state_dict()
+        #return self._model.parameters()
 
     def save_model_weights(self, path):
-        self._model.save_weights(path + '.h5')
+        torch.save(self._model, path + ".pt")
+        #self._model.save_state_dict(path + '.pt')
 
     def make_gradcam_heatmap(self, laser, orientation, distance, velocity, pred_index=0):
         """

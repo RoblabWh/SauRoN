@@ -129,7 +129,7 @@ class PPO_MultiprocessingActor:
             for i in range(0, len(robotsData)):  # iterating over every robot
                 if not True in robotsData[i][3]:
                     aTmp = self.policy_action(robotsOldState[i][0])
-                    a = np.ndarray.tolist(aTmp[0].detach().numpy()) 
+                    a = np.ndarray.tolist(aTmp[0].detach().numpy())
                     c = np.ndarray.tolist(aTmp[1].detach().numpy())[0]
                     negL = np.ndarray.tolist(aTmp[2].detach().numpy())[0]
                     #print(a)
