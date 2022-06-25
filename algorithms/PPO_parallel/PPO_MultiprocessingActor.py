@@ -29,7 +29,7 @@ class PPO_MultiprocessingActor:
 
         # Ray setzt die env Variable für die GPU selber (auf 0 bei einer GPU).
         # GPU kann nicht fehlerfrei genutzt werden und bietet teilweise keinen Leistungsvorteil während der Simulation
-        os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
+        #os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 
         self.args = args
         self.app = app
