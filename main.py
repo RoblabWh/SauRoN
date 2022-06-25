@@ -7,6 +7,7 @@ import yaml
 import sys
 import datetime
 from ControlWindow import ControlWindow
+from cmd import CMD
 from algorithms.PPO_parallel.PPO_Multi import PPO_Multi
 from algorithms.utils import str2bool
 from pathlib import Path
@@ -64,6 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('--nb_episodes', type=int, default=num_episodes, help='Number of training episodes')
     parser.add_argument('--steps', type=int, default=steps, help='Steps in Environment per Episode')
     parser.add_argument('--sim_time_step', type=float, default=simTimeStep, help='Time between steps')
+    parser.add_argument('--show_simulation', type=str, default='True', help='Show simulation while training')
 
     # Trainings settings
     parser.add_argument('--parallel_envs', type=int, default=numbOfParallelEnvs, help='Number of parallel environments used during training in addition to the main training process')
@@ -74,6 +76,7 @@ if __name__ == '__main__':
     parser.add_argument('-lr', '--learningrate', type=float, default=lr, help='Learning Rate')
     parser.add_argument('--gamma', type=float, default=gamma, help='Gamma determines the influence of future rewards in a discounted reward')
     parser.add_argument('--time_frames', type=int, default=timeFrames, help='Number of Timeframes (past States) which will be analyzed by neural net')
+    parser.add_argument('--use_cpu_only', type=str, default='False', help='Trainnig just on CPU')
 
     #System settings
     parser.add_argument('--path', type=str, default='', help='Path where Models are saved')
@@ -92,6 +95,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='sonar', choices=['global', 'sonar'], help='Training Mode')  #Global is deprecated and may not work
 
     args = parser.parse_args(args)
+
 
     if args.path == "":
         args.path = os.path.join(os.getcwd(), "models", "")
@@ -134,14 +138,18 @@ if __name__ == '__main__':
     act_dim = np.asarray(2)
 
     if args.training:
-        app = QApplication(sys.argv)
-        args.parallel_envs = 1
-        if args.load_old:
-            controlWindow = ControlWindow(app, args.parallel_envs, act_dim, env_dim, args, args.path+filename)  # , model)
+        if args.show_simulation == 'True':
+            app = QApplication(sys.argv)
+            args.parallel_envs = 1
+            if args.load_old:
+                controlWindow = ControlWindow(app, args.parallel_envs, act_dim, env_dim, args, args.path+filename)  # , model)
+            else:
+                controlWindow = ControlWindow(app, args.parallel_envs, act_dim, env_dim, args)  # , model)
+            controlWindow.show()
+            app.exec_()
         else:
-            controlWindow = ControlWindow(app, args.parallel_envs, act_dim, env_dim, args)  # , model)
-        controlWindow.show()
-        app.exec_()
+            cmd = CMD(args, act_dim, env_dim, args.path+filename)
+            cmd.train()
         print("Finish!")
 
     else:

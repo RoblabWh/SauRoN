@@ -6,7 +6,6 @@ from algorithms.PPO_parallel.PPO_MultiprocessingActor import PPO_Multiprocessing
 from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from tqdm import tqdm
 import yaml
-import tensorflow
 from random import shuffle
 import multiprocessing
 

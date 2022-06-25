@@ -69,7 +69,9 @@ class PPO_Network():
         self.args = args
         self.config = (config)
         self.loss_fn = nn.MSELoss()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = 'cpu'
+        if args.use_cpu_only == "False":
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print("Uploading model to {}".format(self.device))
         self._model = Model(self.config).to(self.device)
         print("Done!")
@@ -163,19 +165,22 @@ class PPO_Network():
         return {'loss': loss}
 
     def calculate_loss(self, action, net_out):
-        neglogp = self._neglog_continuous(torch.FloatTensor(action['action'][0]), net_out[0][0], net_out[0][1])
+        length = len(net_out)
+        loss = 0
+        for i in range(length):
+            neglogp = self._neglog_continuous(torch.FloatTensor(action['action'][i]), net_out[i][0], net_out[i][1])
+                
+            ratio = torch.exp(torch.FloatTensor([action['neglog_policy'][i]]) - neglogp)
+            pg_loss = -torch.FloatTensor([action['advantage'][i]]) * ratio
+            pg_loss_cliped = -torch.FloatTensor([action['advantage'][i]]) * torch.clamp(ratio, 1.0 - self._config['clipping_range'], 1.0 + self._config['clipping_range'])
+
+            pg_loss = torch.mean(torch.max(pg_loss, pg_loss_cliped))
+
+            value_loss = self.loss_fn(net_out[0][2], torch.FloatTensor([action['reward'][i]])) * self._config['coefficient_value']
             
-        ratio = torch.exp(torch.FloatTensor([action['neglog_policy'][0]]) - neglogp)
-        pg_loss = -torch.FloatTensor([action['advantage'][0]]) * ratio
-        pg_loss_cliped = -torch.FloatTensor([action['advantage'][0]]) * torch.clamp(ratio, 1.0 - self._config['clipping_range'], 1.0 + self._config['clipping_range'])
+            loss += pg_loss + value_loss
 
-        pg_loss = torch.mean(torch.max(pg_loss, pg_loss_cliped))
-
-        value_loss = self.loss_fn(net_out[0][2], torch.FloatTensor([action['reward'][0]])) * self._config['coefficient_value']
-        
-        loss = pg_loss + value_loss
-
-        return loss
+        return loss / length
 
 
     def load_weights(self, path):
