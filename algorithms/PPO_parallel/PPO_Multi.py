@@ -61,7 +61,7 @@ class PPO_Multi:
         envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
 
         multiActors = [PPO_MultiprocessingActor(self.app, self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
-        startweights = multiActors[0].getWeights()
+        #startweights = multiActors[0].getWeights()
         #for i in range(self.numbOfParallelEnvs - 1):
         #    multiActors.append(Process(target=PPO_MultiprocessingActor, args=(self.act_dim, self.env_dim, self.args, startweights, envLevel[i + 1], False)))
         #multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i + 1], False) for i in range(self.numbOfParallelEnvs - 1)]
