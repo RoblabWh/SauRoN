@@ -1,5 +1,7 @@
 import argparse
 import math
+import time
+
 import numpy as np
 import os
 from PyQt5.QtWidgets import QApplication
@@ -138,9 +140,9 @@ if __name__ == '__main__':
     act_dim = np.asarray(2)
 
     if args.training:
+        args.parallel_envs = 1 #TODO
         if args.show_simulation == 'True':
             app = QApplication(sys.argv)
-            args.parallel_envs = 1
             if args.load_old:
                 controlWindow = ControlWindow(app, args.parallel_envs, act_dim, env_dim, args, args.path+filename)  # , model)
             else:
@@ -148,7 +150,7 @@ if __name__ == '__main__':
             controlWindow.show()
             app.exec_()
         else:
-            cmd = CMD(args, act_dim, env_dim, args.path+filename)
+            cmd = CMD(args, act_dim, env_dim)
             cmd.train()
         print("Finish!")
 
@@ -156,7 +158,7 @@ if __name__ == '__main__':
         model = PPO_Multi(act_dim, env_dim, args)
 
         if args.load_weights_only:
-            filename += '.h5'
+            filename += '.pt'
         if args.train_perception_only:
             model.load_net(args.path + filename)
             model.trainPerception(args, env_dim[0])

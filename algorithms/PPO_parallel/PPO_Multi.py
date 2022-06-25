@@ -52,7 +52,7 @@ class PPO_Multi:
         loadedWeights = None
         if loadWeightsPath != "":
             if self.args.load_weights_only:
-                loadWeightsPath += '.h5'
+                loadWeightsPath += '.pt'
 
             self.load_net(loadWeightsPath)
             loadedWeights = self.network.get_model_weights()
@@ -101,14 +101,16 @@ class PPO_Multi:
                 if actor.isActive():
                     activeActors.append(actor)
 
-            for i, show in enumerate(visibleLevels):
-                if show:
-                    if self.multiActors[i].has_been_closed():
-                        self.closed_windows.append(i)
+            if self.args.show_simulation == "True":
+                for i, show in enumerate(visibleLevels):
+                    if show:
+                        if self.multiActors[i].has_been_closed():
+                            self.closed_windows.append(i)
+                        else:
+                            self.showEnvWindow(i)
                     else:
-                        self.showEnvWindow(i)
-                else:
-                    self.hideEnvWindow(i)
+                        self.hideEnvWindow(i)
+
             self.activeActors = activeActors
             return False
         else:
@@ -118,7 +120,6 @@ class PPO_Multi:
         """
         Called after a full episode of training to collect statistics, reset the active actors list and save weights
         """
-        print("#########################")
         self.tqdm_e.update(1)
         self.currentEpisode += 1
         #reset the active actors list for next episode

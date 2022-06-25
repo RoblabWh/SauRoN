@@ -17,6 +17,7 @@ class ControlWindow(QtWidgets.QMainWindow):
         self.worker = None
 
         self.loadWeightsPath = loadWeightsPath
+        
 
         self.setWindowTitle("Control Panel")
 
