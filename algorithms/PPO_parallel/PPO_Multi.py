@@ -7,8 +7,7 @@ from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from tqdm import tqdm
 import yaml
 from random import shuffle
-import multiprocessing
-
+from multiprocessing import Process
 
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
@@ -55,20 +54,23 @@ class PPO_Multi:
                 loadWeightsPath += '.pt'
 
             self.load_net(loadWeightsPath)
-            loadedWeights = self.network.get_model_weights()
-            tensorflow.keras.backend.clear_session()
+           # loadedWeights = self.network.get_model_weights()
+           # tensorflow.keras.backend.clear_session()
 
         #Create parallel workers with own environment
         envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
 
         multiActors = [PPO_MultiprocessingActor(self.app, self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
-        #startweights = multiActors[0].getWeights()
+        startweights = multiActors[0].getWeights()
+        #for i in range(self.numbOfParallelEnvs - 1):
+        #    multiActors.append(Process(target=PPO_MultiprocessingActor, args=(self.act_dim, self.env_dim, self.args, startweights, envLevel[i + 1], False)))
         #multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i + 1], False) for i in range(self.numbOfParallelEnvs - 1)]
        
         levelNames = []
         for i, actor in enumerate(multiActors):
+            levelNames.append(envLevel[i])
             levelName = actor.setLevel(envLevel[i])
-            levelNames.append(levelName)
+
 
         self.multiActors = multiActors
         self.activeActors = multiActors
@@ -89,6 +91,7 @@ class PPO_Multi:
 
         activeActors = self.activeActors
         if len(activeActors) > 0:
+
             allTrainingResults = [actor.trainSteps(self.args.train_interval) for actor in activeActors] #Liste mit Listen von Observations aus den Environments
             trainedWeights = self.train_models_with_obs(allTrainingResults, self.multiActors[0])
 

@@ -27,13 +27,8 @@ class PPO_MultiprocessingActor:
         :param master: boolean - the master actor is used for training of the network weights and sets the initial weights
         """
 
-        # Ray setzt die env Variable für die GPU selber (auf 0 bei einer GPU).
-        # GPU kann nicht fehlerfrei genutzt werden und bietet teilweise keinen Leistungsvorteil während der Simulation
-        #os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
-
         self.args = args
         self.app = app
-
         self.network = PPO_Network(act_dim, env_dim, args)
         self.network.build()
         #if master:
@@ -53,7 +48,10 @@ class PPO_MultiprocessingActor:
         self.cumul_reward = 0
         self.steps = 0
         self.resetActor()
+        #self.reset = True
+        #self.env.reset(self.level)
         self.closed = False
+        self.setLevel(level)
 
     def setWeights(self, weights):
         self.network.set_model_weights(weights)
@@ -127,27 +125,16 @@ class PPO_MultiprocessingActor:
             # Actor picks an action (following the policy)
             robotsActions = []  # actions of every Robot in the selected environment
             for i in range(0, len(robotsData)):  # iterating over every robot
+                a = [None, None]
+                aTmp = self.policy_action(robotsOldState[i][0])
                 if not True in robotsData[i][3]:
-                    aTmp = self.policy_action(robotsOldState[i][0])
                     a = np.ndarray.tolist(aTmp[0].detach().numpy())
-                    c = np.ndarray.tolist(aTmp[1].detach().numpy())[0]
-                    negL = np.ndarray.tolist(aTmp[2].detach().numpy())[0]
-                    robotsData[i][0].append(a)
-                    robotsData[i][4].append(c)
-                    robotsData[i][5].append(negL)
-                else:
-                    a = [None, None]
-                    robotsData[i][0].append(a)
-                    robotsData[i][4].append(c)
-                    robotsData[i][5].append(negL)
+                c = np.ndarray.tolist(aTmp[1].detach().numpy())[0]
+                negL = np.ndarray.tolist(aTmp[2].detach().numpy())[0]
+                robotsData[i][0].append(a)
+                robotsData[i][4].append(c)
+                robotsData[i][5].append(negL)
                 robotsActions.append(a)
-
-            
-                # if not None in a:
-                    # robotsData[i][0].append(a)
-                    # robotsData[i][4].append(c)
-                    # robotsData[i][5].append(negL)
-                
 
             # environment makes a step with selected actions
             results = self.env.step(robotsActions)

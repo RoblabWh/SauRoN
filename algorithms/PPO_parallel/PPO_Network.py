@@ -117,6 +117,12 @@ class PPO_Network():
 
         net_out = self._model.forward(obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity)
 
+        del obs_laser
+        del obs_orientation_to_goal
+        del obs_distance_to_goal
+        del obs_velocity
+        torch.cuda.empty_cache()
+
         selected_action, neglog = self._postprocess_predictions(*net_out)
 
         return [selected_action, net_out[2], neglog]
@@ -151,13 +157,26 @@ class PPO_Network():
         obs_velocity = torch.from_numpy(observation['velocity']).float()
 
         net_out = []
-        for i in range(obs_laser.shape[0]):
-            net_out.append(self._model.forward(obs_laser[i].unsqueeze(0).to(self.device), obs_orientation_to_goal[i].unsqueeze(0).to(self.device), obs_distance_to_goal[i].unsqueeze(0).to(self.device), obs_velocity[i].unsqueeze(0).to(self.device))) 
-        
-        #net_out = self._model.forward(obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity)
+        for i in range(obs_laser.shape[0]): #Just so bit to test how to minimize GPU memory usage TODO
+            laser = obs_laser[i].unsqueeze(0)
+            laser = obs_laser[i].to(self.device)
+            ori_to_goal = obs_orientation_to_goal[i].unsqueeze(0)
+            ori_to_goal = ori_to_goal.to(self.device)
+            distance_to_goal = obs_distance_to_goal[i].unsqueeze(0)
+            distance_to_goal = distance_to_goal.to(self.device)
+            velocity = obs_velocity[i].unsqueeze(0)
+            velocity = velocity.to(self.device)
+
+            net_out.append(self._model.forward(laser, ori_to_goal, distance_to_goal, velocity))
+            del laser
+            del ori_to_goal
+            del distance_to_goal
+            del velocity
+            torch.cuda.empty_cache()
+
 
         self.optimizer.zero_grad()
-        loss = self.calculate_loss(action, net_out)          # Fuction just works for 1 element
+        loss = self.calculate_loss(action, net_out)
         loss.backward()
         self.optimizer.step()
 

@@ -16,6 +16,6 @@ class CMD():
     def train(self):
         self.done, levelNames = self.model.prepare_training(self.loadWeightsPath)
         while self.done == False:
-            episodeDoneFuture = self.model.train_with_feedback_for_n_steps(self.visibilities)
-            self.done, avrgRewardLastEpisode, successrates, currentEpisode, successAll = self.model.train_with_feedback_end_of_episode()
-            self.currentEpisode = currentEpisode
+            if self.model.train_with_feedback_for_n_steps(self.visibilities):
+                self.done, avrgRewardLastEpisode, successrates, currentEpisode, successAll = self.model.train_with_feedback_end_of_episode()
+                self.currentEpisode = currentEpisode
