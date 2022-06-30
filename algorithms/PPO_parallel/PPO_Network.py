@@ -2,28 +2,33 @@ import logging
 import tensorflow as tf
 from tensorflow import keras
 from algorithms.PPO_parallel.abstract_model import AbstractModel
-from tensorflow.keras.layers import Input, Conv1D, Flatten, Concatenate, Lambda, Dense, Conv2D
+from tensorflow.keras.layers import Input, Conv1D, Flatten, Concatenate, Lambda, Dense, Conv2D, MaxPooling2D
 from tensorflow.keras.models import Model as KerasModel
 from algorithms.PPO_parallel.continous_layer import ContinuousLayer
 import numpy as np
 
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
 class PPO_Network(AbstractModel):
     NEEDED_OBSERVATIONS = ['lidar_0', 'orientation_to_goal', 'distance_to_goal', 'velocity']
 
-    def __init__(self, act_dim, env_dim, args):
+    def __init__(self, act_dim, env_dim, args, load_weights=False):
         config = {
             'lidar_size': args.number_of_rays,
             'orientation_size': 2,
             'distance_size': 1,
             'velocity_size': 2,
             'stack_size': env_dim[0],
-            'clipping_range': 0.2,
-            'coefficient_value': 0.5
+            'clipping_range': 0.1, #0.2
+            'coefficient_value': 0.8 #0.5
         }
         self.args = args
         super().__init__(config)
 
         self.config = (config)
+        self._load_weights = load_weights
         print('Versionen (tf, Keras): ', tf.__version__, keras.__version__)
 
     @property
@@ -36,16 +41,33 @@ class PPO_Network(AbstractModel):
 
     def build(self):
         #input_lidar = self._create_input_layer(self._config['lidar_size'], 'lidar')
-        input_lidar = Input(shape=(161, 161, self._config['stack_size']), dtype='float32', name='input_lidar')
+        input_lidar = Input(shape=(121, 121, self._config['stack_size']), dtype='float32', name='input_lidar')
         input_orientation = self._create_input_layer(self._config['orientation_size'], 'orientation')
         input_distance = self._create_input_layer(self._config['distance_size'], 'distance')
         input_velocity = self._create_input_layer(self._config['velocity_size'], 'velocity')
 
         tag = 'body'
 
-        lidar_conv = Conv2D(32, (3, 3), activation='relu')(input_lidar) 
-        lidar_conv = Conv2D(16, (3, 3), activation='relu')(lidar_conv) 
+        if not self._load_weights:
+            lidar_conv = Conv2D(32, (3, 3), activation='relu')(input_lidar)
+            #lidar_conv = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid')(lidar_conv)
+            lidar_conv = Conv2D(64, (3, 3), activation='relu')(lidar_conv)
+            #lidar_conv = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid')(lidar_conv)
+            #lidar_conv = Conv2D(64, (3, 3), activation='relu')(lidar_conv)
+        else:
+            m = PPO_Network(None, [4], self.args, False)
+            m.build()
+            path = "models/weights.h5"
+            m.load_weights(path)
 
+            layer_names = ["conv2d", "conv2d_1", "conv2d_2"]
+            layers = [m._model.get_layer(layer_name) for layer_name in layer_names]
+
+            lidar_conv = layers[0](input_lidar)
+            lidar_pool = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid')(lidar_conv)
+            lidar_conv = layers[1](lidar_pool)
+            lidar_pool = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid')(lidar_conv)
+            lidar_conv = layers[2](lidar_pool)
 
         # Lidar Convolutions
         #lidar_conv = Conv1D(filters=16, kernel_size=7, strides=3, padding='same', activation='relu', name=tag + '_lidar-conv_1')(input_lidar) # k_s 7 (15) str 3 (7)
@@ -57,8 +79,6 @@ class PPO_Network(AbstractModel):
         lidar_flat = Flatten()(lidar_conv)
         #lidar_flat = Dense(units=160, activation='relu', name=tag + '_lidar-dense')(lidar_flat)
         lidar_flat = Dense(units=128, activation='relu', name=tag + '_lidar-dense')(lidar_flat)
-
-
 
         # Orientation 
         orientation_flat = Flatten(name=tag + 'orientation_flat')(input_orientation)
@@ -74,7 +94,6 @@ class PPO_Network(AbstractModel):
         #concated_some = Dense(units=96, activation='relu')(concated_some)
         concated_some = Concatenate()([orientation_flat, distance_flat, velocity_flat, lidar_flat])
         densed = Dense(units=128, activation='relu')(concated_some)
-
 
         # Concat the layers
         # concated = Concatenate(name=tag + '_concat')([lidar_flat, concated_some])
@@ -103,7 +122,9 @@ class PPO_Network(AbstractModel):
         return Input(shape=(input_dim, self._config['stack_size']), dtype='float32', name='input_' + name)
 
     def _select_action_continuous_clip(self, mu, var):
-        return tf.clip_by_value(mu + tf.exp(var) * tf.random.normal(tf.shape(mu),0, 0.5), -1.0, 1.0)
+        # original, if you restore this. set variance_start in continous layer to 0.0
+        return tf.clip_by_value(mu + tf.exp(var) * tf.random.normal(tf.shape(mu), 0, 0.5), -1.0, 1.0)
+        #return tf.clip_by_value(tf.random.normal(tf.shape(mu), mu, tf.sqrt(var)), -1.0, 1.0)
         #return clip(mu + exp(var) * random_normal(shape(mu)), -1.0, 1.0)
 
     def _neglog_continuous(self, action, mu, var):
@@ -111,6 +132,8 @@ class PPO_Network(AbstractModel):
                 + 0.5 * tf.math.log(2.0 * np.pi) * tf.cast(tf.shape(action)[-1], dtype='float32') \
                 + tf.reduce_sum(var, axis=-1)
 
+    def entropy_continuous(self, var):
+        return tf.reduce_sum(var + 0.5 * tf.math.log(2.0 * np.pi * np.e), axis=-1)
 
     def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
         '''
@@ -142,8 +165,7 @@ class PPO_Network(AbstractModel):
         """
         selected_action = self._select_action_continuous_clip(mu, var)
         neglog = self._neglog_continuous(selected_action, mu, var)
-        return (selected_action, neglog)        
-
+        return selected_action, neglog
 
 
     def train(self, observation, action):
@@ -161,16 +183,21 @@ class PPO_Network(AbstractModel):
         neglogp = self._neglog_continuous(action['action'], net_out[0], net_out[1])
             
         ratio = tf.exp(action['neglog_policy'] - neglogp)
+
         pg_loss = -action['advantage'] * ratio
         pg_loss_cliped = -action['advantage'] * tf.clip_by_value(ratio, 1.0 - self._config['clipping_range'], 1.0 + self._config['clipping_range'])
 
         pg_loss = tf.reduce_mean(tf.maximum(pg_loss, pg_loss_cliped))
+
+        #pg_loss = action['advantage'] * ratio
+        #pg_loss_cliped = action['advantage'] * tf.clip_by_value(ratio, 1.0 - self._config['clipping_range'], 1.0 + self._config['clipping_range'])
+        #pg_loss = tf.reduce_mean(tf.minimum(pg_loss, pg_loss_cliped))
+
         value_loss = keras.losses.mean_squared_error(net_out[2], tf.convert_to_tensor(action['reward'], dtype='float32')) * self._config['coefficient_value']
         
-        loss = pg_loss + value_loss
+        loss = pg_loss + value_loss - self.entropy_continuous(net_out[1])
 
         return loss
-
 
     def load_weights(self, path):
         self._model.load_weights(path)
@@ -200,7 +227,7 @@ class PPO_Network(AbstractModel):
             net_out = self._model([np.expand_dims(laser, 0), np.expand_dims(orientation, 0), np.expand_dims(distance, 0),
                                    np.expand_dims(velocity, 0)])
 
-            return (net_out[0], None)
+            return net_out[0], None
 
     def print_summary(self):
         self._model.summary()
@@ -257,7 +284,6 @@ class PPO_Network(AbstractModel):
         # For visualization purpose, we will also normalize the heatmap between 0 & 1
         heatmap = tf.maximum(heatmap, 0) / tf.math.reduce_max(heatmap)
         return (preds, heatmap.numpy())
-
 
     def create_perception_model(self):
         layer_name = 'body_lidar-dense'

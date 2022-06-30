@@ -63,7 +63,7 @@ class Simulation:
             # r.reset(self.stations, self.level[level][0][i], self.level[level][1][i]+(random.uniform(0, math.pi)*self.noiseStrength[level]), self.level[level][3])
             r.reset(self.stations, random_pos[i], self.level[1][i]+(random.uniform(0, math.pi)), self.level[3])
 
-        print("Reset Robot lidar ", end='')
+        print("Resetting the simulation ", end='')
         counter = 1
         for robot in self.robots:
             print('.', end='')
@@ -80,7 +80,6 @@ class Simulation:
                 self.simulationWindow.setStations(self.stations)
                 self.simulationWindow.setCircleWalls(self.circleWalls)
                 self.simulationWindow.resize()
-        
 
     def isFarEnoughApart(self, stationPositions, randPos, minDist):
         """
@@ -134,12 +133,10 @@ class Simulation:
                 tarLinVel, tarAngVel = robotsTarVels[i]
                 self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
 
-
         if self.args.mode == 'sonar':
             for i, robot in enumerate(self.robots):
                 if robotsTarVels[i] != (None, None):
                     robot.lidarReading(self.robots, stepsLeft, self.steps)
-
 
         robotsTerminations = []
         for robot in self.robots:

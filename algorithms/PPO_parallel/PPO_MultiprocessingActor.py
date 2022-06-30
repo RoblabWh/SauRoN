@@ -29,7 +29,7 @@ class PPO_MultiprocessingActor:
 
         # Ray setzt die env Variable für die GPU selber (auf 0 bei einer GPU).
         # GPU kann nicht fehlerfrei genutzt werden und bietet teilweise keinen Leistungsvorteil während der Simulation
-        os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
+        # os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 
         self.args = args
         self.app = app
@@ -121,7 +121,6 @@ class PPO_MultiprocessingActor:
                 actions, states, rewards, done, evaluation, neglog = robotDataBackup
                 robotsData.append(([actions[-1]],[states[-1]],[rewards[-1]], [done[-1]], [evaluation[-1]], [neglog[-1]]))
 
-
         while stepsLeft > 0 and not self.env.is_done():
 
             # Actor picks an action (following the policy)
@@ -156,7 +155,7 @@ class PPO_MultiprocessingActor:
                     #print(robotsData[i][1][-1])
                     robotsData[i][2].append(r)
                     robotsData[i][3].append(done)
-                    if (done):
+                    if done:
                         reachedPickup = dataCurrentFrameSingleRobot[3]
                         self.reachedTargetList.pop(0)
                         self.reachedTargetList.append(reachedPickup)
@@ -171,7 +170,6 @@ class PPO_MultiprocessingActor:
         self.cumul_reward += cumul_reward
 
         return self.restructureRobotsData(robotsData)
-
 
     def restructureRobotsData(self, robotsData):
         """
@@ -242,8 +240,6 @@ class PPO_MultiprocessingActor:
 
             discounted_rewardsTmp = self.discount(rewards)
             discounted_rewards = np.concatenate((discounted_rewards, discounted_rewardsTmp))
-
-
 
             advantagesTmp = discounted_rewardsTmp - np.reshape(evaluations, len(evaluations))
             advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)

@@ -6,15 +6,19 @@ from algorithms.PPO_parallel.PPO_MultiprocessingActor import PPO_Multiprocessing
 from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from tqdm import tqdm
 import yaml
-import tensorflow
+import tensorflow as tf
 from random import shuffle
 import multiprocessing
+import copy
 
 
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
 sys.path.insert(1, '/')
 
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 class PPO_Multi:
     """
@@ -57,7 +61,7 @@ class PPO_Multi:
 
             self.load_net(loadWeightsPath)
             loadedWeights = self.network.get_model_weights()
-            tensorflow.keras.backend.clear_session()
+            tf.keras.backend.clear_session()
 
         #Create parallel workers with own environment
         envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
@@ -157,10 +161,12 @@ class PPO_Multi:
 
         self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(self.successrate))
         self.tqdm_e.refresh()
+        print("")
 
         done = False
         if self.currentEpisode == self.args.nb_episodes:
             # If all episodes are finished the current weights are saved
+            print("saving network weights under ", (self.args.path + 'PPO' + self.args.model_timestamp))
             self.save_weights(self.multiActors[0], self.args.path)
 
             for actor in self.multiActors:
@@ -183,14 +189,29 @@ class PPO_Multi:
         :param master_env: refernce to the master environment whose network will be used for training
         :return: trained weights
         """
-        shuffle(obs_lists)
-        numb_of_exp_per_batch = len(obs_lists)# int(1024 / (self.args.train_interval  * 4))
+
+        # shuffle dicts
+        length = len(obs_lists[0]['action'])
+        idx = np.arange(0, length)
+        np.random.shuffle(idx)
+        obs_lists_copy = copy.deepcopy(obs_lists)
+
+        for key in obs_lists[0].keys():
+            if key == 'observation':
+                for keyobs in obs_lists[0][key].keys():
+                    for i, val in enumerate(obs_lists[0][key][keyobs]):
+                        obs_lists_copy[0][key][keyobs][idx[i]] = val
+            else:
+                for i, val in enumerate(obs_lists[0][key]):
+                    obs_lists_copy[0][key][idx[i]] = val
+
+        numb_of_exp_per_batch = len(obs_lists_copy) # int(1024 / (self.args.train_interval  * 4))
 
         obs_concatinated = []
         current_index = -1
 
         weights = None
-        for i, exp in enumerate(obs_lists):
+        for i, exp in enumerate(obs_lists_copy):
             if(i%numb_of_exp_per_batch == 0):
                 current_index += 1
                 obs_concatinated.append(exp)

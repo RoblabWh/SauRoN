@@ -76,11 +76,11 @@ class ControlWindow(QtWidgets.QMainWindow):
                 self.successLabel.setText("Success insgesamt: " + str(successAll))
 
                 if self.done is False:
-                    print("Episode not done")
+                    #print("Training not done")
                     self.worker.update(self.model, self.tableWidget.getVisibilites())
                     self.worker.go = True
                 else:
-                    #print("Episode done")
+                    print("Training done")
                     self.startbutton.setEnabled(True)
                     self.startbutton.setText("Ende")
                     self.startbutton.disconnect()
