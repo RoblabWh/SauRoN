@@ -11,7 +11,7 @@
    viewBox="0 0 623.619 283.46"
    enable-background="new 0 0 623.619 283.46"
    xml:space="preserve"
-   sodipodi:docname="onerobot.svg"
+   sodipodi:docname="tworobots.svg"
    inkscape:version="1.2 (1:1.2+202206011327+fc4e4096c5)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -28,8 +28,8 @@
    inkscape:deskcolor="#505050"
    showgrid="false"
    inkscape:zoom="1.665138"
-   inkscape:cx="315.88974"
-   inkscape:cy="221.00271"
+   inkscape:cx="315.88973"
+   inkscape:cy="221.0027"
    inkscape:window-width="1920"
    inkscape:window-height="1031"
    inkscape:window-x="0"
@@ -44,7 +44,16 @@
    stroke-miterlimit="10"
    cx="12.607795"
    cy="269.2706"
-   r="7.5" />
+   r="7.5" /><circle
+   id="start_2_1_-3"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="12.585119"
+   cy="11.384138"
+   r="7.5"
+   inkscape:transform-center-x="5.2157093"
+   inkscape:transform-center-y="204.35366" />
 
 
 
@@ -57,6 +66,13 @@
    stroke-miterlimit="10"
    cx="602.99896"
    cy="19.398916"
+   r="13.99" /><circle
+   id="goal_4_1_-6"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="603.39941"
+   cy="263.25278"
    r="13.99" />
 <polygon
    fill="none"

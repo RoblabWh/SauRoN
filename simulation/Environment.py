@@ -134,7 +134,7 @@ class Environment:
 
         reward = self.createReward(robot, distance_new, distance_old, reachedPickup, collision)
 
-        return (next_state, reward, not robot.isActive(), reachedPickup)
+        return [next_state, reward, not robot.isActive(), reachedPickup]
 
     def createReward(self, robot, dist_new, dist_old, reachedPickup, collision):
         """
@@ -151,9 +151,9 @@ class Environment:
 
         reward = 0
         r_arrival = 15
-        r_collision = -20
+        r_collision = -15
         w_g = 2.5
-        w_w = -0.1
+        w_w = -0.01
 
         if reachedPickup:
             reward += r_arrival

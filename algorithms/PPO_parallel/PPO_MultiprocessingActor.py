@@ -85,7 +85,36 @@ class PPO_MultiprocessingActor:
 
         return self.env.simulation.getLevelName()
 
-    def trainSteps(self, numbrOfSteps):
+    def get_robots_state(self):
+        # Robot 0 actions --> robotsData[0][0]
+        # Robot 0 observations  --> robotsData[0][1]
+        # Robot 0 rewards --> robotsData[0][2]
+        # Robot 1 actions --> robotsData[1][0]
+        # ...
+        robotsData = []
+        old_observations = []
+
+        if self.reset:
+            # Reset episode
+            self.reset = False
+
+            for i in range(self.numbOfRobots):
+                old_observation = self.env.get_observation(i)
+                old_observations.append(np.expand_dims(np.asarray(old_observation, dtype=object), axis=0))
+
+                actions, states, rewards, env_done, evaluation, neglog = [], [], [], [], [], []
+                robotsData.append([actions, states, rewards, env_done, evaluation, neglog])
+        else:
+            old_observations = self.robotsOldStateBackup
+
+            # geht sicher schöner
+            for robotDataBackup in self.robotsDataBackup:
+                actions, states, rewards, env_done, evaluation, neglog = robotDataBackup
+                robotsData.append([[actions[-1]],[states[-1]],[rewards[-1]], [env_done[-1]], [evaluation[-1]], [neglog[-1]]])
+
+        return robotsData, old_observations
+
+    def take_steps_in_env(self, numbrOfSteps):
         """
         Executes the simulation for a given number of steps
         :param numbrOfSteps: int - determines how many steps per robot are executed
@@ -93,52 +122,27 @@ class PPO_MultiprocessingActor:
         """
         stepsLeft = numbrOfSteps
         cumul_reward = 0
-
-        if self.reset:
-            self.reset = False
-            # Reset episode
-            done = False
-
-            robotsData = []
-            robotsOldState = []
-            for i in range(self.numbOfRobots):
-                old_state = self.env.get_observation(i)
-                robotsOldState.append(np.expand_dims(np.asarray(old_state, dtype=object), axis=0))
-
-                actions, states, rewards, done, evaluation, neglog = [], [], [], [], [], []
-                robotsData.append((actions, states, rewards, done, evaluation, neglog))
-            # Robot 0 actions --> robotsData[0][0]
-            # Robot 0 states  --> robotsData[0][1]
-            # Robot 0 rewards --> robotsData[0][2]
-            # Robot 1 actions --> robotsData[1][0]
-            # ...
-        else:
-
-            robotsData = []
-            robotsOldState = self.robotsOldStateBackup
-
-            for robotDataBackup in self.robotsDataBackup:
-                actions, states, rewards, done, evaluation, neglog = robotDataBackup
-                robotsData.append(([actions[-1]],[states[-1]],[rewards[-1]], [done[-1]], [evaluation[-1]], [neglog[-1]]))
+        robotsData, old_observations = self.get_robots_state()
 
         while stepsLeft > 0 and not self.env.is_done():
 
             # Actor picks an action (following the policy)
             robotsActions = []  # actions of every Robot in the selected environment
             for i in range(0, len(robotsData)):  # iterating over every robot
+
                 if not True in robotsData[i][3]:
-                    aTmp = self.policy_action(robotsOldState[i][0])
-                    a = np.ndarray.tolist(aTmp[0].numpy())[0]  # Tensoren in Numpy in List umwandeln
-                    c = np.ndarray.tolist(aTmp[1].numpy())[0]
+                    aTmp = self.policy_action(old_observations[i][0])
+                    action = np.ndarray.tolist(aTmp[0].numpy())[0]  # Tensoren in Numpy in List umwandeln
+                    value = np.ndarray.tolist(aTmp[1].numpy())[0]
                     negL = np.ndarray.tolist(aTmp[2].numpy())
 
                 else:
-                    a = [None, None]
-                robotsActions.append(a)
+                    action = [None, None]
+                robotsActions.append(action)
 
-                if not None in a:
-                    robotsData[i][0].append(a)
-                    robotsData[i][4].append(c)
+                if not None in action:
+                    robotsData[i][0].append(action)
+                    robotsData[i][4].append(value)
                     robotsData[i][5].append(negL)
 
             # environment makes a step with selected actions
@@ -148,25 +152,110 @@ class PPO_MultiprocessingActor:
 
                 if not True in robotsData[i][3]:  # [environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
 
-                    new_state = dataCurrentFrameSingleRobot[0]
-                    r = dataCurrentFrameSingleRobot[1]
-                    done = dataCurrentFrameSingleRobot[2]
-                    robotsData[i][1].append(robotsOldState[i][0])
-                    #print(robotsData[i][1][-1])
-                    robotsData[i][2].append(r)
-                    robotsData[i][3].append(done)
-                    if done:
+                    new_observations = dataCurrentFrameSingleRobot[0]
+                    reward = dataCurrentFrameSingleRobot[1]
+                    env_done = dataCurrentFrameSingleRobot[2]
+                    robotsData[i][1].append(old_observations[i][0])
+                    robotsData[i][2].append(reward)
+                    robotsData[i][3].append(env_done)
+                    if env_done:
+                        # just for tqdm's successrate...
                         reachedPickup = dataCurrentFrameSingleRobot[3]
                         self.reachedTargetList.pop(0)
                         self.reachedTargetList.append(reachedPickup)
                     # Update current state
-                    robotsOldState[i] = new_state
+                    old_observations[i] = new_observations
                     #print(robotsData[i][1][-1])
-                    cumul_reward += r
+                    cumul_reward += reward
+            stepsLeft -= 1
+            self.steps += 1
+
+        self.robotsDataBackup = robotsData
+        self.robotsOldStateBackup = old_observations
+        self.cumul_reward += cumul_reward
+
+
+    def trainSteps(self, numbrOfSteps):
+        """
+        Executes the simulation for a given number of steps
+        :param numbrOfSteps: int - determines how many steps per robot are executed
+        :return: collected experiences of all robots acting in this simulation
+        """
+        stepsLeft = numbrOfSteps
+        cumul_reward = 0
+        robotsData = []
+        old_observations = []
+
+        if self.reset:
+            # Reset episode
+            self.reset = False
+
+            for i in range(self.numbOfRobots):
+                old_observation = self.env.get_observation(i)
+                old_observations.append(np.expand_dims(np.asarray(old_observation, dtype=object), axis=0))
+
+                actions, states, rewards, env_done, evaluation, neglog = [], [], [], [], [], []
+                robotsData.append([actions, states, rewards, env_done, evaluation, neglog])
+            # Robot 0 actions --> robotsData[0][0]
+            # Robot 0 observations  --> robotsData[0][1]
+            # Robot 0 rewards --> robotsData[0][2]
+            # Robot 1 actions --> robotsData[1][0]
+            # ...
+        else:
+            old_observations = self.robotsOldStateBackup
+
+            # geht sicher schöner
+            for robotDataBackup in self.robotsDataBackup:
+                actions, states, rewards, env_done, evaluation, neglog = robotDataBackup
+                robotsData.append([[actions[-1]],[states[-1]],[rewards[-1]], [env_done[-1]], [evaluation[-1]], [neglog[-1]]])
+
+        while stepsLeft > 0 and not self.env.is_done():
+
+            # Actor picks an action (following the policy)
+            robotsActions = []  # actions of every Robot in the selected environment
+            for i in range(0, len(robotsData)):  # iterating over every robot
+
+                if not True in robotsData[i][3]:
+                    aTmp = self.policy_action(old_observations[i][0])
+                    action = np.ndarray.tolist(aTmp[0].numpy())[0]  # Tensoren in Numpy in List umwandeln
+                    value = np.ndarray.tolist(aTmp[1].numpy())[0]
+                    negL = np.ndarray.tolist(aTmp[2].numpy())
+
+                else:
+                    action = [None, None]
+                robotsActions.append(action)
+
+                if not None in action:
+                    robotsData[i][0].append(action)
+                    robotsData[i][4].append(value)
+                    robotsData[i][5].append(negL)
+
+            # environment makes a step with selected actions
+            results = self.env.step(robotsActions)
+
+            for i, dataCurrentFrameSingleRobot in enumerate(results):
+
+                if not True in robotsData[i][3]:  # [environment] [robotsData (anstelle von OldState (1)] [Roboter] [done Liste]
+
+                    new_observations = dataCurrentFrameSingleRobot[0]
+                    reward = dataCurrentFrameSingleRobot[1]
+                    env_done = dataCurrentFrameSingleRobot[2]
+                    robotsData[i][1].append(old_observations[i][0])
+                    robotsData[i][2].append(reward)
+                    robotsData[i][3].append(env_done)
+                    if env_done:
+                        # just for tqdm's successrate...
+                        reachedPickup = dataCurrentFrameSingleRobot[3]
+                        self.reachedTargetList.pop(0)
+                        self.reachedTargetList.append(reachedPickup)
+                    # Update current state
+                    old_observations[i] = new_observations
+                    #print(robotsData[i][1][-1])
+                    cumul_reward += reward
             stepsLeft -= 1
             self.steps += 1
         self.robotsDataBackup = robotsData
-        self.robotsOldStateBackup = robotsOldState
+        self.robotsOldStateBackup = old_observations
         self.cumul_reward += cumul_reward
 
         return self.restructureRobotsData(robotsData)
@@ -241,24 +330,36 @@ class PPO_MultiprocessingActor:
             discounted_rewardsTmp = self.discount(rewards)
             discounted_rewards = np.concatenate((discounted_rewards, discounted_rewardsTmp))
 
+            # maybe ändern
+            # advantage richtig ausgerechnet?
             advantagesTmp = discounted_rewardsTmp - np.reshape(evaluations, len(evaluations))
-            advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-8)
+            advantagesTmp = (advantagesTmp - advantagesTmp.mean()) / (advantagesTmp.std() + 1e-10)
             advantages = np.concatenate((advantages, advantagesTmp))
 
         observation = {'lidar_0': statesConcatenatedL, 'orientation_to_goal': statesConcatenatedO, 'distance_to_goal': statesConcatenatedD, 'velocity': statesConcatenatedV}
         exp = {'observation': observation, 'action':actionsConcatenated, 'neglog_policy':neglogsConcatinated, 'reward':discounted_rewards, 'advantage':advantages}
         return exp
 
-    def discount(self, r):
+    def discount(self, rewards):
         """
         Compute the gamma-discounted rewards over an episode
         """
-        discounted_r = np.zeros_like(r, dtype=float)
-        cumul_r = 0
-        for t in reversed(range(0, len(r))):
-            cumul_r = r[t] + cumul_r * self.gamma
-            discounted_r[t] = cumul_r
-        return discounted_r
+        t_steps = np.arange(len(rewards))
+        r = rewards * self.gamma ** t_steps
+        r = r[::-1].cumsum()[::-1] / self.gamma ** t_steps
+
+        return r
+
+    # def discount(self, r):
+    #     """
+    #     Compute the gamma-discounted rewards over an episode
+    #     """
+    #     discounted_r = np.zeros_like(r, dtype=float)
+    #     cumul_r = 0
+    #     for t in reversed(range(0, len(r))):
+    #         cumul_r = r[t] + cumul_r * self.gamma
+    #         discounted_r[t] = cumul_r
+    #     return discounted_r
 
     def resetActor(self):
         self.env.reset(self.level)
@@ -284,11 +385,11 @@ class PPO_MultiprocessingActor:
         laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,2)
         #print("laser_state1: ", laser.shape)
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0,1)
-        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0,1)
+        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))])
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0,1)
         #print(np.array([laser]))
         #print(np.array([laser]).shape)
-        return self.network.predict(np.array([laser]), np.array([orientation]), np.array([distance]), np.array([velocity]))  # Liste mit [actions, value]
+        return self.network.predict(np.array([laser]), np.array([orientation]), np.array([[distance]]), np.array([velocity]))  # Liste mit [actions, value]
 
     def train_net_obs(self, obs_with_actions_list):
         """
@@ -306,7 +407,7 @@ class PPO_MultiprocessingActor:
     def showWindow(self):
         self.env.simulation.simulationWindow.show()
         self.env.simulation.hasUI = True
-        
+
     def hideWindow(self):
         self.env.simulation.simulationWindow.hide()
         self.env.simulation.hasUI = False

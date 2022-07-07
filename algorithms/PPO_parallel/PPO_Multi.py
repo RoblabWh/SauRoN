@@ -83,6 +83,29 @@ class PPO_Multi:
 
         return False, levelNames
 
+    def train_with_feedback_for_n_steps2(self, visibleLevels):
+
+        for actor in self.activeActors:
+            actor.take_steps_in_env(self.args.train_interval)
+            training_data = actor.restructureRobotsData(actor.robotsDataBackup)
+
+            for i in range(10):
+                trainedWeights = self.train_models_with_obs(training_data, self.multiActors[0])
+                self.multiActors[0].setWeights(trainedWeights)
+                observations = actor.robotsOldStateBackup
+                for i, robot_data in enumerate(actor.robotsDataBackup):
+                    robot_observations = robot_data[1]
+                    for j, obs in enumerate(robot_observations):
+                        aTmp = actor.policy_action(obs)
+                        value = np.ndarray.tolist(aTmp[1].numpy())[0]
+                        negL = np.ndarray.tolist(aTmp[2].numpy())
+                        ## fuuuuck fuck
+                        training_data['neglog_policy'][(i+1)*j] = negL
+
+                net_outs = []
+                for obs in observations:
+                    net_out = actor.policy_action(obs[0])
+                    net_outs.append(net_out)
 
     def train_with_feedback_for_n_steps(self, visibleLevels):
         """
@@ -94,10 +117,15 @@ class PPO_Multi:
 
         activeActors = self.activeActors
         if len(activeActors) > 0:
-            allTrainingResults = [actor.trainSteps(self.args.train_interval) for actor in activeActors] #Liste mit Listen von Observations aus den Environments
-            trainedWeights = self.train_models_with_obs(allTrainingResults, self.multiActors[0])
+            activeActor = activeActors[0]
+            #allTrainingResults = [actor.trainSteps(self.args.train_interval) for actor in activeActors] #Liste mit Listen von Observations aus den Environments
+            allTrainingResults = activeActor.trainSteps(self.args.train_interval) #Liste mit Listen von Observations aus den Environments
 
-            self.multiActors[0].setWeights(trainedWeights)
+            # aufjed ändern
+            # train for K steps??
+            for i in range(5):
+                trainedWeights = self.train_models_with_obs(allTrainingResults, self.multiActors[0])
+                self.multiActors[0].setWeights(trainedWeights)
             #for actor in self.multiActors[1:len(self.multiActors)]:
             #    actor.setWeights(trainedWeights)
 
@@ -191,27 +219,28 @@ class PPO_Multi:
         """
 
         # shuffle dicts
-        length = len(obs_lists[0]['action'])
+        length = len(obs_lists['action'])
         idx = np.arange(0, length)
         np.random.shuffle(idx)
         obs_lists_copy = copy.deepcopy(obs_lists)
 
-        for key in obs_lists[0].keys():
+        for key in obs_lists.keys():
             if key == 'observation':
-                for keyobs in obs_lists[0][key].keys():
-                    for i, val in enumerate(obs_lists[0][key][keyobs]):
-                        obs_lists_copy[0][key][keyobs][idx[i]] = val
+                for keyobs in obs_lists[key].keys():
+                    for i, val in enumerate(obs_lists[key][keyobs]):
+                        obs_lists_copy[key][keyobs][idx[i]] = val
             else:
-                for i, val in enumerate(obs_lists[0][key]):
-                    obs_lists_copy[0][key][idx[i]] = val
+                for i, val in enumerate(obs_lists[key]):
+                    obs_lists_copy[key][idx[i]] = val
 
-        numb_of_exp_per_batch = len(obs_lists_copy) # int(1024 / (self.args.train_interval  * 4))
+        #numb_of_exp_per_batch = len(obs_lists_copy) # int(1024 / (self.args.train_interval  * 4))
+        numb_of_exp_per_batch = 1
 
         obs_concatinated = []
         current_index = -1
 
         weights = None
-        for i, exp in enumerate(obs_lists_copy):
+        for i, exp in enumerate([obs_lists_copy]):
             if(i%numb_of_exp_per_batch == 0):
                 current_index += 1
                 obs_concatinated.append(exp)

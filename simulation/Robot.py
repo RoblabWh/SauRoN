@@ -1,6 +1,7 @@
 import math
 from simulation.Borders import ColliderLine
 from pynput.keyboard import Listener
+import copy
 
 import os
 import time
@@ -273,7 +274,6 @@ class Robot:
         else:
             self.posSensor = [posX, posY]
 
-
     def calculatePieSlice(self, dirV):
         offsetSensorDist = self.offsetSensorDist
         posX, posY = self.getPosX(), self.getPosY()
@@ -420,7 +420,7 @@ class Robot:
         self.debugAngle = orientation
 
 
-        distancesNorm = distances* self.maxDistFact
+        distancesNorm = distances * self.maxDistFact
         distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)
         distancesNorm = distancesNorm.tolist()
 
@@ -436,7 +436,7 @@ class Robot:
                 scanplot.append([x, y])
         scanplot = np.asarray(scanplot)
         theta = np.radians(-135)
-        rotMatrix = np.array([[np.cos(theta), -np.sin(theta)], 
+        rotMatrix = np.array([[np.cos(theta), -np.sin(theta)],
                     [np.sin(theta),  np.cos(theta)]])
         data = np.dot(scanplot, rotMatrix.T)
 
@@ -459,7 +459,10 @@ class Robot:
 
         currentTimestep = (steps - stepsLeft)/steps
 
-        frame_lidar = [image.tolist(), orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
+        distance = (distance * self.maxDistFact)
+        if distance > 1 : distance = 1
+
+        frame_lidar = [image, orientation, [distance], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
         #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateLidar) >= self.time_steps:
@@ -469,7 +472,8 @@ class Robot:
             self.stateLidar.append(frame_lidar)
 
     def get_state_lidar(self, reversed = False):
-        tmp_state = self.stateLidar.copy()
+        #tmp_state = self.stateLidar.copy()
+        tmp_state = copy.deepcopy(self.stateLidar)
         if reversed:
              tmp_state.reverse()
         return tmp_state
@@ -492,15 +496,15 @@ class Robot:
         """
         self.netOutput = (tarAngVel, tarLinVel)
 
-        if(tarLinVel>1 or tarAngVel>1 or tarLinVel<-1 or tarLinVel<-1):
-            print("velocitiy recieved from neural net is out of  bounds. Fix your Cide!  ", tarLinVel, tarAngVel)
+        if(tarLinVel > 1 or tarAngVel > 1 or tarLinVel < -1 or tarLinVel <- 1):
+            print("velocitiy recieved from neural net is out of  bounds. Fix your Code!  ", tarLinVel, tarAngVel)
         tarLinVel = max(-1, min(tarLinVel, 1))
         tarAngVel = max(-1, min(tarAngVel, 1))
 
         # mapping the net output range of -1 to 1 onto the velocitiy ranges of the robot
         # tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + (self.maxAngularVelocity + self.minAngularVelocity) * 0.5
         tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)
-        tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity)* 0.5) + ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)
+        tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity) * 0.5) + ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)
 
         # beschleunigen
         if linVel < tarLinVel:
@@ -526,8 +530,9 @@ class Robot:
             if angVel < self.minAngularVelocity:
                 angVel = self.minAngularVelocity
 
-        #return tarLinVel, tarAngVel
-        return linVel, angVel
+        # maybe ändern
+        return tarLinVel, tarAngVel
+        #return linVel, angVel
 
     def directionVectorFromAngle(self, direction):
         """

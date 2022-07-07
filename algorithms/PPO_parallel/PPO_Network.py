@@ -49,11 +49,11 @@ class PPO_Network(AbstractModel):
         tag = 'body'
 
         if not self._load_weights:
-            lidar_conv = Conv2D(32, (3, 3), activation='relu')(input_lidar)
-            #lidar_conv = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid')(lidar_conv)
-            lidar_conv = Conv2D(64, (3, 3), activation='relu')(lidar_conv)
-            #lidar_conv = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid')(lidar_conv)
-            #lidar_conv = Conv2D(64, (3, 3), activation='relu')(lidar_conv)
+            lidar_conv = Conv2D(16, (16, 16), strides=(8, 8), activation='relu')(input_lidar)
+            lidar_conv = Conv2D(32, (8, 8), strides=(4, 4), activation='relu')(lidar_conv)
+            #lidar_conv = Conv2D(16, (16, 16), strides=(4, 4), activation='relu')(input_lidar)
+            #lidar_conv = Conv2D(32, (8, 8), strides=(2, 2), activation='relu')(lidar_conv)
+            #lidar_conv = Conv2D(128, (3, 3), activation='relu')(lidar_conv)
         else:
             m = PPO_Network(None, [4], self.args, False)
             m.build()
@@ -94,6 +94,7 @@ class PPO_Network(AbstractModel):
         #concated_some = Dense(units=96, activation='relu')(concated_some)
         concated_some = Concatenate()([orientation_flat, distance_flat, velocity_flat, lidar_flat])
         densed = Dense(units=128, activation='relu')(concated_some)
+        densed = Dense(units=128, activation='relu')(densed)
 
         # Concat the layers
         # concated = Concatenate(name=tag + '_concat')([lidar_flat, concated_some])
@@ -106,11 +107,14 @@ class PPO_Network(AbstractModel):
         # Policy
         mu = Dense(units=2, activation='tanh', name='output_mu')(densed)
         var = ContinuousLayer(name='output_continous')(mu) # Lambda(lambda x: x/5)
+        #var = ContinuousLayer(name='output_continous')(densed) # Lambda(lambda x: x/5)
 
         # Value
-        value = Dense(units=128, activation='relu', name='out_value_dense')(densed)
-        # value = Dense(units=5, activation='relu', name='out_value_dense')(densed)
-        value = Dense(units=1, activation=None, use_bias=False, name='out_value')(value)
+        value1 = Dense(units=128, activation='relu', name='out_value1_dense')(densed)
+        value2 = Dense(units=128, activation='relu', name='out_value2_dense')(densed)
+        concat_value = Concatenate()([value1, value2])
+        value = Dense(units=1, activation='relu', name='out_value_dense')(concat_value)
+        #value = Dense(units=1, activation=None, use_bias=False, name='out_value')(value)
         
         # Create the Keras Model
         self._model = KerasModel(inputs=[input_lidar, input_orientation, input_distance, input_velocity], outputs=[mu, var, value])
@@ -123,6 +127,7 @@ class PPO_Network(AbstractModel):
 
     def _select_action_continuous_clip(self, mu, var):
         # original, if you restore this. set variance_start in continous layer to 0.0
+        #var = tf.Variable([-6, -6], dtype='float32') # why variance so biggg???
         return tf.clip_by_value(mu + tf.exp(var) * tf.random.normal(tf.shape(mu), 0, 0.5), -1.0, 1.0)
         #return tf.clip_by_value(tf.random.normal(tf.shape(mu), mu, tf.sqrt(var)), -1.0, 1.0)
         #return clip(mu + exp(var) * random_normal(shape(mu)), -1.0, 1.0)
@@ -167,11 +172,11 @@ class PPO_Network(AbstractModel):
         neglog = self._neglog_continuous(selected_action, mu, var)
         return selected_action, neglog
 
-
     def train(self, observation, action):
         logging.info(f'Tracing train function of {self.__class__}')
         with tf.GradientTape() as tape:
             net_out = self._model(observation.values())
+            #net_out = self._model(observation['lidar_0'], observation['orientation_to_goal'], observation['distance_to_goal'], observation['velocity'])
             loss = self.calculate_loss(observation, action, net_out)
 
         gradients = tape.gradient(loss, self._model.trainable_variables)

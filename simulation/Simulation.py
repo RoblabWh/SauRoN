@@ -64,11 +64,8 @@ class Simulation:
             r.reset(self.stations, random_pos[i], self.level[1][i]+(random.uniform(0, math.pi)), self.level[3])
 
         print("Resetting the simulation ", end='')
-        counter = 1
         for robot in self.robots:
             print('.', end='')
-            #print("Reset lidar: {}".format(counter))
-            counter += 1
             robot.resetLidar(self.robots)
         print("")
 
@@ -129,7 +126,7 @@ class Simulation:
         self.simTime += self.simTimestep
 
         for i, robot in enumerate(self.robots):
-            if robot.isActive() == True:
+            if robot.isActive():
                 tarLinVel, tarAngVel = robotsTarVels[i]
                 self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
 

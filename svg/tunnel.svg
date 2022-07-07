@@ -69,11 +69,11 @@
    cy="145.7778"
    r="13.99" />
 
-<rect x="2.563" y="90" fill="none" stroke="#000000" stroke-miterlimit="10" width="618" height="85"/>
 <polygon
    fill="none"
    stroke="#000000"
    stroke-miterlimit="10"
-   points="619.977,279.897 619.977,2.563 3.31,2.563 3.31,279.563 "
+   points="619.977,176 619.977,90.9 3.31,90.9 3.31,176 "
    id="polygon10" />
+
 </svg>
