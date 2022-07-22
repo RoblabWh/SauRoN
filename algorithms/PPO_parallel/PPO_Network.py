@@ -98,6 +98,8 @@ class PPO_Network():
         return 0.5 * torch.sum(torch.square(action - mu) / torch.exp(var)) + 0.5 * math.log(2.0 * torch.pi) \
                * torch.FloatTensor([2.0]) + torch.sum(var)
 
+    def entropy_continuous(selfself, var):
+        return torch.sum(var + 0.5 * math.log(2.0 * torch.pi * math.e), axis=-1)
 
 
     def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
@@ -117,11 +119,11 @@ class PPO_Network():
 
         net_out = self._model.forward(obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity)
 
-        del obs_laser
-        del obs_orientation_to_goal
-        del obs_distance_to_goal
-        del obs_velocity
-        torch.cuda.empty_cache()
+        #del obs_laser
+        #del obs_orientation_to_goal
+        #del obs_distance_to_goal
+        #del obs_velocity
+        #torch.cuda.empty_cache()
 
         selected_action, neglog = self._postprocess_predictions(*net_out)
 
@@ -143,7 +145,7 @@ class PPO_Network():
         """
         selected_action = self._select_action_continuous_clip(mu, var)
         neglog = self._neglog_continuous(selected_action, mu, var)
-        return (selected_action, neglog)        
+        return selected_action, neglog
 
 
 
@@ -217,7 +219,8 @@ class PPO_Network():
         :param s: state of a single robot
         :return: [actions]
         """
-        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 1)
+        #laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 1)
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 2)
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0, 1)
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0, 1)
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0, 1)

@@ -6,6 +6,7 @@ from algorithms.PPO_parallel.PPO_MultiprocessingActor import PPO_Multiprocessing
 from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from tqdm import tqdm
 import yaml
+import copy
 from random import shuffle
 from multiprocessing import Process
 
@@ -54,8 +55,6 @@ class PPO_Multi:
                 loadWeightsPath += '.pt'
 
             self.load_net(loadWeightsPath)
-           # loadedWeights = self.network.get_model_weights()
-           # tensorflow.keras.backend.clear_session()
 
         #Create parallel workers with own environment
         envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
@@ -80,6 +79,29 @@ class PPO_Multi:
 
         return False, levelNames
 
+    def train_with_feedback_for_n_steps2(self, visibleLevels):
+
+        for actor in self.activeActors:
+            actor.take_steps_in_env(self.args.train_interval)
+            training_data = actor.restructureRobotsData(actor.robotsDataBackup)
+
+            for i in range(10):
+                trainedWeights = self.train_models_with_obs(training_data, self.multiActors[0])
+                self.multiActors[0].setWeights(trainedWeights)
+                observations = actor.robotsOldStateBackup
+                for i, robot_data in enumerate(actor.robotsDataBackup):
+                    robot_observations = robot_data[1]
+                    for j, obs in enumerate(robot_observations):
+                        aTmp = actor.policy_action(obs)
+                        value = np.ndarray.tolist(aTmp[1].numpy())[0]
+                        negL = np.ndarray.tolist(aTmp[2].numpy())
+                        ## fuuuuck fuck
+                        training_data['neglog_policy'][(i + 1) * j] = negL
+
+                net_outs = []
+                for obs in observations:
+                    net_out = actor.policy_action(obs[0])
+                    net_outs.append(net_out)
 
     def train_with_feedback_for_n_steps(self, visibleLevels):
         """
@@ -91,8 +113,7 @@ class PPO_Multi:
 
         activeActors = self.activeActors
         if len(activeActors) > 0:
-
-            allTrainingResults = [actor.trainSteps(self.args.train_interval) for actor in activeActors] #Liste mit Listen von Observations aus den Environments
+            allTrainingResults = [actor.trainSteps(self.args.train_interval) for actor in activeActors][0] #Liste mit Listen von Observations aus den Environments
             trainedWeights = self.train_models_with_obs(allTrainingResults, self.multiActors[0])
 
             self.multiActors[0].setWeights(trainedWeights)
@@ -164,6 +185,7 @@ class PPO_Multi:
         done = False
         if self.currentEpisode == self.args.nb_episodes:
             # If all episodes are finished the current weights are saved
+            print("saving network weights under ", (self.args.path + 'PPO' + self.args.model_timestamp))
             self.save_weights(self.multiActors[0], self.args.path)
 
             for actor in self.multiActors:
@@ -186,8 +208,22 @@ class PPO_Multi:
         :param master_env: refernce to the master environment whose network will be used for training
         :return: trained weights
         """
-        shuffle(obs_lists)
-        numb_of_exp_per_batch = len(obs_lists)# int(1024 / (self.args.train_interval  * 4))
+        length = len(obs_lists['action'])
+        idx = np.arange(0, length)
+        np.random.shuffle(idx)
+        obs_lists_copy = copy.deepcopy(obs_lists)
+
+        for key in obs_lists.keys():
+            if key == 'observation':
+                for keyobs in obs_lists[key].keys():
+                    for i, val in enumerate(obs_lists[key][keyobs]):
+                        obs_lists_copy[key][keyobs][idx[i]] = val
+            else:
+                for i, val in enumerate(obs_lists[key]):
+                    obs_lists_copy[key][idx[i]] = val
+
+        #numb_of_exp_per_batch = len(obs_lists)# int(1024 / (self.args.train_interval  * 4))
+        numb_of_exp_per_batch = 1
 
         obs_concatinated = []
         current_index = -1
