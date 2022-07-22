@@ -9,7 +9,7 @@ import yaml
 import sys
 import datetime
 from ControlWindow import ControlWindow
-from cmd import CMD
+from cmd_local import CMD
 from algorithms.PPO_parallel.PPO_Multi import PPO_Multi
 from algorithms.utils import str2bool
 from pathlib import Path

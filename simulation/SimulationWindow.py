@@ -80,7 +80,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
         windowHeight = self.geometry().height()
         windowWidth = self.geometry().width()
 
-
         self.newScaleFactorWidth = windowWidth / self.arenaWidth
 
         self.setFixedHeight(self.arenaHeight * self.newScaleFactorWidth)

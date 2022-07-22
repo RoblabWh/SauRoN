@@ -60,7 +60,6 @@ class Environment:
 
         return 2#[0, 1, 2, 3]  # Links, Rechts, Oben, Unten
 
-
     def is_done(self):
         """
         Checks whether all robots are done (either crashed with a wall, crashed with another robot, reached their goal or
@@ -107,8 +106,6 @@ class Environment:
             (Boolean collision with walls or other robots, Boolean reached PickUp, Boolean runOutOfTime)
         :return: tuple (list next state, float reward, Boolean is robot done, Boolean has reached goal)
         """
-
-
         robot = self.simulation.robots[i]
         collision, reachedPickup, runOutOfTime = terminations
 
@@ -156,7 +153,7 @@ class Environment:
         r_arrival = 15
         r_collision = -15
         w_g = 2.5
-        w_w = -0.1
+        w_w = -0.01
 
         if reachedPickup:
             reward += r_arrival

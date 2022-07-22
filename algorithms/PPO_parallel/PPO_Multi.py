@@ -6,14 +6,19 @@ from algorithms.PPO_parallel.PPO_MultiprocessingActor import PPO_Multiprocessing
 from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from tqdm import tqdm
 import yaml
-import copy
+import tensorflow as tf
 from random import shuffle
-from multiprocessing import Process
+import multiprocessing
+import copy
+
 
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
 sys.path.insert(1, '/')
 
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 class PPO_Multi:
     """
@@ -52,24 +57,23 @@ class PPO_Multi:
         loadedWeights = None
         if loadWeightsPath != "":
             if self.args.load_weights_only:
-                loadWeightsPath += '.pt'
+                loadWeightsPath += '.h5'
 
             self.load_net(loadWeightsPath)
+            loadedWeights = self.network.get_model_weights()
+            tf.keras.backend.clear_session()
 
         #Create parallel workers with own environment
         envLevel = [int(i/(self.numbOfParallelEnvs/len(self.levelFiles))) for i in range(self.numbOfParallelEnvs)]
 
         multiActors = [PPO_MultiprocessingActor(self.app, self.act_dim, self.env_dim, self.args, loadedWeights, envLevel[0], True)]
         #startweights = multiActors[0].getWeights()
-        #for i in range(self.numbOfParallelEnvs - 1):
-        #    multiActors.append(Process(target=PPO_MultiprocessingActor, args=(self.act_dim, self.env_dim, self.args, startweights, envLevel[i + 1], False)))
         #multiActors += [PPO_MultiprocessingActor.remote(self.act_dim, self.env_dim, self.args, startweights, envLevel[i + 1], False) for i in range(self.numbOfParallelEnvs - 1)]
        
         levelNames = []
         for i, actor in enumerate(multiActors):
-            levelNames.append(envLevel[i])
             levelName = actor.setLevel(envLevel[i])
-
+            levelNames.append(levelName)
 
         self.multiActors = multiActors
         self.activeActors = multiActors
@@ -96,7 +100,7 @@ class PPO_Multi:
                         value = np.ndarray.tolist(aTmp[1].numpy())[0]
                         negL = np.ndarray.tolist(aTmp[2].numpy())
                         ## fuuuuck fuck
-                        training_data['neglog_policy'][(i + 1) * j] = negL
+                        training_data['neglog_policy'][(i+1)*j] = negL
 
                 net_outs = []
                 for obs in observations:
@@ -113,10 +117,15 @@ class PPO_Multi:
 
         activeActors = self.activeActors
         if len(activeActors) > 0:
-            allTrainingResults = [actor.trainSteps(self.args.train_interval) for actor in activeActors][0] #Liste mit Listen von Observations aus den Environments
-            trainedWeights = self.train_models_with_obs(allTrainingResults, self.multiActors[0])
+            activeActor = activeActors[0]
+            #allTrainingResults = [actor.trainSteps(self.args.train_interval) for actor in activeActors] #Liste mit Listen von Observations aus den Environments
+            allTrainingResults = activeActor.trainSteps(self.args.train_interval) #Liste mit Listen von Observations aus den Environments
 
-            self.multiActors[0].setWeights(trainedWeights)
+            # aufjed ändern
+            # train for K steps??
+            for i in range(5):
+                trainedWeights = self.train_models_with_obs(allTrainingResults, self.multiActors[0])
+                self.multiActors[0].setWeights(trainedWeights)
             #for actor in self.multiActors[1:len(self.multiActors)]:
             #    actor.setWeights(trainedWeights)
 
@@ -125,16 +134,14 @@ class PPO_Multi:
                 if actor.isActive():
                     activeActors.append(actor)
 
-            if self.args.show_simulation == "True":
-                for i, show in enumerate(visibleLevels):
-                    if show:
-                        if self.multiActors[i].has_been_closed():
-                            self.closed_windows.append(i)
-                        else:
-                            self.showEnvWindow(i)
+            for i, show in enumerate(visibleLevels):
+                if show:
+                    if self.multiActors[i].has_been_closed():
+                        self.closed_windows.append(i)
                     else:
-                        self.hideEnvWindow(i)
-
+                        self.showEnvWindow(i)
+                else:
+                    self.hideEnvWindow(i)
             self.activeActors = activeActors
             return False
         else:
@@ -144,6 +151,7 @@ class PPO_Multi:
         """
         Called after a full episode of training to collect statistics, reset the active actors list and save weights
         """
+
         self.tqdm_e.update(1)
         self.currentEpisode += 1
         #reset the active actors list for next episode
@@ -181,6 +189,7 @@ class PPO_Multi:
 
         self.tqdm_e.set_description("R avr last e: " + str(cumul_reward) + " --R avr all e : " + str(self.av_meter.avg) + " --Avr Reached Target (25 epi): " + str(self.successrate))
         self.tqdm_e.refresh()
+        print("")
 
         done = False
         if self.currentEpisode == self.args.nb_episodes:
@@ -208,6 +217,8 @@ class PPO_Multi:
         :param master_env: refernce to the master environment whose network will be used for training
         :return: trained weights
         """
+
+        # shuffle dicts
         length = len(obs_lists['action'])
         idx = np.arange(0, length)
         np.random.shuffle(idx)
@@ -222,14 +233,14 @@ class PPO_Multi:
                 for i, val in enumerate(obs_lists[key]):
                     obs_lists_copy[key][idx[i]] = val
 
-        #numb_of_exp_per_batch = len(obs_lists)# int(1024 / (self.args.train_interval  * 4))
+        #numb_of_exp_per_batch = len(obs_lists_copy) # int(1024 / (self.args.train_interval  * 4))
         numb_of_exp_per_batch = 1
 
         obs_concatinated = []
         current_index = -1
 
         weights = None
-        for i, exp in enumerate(obs_lists):
+        for i, exp in enumerate([obs_lists_copy]):
             if(i%numb_of_exp_per_batch == 0):
                 current_index += 1
                 obs_concatinated.append(exp)

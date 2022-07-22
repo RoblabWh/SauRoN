@@ -4,6 +4,7 @@ import math, random
 import numpy as np
 from simulation.Borders import ColliderLine
 
+closedFirst = False
 
 class Simulation:
     """
@@ -19,6 +20,8 @@ class Simulation:
         :param timeframes: int -
             the amount of frames saved as a history by the robots to train the neural net
         """
+        global closedFirst
+        closedFirst = False
         self.args = args
         self.levelFiles = args.level_files
         # Skalierungsparameter für Visualisierung
@@ -41,7 +44,6 @@ class Simulation:
         self.simTimestep = args.sim_time_step  # s
         # self.plotterWindow = PlotterWindow(app)
 
-    
     def reset(self, level):
         """
         Resets the simulation after each epoch
@@ -61,14 +63,11 @@ class Simulation:
             # r.reset(self.stations, self.level[level][0][i], self.level[level][1][i]+(random.uniform(0, math.pi)*self.noiseStrength[level]), self.level[level][3])
             r.reset(self.stations, random_pos[i], self.level[1][i]+(random.uniform(0, math.pi)), self.level[3])
 
-        #print("Reset Robot lidar ", end='')
-        #counter = 1
+        print("Resetting the simulation ", end='')
         for robot in self.robots:
-            #print('.', end='')
-            #print("Reset lidar: {}".format(counter))
-            #counter += 1
+            print('.', end='')
             robot.resetLidar(self.robots)
-        #print("")
+        print("")
 
         if self.hasUI and self.simulationWindow != None:
             if levelChanged:
@@ -78,7 +77,6 @@ class Simulation:
                 self.simulationWindow.setStations(self.stations)
                 self.simulationWindow.setCircleWalls(self.circleWalls)
                 self.simulationWindow.resize()
-        
 
     def isFarEnoughApart(self, stationPositions, randPos, minDist):
         """
@@ -128,22 +126,14 @@ class Simulation:
         self.simTime += self.simTimestep
 
         for i, robot in enumerate(self.robots):
-            if robot.isActive() == True:
-                tarLinVel = 0
-                tarAngVel = 0
-                #TODO:
-                try:
-                    tarLinVel, tarAngVel = robotsTarVels[i]
-                    self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
-                except:
-                    self.robots[i].update(self.simTimestep, 0.0, 0.0)
-
+            if robot.isActive():
+                tarLinVel, tarAngVel = robotsTarVels[i]
+                self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
 
         if self.args.mode == 'sonar':
             for i, robot in enumerate(self.robots):
                 if robotsTarVels[i] != (None, None):
                     robot.lidarReading(self.robots, stepsLeft, self.steps)
-
 
         robotsTerminations = []
         for robot in self.robots:

@@ -1,6 +1,7 @@
 import math
 from simulation.Borders import ColliderLine
 from pynput.keyboard import Listener
+import copy
 
 import os
 import time
@@ -191,7 +192,6 @@ class Robot:
         else:
             self.posSensor = [posX, posY]
 
-
     def resetLidar(self, robots):
         if self.args.mode == 'sonar':
             if self.hasPieSlice:
@@ -202,7 +202,6 @@ class Robot:
 
             for _ in range(self.time_steps):
                 self.lidarReading(robots, self.args.steps, self.args.steps)
-
 
     def denormdata(self, data, limits):
         """
@@ -216,7 +215,6 @@ class Robot:
             denormalized data value
         """
         return (data * (limits[1] - limits[0])) + limits[0]
-
 
     def push_frame(self, frame):
         """
@@ -232,7 +230,6 @@ class Robot:
             self.state_raw.append(frame)
         else:
             self.state_raw.append(frame)
-
 
     def update(self, dt, tarLinVel, tarAngVel):
         """
@@ -270,14 +267,12 @@ class Robot:
 
         goalDist = math.sqrt((posX-goalX)**2+(posY-goalY)**2)
 
-
         frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist, direction]
         self.push_frame(frame)
         if self.hasPieSlice:
             self.updatePieSlice(deltaDir, (deltaPosX, deltaPosY))
         else:
             self.posSensor = [posX, posY]
-
 
     def calculatePieSlice(self, dirV):
         offsetSensorDist = self.offsetSensorDist
@@ -425,36 +420,11 @@ class Robot:
         self.debugAngle = orientation
 
 
-        distancesNorm = distances* self.maxDistFact
+        distancesNorm = distances * self.maxDistFact
         distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)
         distancesNorm = distancesNorm.tolist()
 
         ## WRAP THIS
-        if False:
-            #print("dist", distances.shape)
-            #print("lidarHIts", lidarHits.shape)
-            #print(self.getDirectionAngle())
-            scanplot = []
-            for i, point in enumerate(distancesNorm):
-                    #angle_min = self.getDirectionAngle() - np.radians(135)
-                    angle_min = 0
-                    angle_increment = np.radians(0.25)
-                    angle = angle_min + (i * angle_increment)
-                    x = point * np.cos(angle)
-                    y = point * np.sin(angle)
-                    scanplot.append([x, y])
-            scanplot = np.asarray(scanplot)
-
-            idx = len(os.listdir("./scans")) - 1
-            frmt = "{0:06d}"
-            idx = frmt.format(idx)
-            file = "./scans/"+idx+"_scan.npy"
-
-            with open(file, 'wb') as f:
-                np.save(f, scanplot)
-                #print(self.getDirectionAngle())
-                np.save(f, np.array([self.getDirectionAngle()]))
-
         scanplot = []
         for i, point in enumerate(distancesNorm):
                 #angle_min = self.getDirectionAngle() - np.radians(135)
@@ -466,16 +436,17 @@ class Robot:
                 scanplot.append([x, y])
         scanplot = np.asarray(scanplot)
         theta = np.radians(-135)
-        rotMatrix = np.array([[np.cos(theta), -np.sin(theta)], 
+        rotMatrix = np.array([[np.cos(theta), -np.sin(theta)],
                     [np.sin(theta),  np.cos(theta)]])
         data = np.dot(scanplot, rotMatrix.T)
-        data = ((data * 20) + 20) * 4
+
+        data = ((data * 20) + 20) * 3
         data = data.astype(int)
-        image = np.zeros((161, 161))
+        image = np.zeros((121, 121))
 
         # comment in to print scans in folder
         # image[data[:,0], data[:,1]] = 255
-
+        #
         # im = Image.fromarray(image).convert('RGB')
         # frmt = "{0:06d}"
         # idx_ = len(os.listdir("./scans")) - 1
@@ -488,7 +459,10 @@ class Robot:
 
         currentTimestep = (steps - stepsLeft)/steps
 
-        frame_lidar = [image, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
+        distance = (distance * self.maxDistFact)
+        if distance > 1 : distance = 1
+
+        frame_lidar = [image, orientation, [distance], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
         #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateLidar) >= self.time_steps:
@@ -497,13 +471,12 @@ class Robot:
         else:
             self.stateLidar.append(frame_lidar)
 
-
     def get_state_lidar(self, reversed = False):
-        tmp_state = self.stateLidar.copy()
+        #tmp_state = self.stateLidar.copy()
+        tmp_state = copy.deepcopy(self.stateLidar)
         if reversed:
              tmp_state.reverse()
         return tmp_state
-
 
     def computeNextVelocityContinuous(self, dt, linVel, angVel, tarLinVel, tarAngVel):
         """
@@ -523,15 +496,15 @@ class Robot:
         """
         self.netOutput = (tarAngVel, tarLinVel)
 
-        if(tarLinVel>1 or tarAngVel>1 or tarLinVel<-1 or tarLinVel<-1):
-            print("velocitiy recieved from neural net is out of  bounds. Fix your Cide!  ", tarLinVel, tarAngVel)
+        if(tarLinVel > 1 or tarAngVel > 1 or tarLinVel < -1 or tarLinVel <- 1):
+            print("velocitiy recieved from neural net is out of  bounds. Fix your Code!  ", tarLinVel, tarAngVel)
         tarLinVel = max(-1, min(tarLinVel, 1))
         tarAngVel = max(-1, min(tarAngVel, 1))
 
         # mapping the net output range of -1 to 1 onto the velocitiy ranges of the robot
         # tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + (self.maxAngularVelocity + self.minAngularVelocity) * 0.5
         tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)
-        tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity)* 0.5) + ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)
+        tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity) * 0.5) + ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)
 
         # beschleunigen
         if linVel < tarLinVel:
@@ -557,9 +530,9 @@ class Robot:
             if angVel < self.minAngularVelocity:
                 angVel = self.minAngularVelocity
 
-        #return tarLinVel, tarAngVel
-        return linVel, angVel
-
+        # maybe ändern
+        return tarLinVel, tarAngVel
+        #return linVel, angVel
 
     def directionVectorFromAngle(self, direction):
         """
@@ -580,7 +553,6 @@ class Robot:
                                            (station.getPosY() - self.getPosY())**2) + self.radius
         return (distance2StationCenter < station.radius)
 
-
     def collideWithTargetStationRectengular(self):
         """
         :return: Boolean
@@ -595,7 +567,6 @@ class Robot:
                         return True
         return False
 
-
     def isInCircleOfGoal(self, r):
         """
         Checks whether the robot is closer to its target than defined by the parameter r
@@ -605,8 +576,6 @@ class Robot:
         """
         return math.sqrt((self.getPosX() - self.getGoalX()) ** 2 +
                          (self.getPosY() - self.getGoalY()) ** 2) < r
-
-
 
     def getPosX(self):
         return self.state_raw[self.time_steps - 1][0]

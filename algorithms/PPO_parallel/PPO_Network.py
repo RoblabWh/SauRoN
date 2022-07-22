@@ -22,9 +22,6 @@ class Model(nn.Module):
         # Value
         self.value_temp = nn.Linear(out_features=128, in_features=96)
         self.value = nn.Linear(out_features=1, in_features=128, bias=False)
-    
-
-
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         laser = F.relu(self.lidar_conv1(laser))
@@ -40,7 +37,7 @@ class Model(nn.Module):
         densed = F.relu(self.concated_some(concat))
 
         mu = torch.tanh(self.mu(densed))
-        var = torch.FloatTensor([0.0, 0.0]) #TODO:
+        var = torch.FloatTensor([0.0, 0.0])  # TODO:
         value = F.relu(self.value_temp(densed))
         value = F.relu(self.value(value))
 
@@ -53,7 +50,7 @@ class Model(nn.Module):
 class PPO_Network():
     NEEDED_OBSERVATIONS = ['lidar_0', 'orientation_to_goal', 'distance_to_goal', 'velocity']
 
-    def __init__(self, act_dim, env_dim, args):
+    def __init__(self, act_dim, env_dim, args, load_weights=False):
         config = {
             'lidar_size': args.number_of_rays,
             'orientation_size': 2,
@@ -79,7 +76,6 @@ class PPO_Network():
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr=self.config["learn_rate"], momentum=0.9)
         #self.optimizer = torch.optim.Adam(self._model.parameters(), lr=self.config["learn_rate"])
 
-
     @property
     def config(self):
         return self._config
@@ -93,14 +89,13 @@ class PPO_Network():
 
     def _select_action_continuous_clip(self, mu, var):
         return torch.clamp(mu + torch.exp(var) * mu.normal_(0, 0.5), -1.0, 1.0)
-        
+
     def _neglog_continuous(self, action, mu, var):
         return 0.5 * torch.sum(torch.square(action - mu) / torch.exp(var)) + 0.5 * math.log(2.0 * torch.pi) \
                * torch.FloatTensor([2.0]) + torch.sum(var)
 
     def entropy_continuous(selfself, var):
         return torch.sum(var + 0.5 * math.log(2.0 * torch.pi * math.e), axis=-1)
-
 
     def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
         '''
@@ -147,8 +142,6 @@ class PPO_Network():
         neglog = self._neglog_continuous(selected_action, mu, var)
         return selected_action, neglog
 
-
-
     def train(self, observation, action):
         self._model.train()
         logging.info(f'Tracing train function of {self.__class__}')
@@ -190,19 +183,20 @@ class PPO_Network():
         loss = 0
         for i in range(length):
             neglogp = self._neglog_continuous(torch.FloatTensor(action['action'][i]), net_out[i][0], net_out[i][1])
-                
+
             ratio = torch.exp(torch.FloatTensor([action['neglog_policy'][i]]) - neglogp)
             pg_loss = -torch.FloatTensor([action['advantage'][i]]) * ratio
-            pg_loss_cliped = -torch.FloatTensor([action['advantage'][i]]) * torch.clamp(ratio, 1.0 - self._config['clipping_range'], 1.0 + self._config['clipping_range'])
+            pg_loss_cliped = -torch.FloatTensor([action['advantage'][i]]) * torch.clamp(ratio, 1.0 - self._config[
+                'clipping_range'], 1.0 + self._config['clipping_range'])
 
             pg_loss = torch.mean(torch.max(pg_loss, pg_loss_cliped))
 
-            value_loss = self.loss_fn(net_out[0][2], torch.FloatTensor([action['reward'][i]])) * self._config['coefficient_value']
-            
+            value_loss = self.loss_fn(net_out[0][2], torch.FloatTensor([action['reward'][i]])) * self._config[
+                'coefficient_value']
+
             loss += pg_loss + value_loss
 
         return loss / length
-
 
     def load_weights(self, path):
         self._model.load_weights(path)
@@ -210,7 +204,7 @@ class PPO_Network():
     def load_model(self, path):
         # path = path.replace('\\', '/')
         print(path)
-        #self._model = tf.keras.models.load_model(path)
+        # self._model = tf.keras.models.load_model(path)
         self.print_summary()
 
     def pedict_certain(self, s):
@@ -220,7 +214,8 @@ class PPO_Network():
         :return: [actions]
         """
         #laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 1)
-        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 2)
+        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0,2)
+        #print("laser_state2: ", laser.shape)
         orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0, 1)
         distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0, 1)
         velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0, 1)
@@ -228,24 +223,22 @@ class PPO_Network():
         if self.args.lidar_activation:
             return self.make_gradcam_heatmap(laser, orientation, distance, velocity, 1)
         else:
-            net_out = self._model.forward([np.expand_dims(laser, 0).to(self.device), np.expand_dims(orientation, 0).to(self.device), np.expand_dims(distance, 0).to(self.device),
-                                   np.expand_dims(velocity, 0).to(self.device)]).to('cpu')
+            net_out = self._model([np.expand_dims(laser, 0), np.expand_dims(orientation, 0), np.expand_dims(distance, 0),
+                                   np.expand_dims(velocity, 0)])
 
-            return (net_out[0], None)
+            return net_out[0], None
 
     def print_summary(self):
         self._model.summary()
 
     def set_model_weights(self, weights):
-        self._model.load_state_dict(weights) #.set_weights(weights)
+        self._model.set_weights(weights)
 
     def get_model_weights(self):
-        return self._model.state_dict()
-        #return self._model.parameters()
+        return self._model.get_weights()
 
     def save_model_weights(self, path):
-        torch.save(self._model, path + ".pt")
-        #self._model.save_state_dict(path + '.pt')
+        self._model.save_weights(path + '.h5')
 
     def make_gradcam_heatmap(self, laser, orientation, distance, velocity, pred_index=0):
         """
@@ -277,7 +270,7 @@ class PPO_Network():
 
         # This is a vector where each entry is the mean intensity of the gradient
         # over a specific feature map channel
-        pooled_grads = torch.mean(grads, (0, 1))
+        pooled_grads = tf.reduce_mean(grads, axis=(0, 1))
 
 
         # We multiply each channel in the feature map array
@@ -291,10 +284,9 @@ class PPO_Network():
         heatmap = tf.maximum(heatmap, 0) / tf.math.reduce_max(heatmap)
         return (preds, heatmap.numpy())
 
-
     def create_perception_model(self):
         layer_name = 'body_lidar-dense'
-        proximity_predictions = nn.Linear(3, activation='softmax')(self._model.get_layer(layer_name).output)
+        proximity_predictions = Dense(3, activation='softmax')(self._model.get_layer(layer_name).output)
         self._perception_model = keras.Model([self._model.inputs],[proximity_predictions])
         self._perception_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
         print(self._perception_model.summary())
