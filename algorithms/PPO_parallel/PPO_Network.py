@@ -175,10 +175,10 @@ class PPO_Network():
         train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=worker, pin_memory=True)#, pin_memory_device=self.device)
 
         #for i, batch in enumerate(train_loader, start=0):
-        for batch in train_loader:
-            laser, dist_to_goal, ori_to_goal, velocity = batch
+        for laser, dist_to_goal, ori_to_goal, velocity in train_loader:
+            #laser, dist_to_goal, ori_to_goal, velocity = batch
             self.optimizer.zero_grad()
-            outputs = self._model(laser, dist_to_goal, ori_to_goal, velocity)
+            outputs = self._model(laser.to(self.device), dist_to_goal.to(self.device), ori_to_goal.to(self.device), velocity.to(self.device)).to('cpu')
             loss = self.calculate_loss(action, outputs)
             loss.backward()
             self.optimizer.step()
