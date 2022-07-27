@@ -217,7 +217,7 @@ class PPO_MultiprocessingActor:
 
                 if not True in robotsData[i][3]:
                     aTmp = self.policy_action(old_observations[i][0])
-                    action = np.ndarray.tolist(aTmp[0].detach().numpy())[0]  # Tensoren in Numpy in List umwandeln
+                    action = np.ndarray.tolist(aTmp[0].detach().numpy())  # Tensoren in Numpy in List umwandeln
                     value = np.ndarray.tolist(aTmp[1].detach().numpy())[0]
                     negL = np.ndarray.tolist(aTmp[2].detach().numpy())
 

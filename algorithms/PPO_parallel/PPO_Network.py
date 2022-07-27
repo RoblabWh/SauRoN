@@ -7,6 +7,18 @@ import numpy as np
 import datetime
 import math
 from torchsummary import summary
+from torch.utils.data import DataLoader, Dataset
+
+class CustomDataset(Dataset):
+    def __init__(self, laser, dist_to_goal, ori_to_goal, velocity):
+        self.data = [laser, dist_to_goal, ori_to_goal, velocity]
+        self.length_dataset = len(laser)
+
+    def __len__(self):
+        return self.length_dataset
+
+    def __getitem__(self, idx):
+        return self.data[0][idx], self.data[1][idx], self.data[2][idx], self.data[3][idx]
 
 class Model(nn.Module):
 
@@ -126,12 +138,6 @@ class PPO_Network():
 
         net_out = self._model.forward(obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity)
 
-        #del obs_laser
-        #del obs_orientation_to_goal
-        #del obs_distance_to_goal
-        #del obs_velocity
-        #torch.cuda.empty_cache()
-
         selected_action, neglog = self._postprocess_predictions(*net_out)
 
         return [selected_action, net_out[2], neglog]
@@ -163,29 +169,36 @@ class PPO_Network():
         obs_distance_to_goal = torch.from_numpy(observation['distance_to_goal']).float()
         obs_velocity = torch.from_numpy(observation['velocity']).float()
 
-        net_out = []
-        for i in range(obs_laser.shape[0]): #Just so bit to test how to minimize GPU memory usage TODO
-            laser = obs_laser[i].unsqueeze(0)
-            laser = obs_laser[i].to(self.device)
-            ori_to_goal = obs_orientation_to_goal[i].unsqueeze(0)
-            ori_to_goal = ori_to_goal.to(self.device)
-            distance_to_goal = obs_distance_to_goal[i].unsqueeze(0)
-            distance_to_goal = distance_to_goal.to(self.device)
-            velocity = obs_velocity[i].unsqueeze(0)
-            velocity = velocity.to(self.device)
+        batch_size = 30
+        worker = 1
+        dataset = CustomDataset(obs_laser, obs_distance_to_goal, obs_orientation_to_goal, obs_velocity)
+        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=worker, pin_memory=True)#, pin_memory_device=self.device)
 
-            net_out.append(self._model.forward(laser, ori_to_goal, distance_to_goal, velocity))
-            del laser
-            del ori_to_goal
-            del distance_to_goal
-            del velocity
-            torch.cuda.empty_cache()
+        #for i, batch in enumerate(train_loader, start=0):
+        for batch in train_loader:
+            laser, dist_to_goal, ori_to_goal, velocity = batch
+            self.optimizer.zero_grad()
+            outputs = self._model(laser, dist_to_goal, ori_to_goal, velocity)
+            loss = self.calculate_loss(action, outputs)
+            loss.backward()
+            self.optimizer.step()
 
+        #loss = []
+        #for i in range(obs_laser.shape[0]):
+        #    laser = obs_laser[i].unsqueeze(0)
+        #    laser = obs_laser[i].to(self.device)
+        #    ori_to_goal = obs_orientation_to_goal[i].unsqueeze(0)
+        #    ori_to_goal = ori_to_goal.to(self.device)
+        #    distance_to_goal = obs_distance_to_goal[i].unsqueeze(0)
+        #    distance_to_goal = distance_to_goal.to(self.device)
+        #    velocity = obs_velocity[i].unsqueeze(0)
+        #    velocity = velocity.to(self.device)
 
-        self.optimizer.zero_grad()
-        loss = self.calculate_loss(action, net_out)
-        loss.backward()
-        self.optimizer.step()
+        #    loss += self.calculate_loss(action, self._model.forward(laser, ori_to_goal, distance_to_goal, velocity))
+
+        #loss /= obs_laser.shape[0]
+        #loss.backward()
+        #self.optimizer.step()
 
         self._model.eval()
         return {'loss': loss}
@@ -244,10 +257,10 @@ class PPO_Network():
         self._model.summary()
 
     def set_model_weights(self, weights):
-        self._model.set_weights(weights)
+        self._model.load_state_dict(weights)
 
     def get_model_weights(self):
-        return self._model.get_weights()
+        return self._model.state_dict()
 
     def save_model_weights(self, path):
         self._model.save_weights(path + '.h5')
