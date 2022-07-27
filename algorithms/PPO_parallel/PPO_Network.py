@@ -6,14 +6,21 @@ import torch.optim as optim
 import numpy as np
 import datetime
 import math
+from torchsummary import summary
 
 class Model(nn.Module):
 
     def __init__(self, config):
         super(Model, self).__init__()
+        scan_size = 121
         self.lidar_conv1 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=3)
+        in_f = self.get_in_features(h_in=scan_size, kernel_size=3)
         self.lidar_conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3)
-        self.lidar_flat = nn.Linear(in_features=788768, out_features=160)
+        in_f = self.get_in_features(h_in=in_f, kernel_size=3)
+
+        features_scan = int(in_f ** 2 * 32)
+
+        self.lidar_flat = nn.Linear(in_features=features_scan, out_features=160)
         self.concated_some = nn.Linear(in_features=180, out_features=96)
 
         # Policy
@@ -22,6 +29,8 @@ class Model(nn.Module):
         # Value
         self.value_temp = nn.Linear(out_features=128, in_features=96)
         self.value = nn.Linear(out_features=1, in_features=128, bias=False)
+
+        print(self.summary())
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         laser = F.relu(self.lidar_conv1(laser))
@@ -43,8 +52,11 @@ class Model(nn.Module):
 
         return [mu.to('cpu'), var.to('cpu'), value.to('cpu')]
 
+    def get_in_features(self, h_in, padding=0, dilation=1, kernel_size=0, stride=1):
+        return (((h_in + 2 * padding - dilation * (kernel_size - 1) -1) / stride) + 1)
+
     def summary(self):
-        pass
+        pass #summary(self, [(1, 4, 121, 121), (1, 2, 4), (1, 1, 4, 1), (1, 2, 4)])
 
 
 class PPO_Network():
