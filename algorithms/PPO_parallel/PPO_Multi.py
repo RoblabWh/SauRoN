@@ -313,11 +313,11 @@ class PPO_Multi:
                     if not robotsDone[i]:
                         # aTmp, heatmap = self.network.policy_action_certain(robotsOldState[i][0]) #i for selected robot, 0 beause the state is encapsulated once too much
                         aTmp, heatmap = self.network.pedict_certain(robotsOldState[i][0])
-                        a = np.ndarray.tolist(aTmp[0].numpy())
+                        a = np.ndarray.tolist(aTmp[0].detach().numpy())
                     else:
                         a = [None, None]
                         heatmap = None
-                    robotsActions.append(a)
+                    robotsActions.append([a])
                     robotsHeatmaps.append(heatmap)
                 if args.lidar_activation:
                     robotsStates = env.step(robotsActions, robotsHeatmaps)

@@ -103,6 +103,7 @@ class PPO_Network():
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print("Uploading model to {}".format(self.device))
         self._model = Model(self.config).to(self.device)
+        self._model.eval()
         print("Done!")
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.SGD(self._model.parameters(), lr=self.config["learn_rate"], momentum=0.9)
@@ -242,8 +243,11 @@ class PPO_Network():
         if self.args.lidar_activation:
             return self.make_gradcam_heatmap(laser, orientation, distance, velocity, 1)
         else:
-            net_out = self._model([np.expand_dims(laser, 0), np.expand_dims(orientation, 0), np.expand_dims(distance, 0),
-                                   np.expand_dims(velocity, 0)])
+            laser = torch.from_numpy(np.expand_dims(laser, 0)).transpose(1, 3).float().to(self.device)
+            orientation = torch.from_numpy(np.expand_dims(orientation, 0)).transpose(1, 2).float().to(self.device)
+            distance = torch.from_numpy(np.expand_dims(distance, 0)).transpose(1, 2).float().to(self.device)
+            velocity = torch.from_numpy(np.expand_dims(velocity, 0)).transpose(1, 2).float().to(self.device)
+            net_out = self._model(laser, orientation, distance, velocity)
 
             return net_out[0], None
 
