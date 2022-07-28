@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Adobe Illustrator 16.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+
+<svg
+   version="1.1"
+   id="Ebene_1"
+   x="0px"
+   y="0px"
+   width="623.619px"
+   height="283.46px"
+   viewBox="0 0 623.619 283.46"
+   enable-background="new 0 0 623.619 283.46"
+   xml:space="preserve"
+   sodipodi:docname="tworobots.svg"
+   inkscape:version="1.2 (1:1.2+202206011327+fc4e4096c5)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+   id="defs15" /><sodipodi:namedview
+   id="namedview13"
+   pagecolor="#505050"
+   bordercolor="#eeeeee"
+   borderopacity="1"
+   inkscape:showpageshadow="0"
+   inkscape:pageopacity="0"
+   inkscape:pagecheckerboard="0"
+   inkscape:deskcolor="#505050"
+   showgrid="false"
+   inkscape:zoom="1.665138"
+   inkscape:cx="315.88973"
+   inkscape:cy="221.0027"
+   inkscape:window-width="1920"
+   inkscape:window-height="1031"
+   inkscape:window-x="0"
+   inkscape:window-y="25"
+   inkscape:window-maximized="1"
+   inkscape:current-layer="Ebene_1" />
+
+<circle
+   id="start_2_1_"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="12.607795"
+   cy="269.2706"
+   r="7.5" /><circle
+   id="start_2_1_-3"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="12.585119"
+   cy="11.384138"
+   r="7.5"
+   inkscape:transform-center-x="5.2157093"
+   inkscape:transform-center-y="204.35366" />
+
+
+
+
+
+<circle
+   id="goal_4_1_"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="602.99896"
+   cy="19.398916"
+   r="13.99" /><circle
+   id="goal_4_1_-6"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="603.39941"
+   cy="263.25278"
+   r="13.99" />
+<polygon
+   fill="none"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   points="619.977,279.897 619.977,2.563 3.31,2.563 3.31,279.563 "
+   id="polygon10" />
+</svg>

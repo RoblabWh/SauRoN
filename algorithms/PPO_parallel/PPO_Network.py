@@ -33,14 +33,14 @@ class Model(nn.Module):
     def __init__(self, config):
         super(Model, self).__init__()
         scan_size = 121
-        self.lidar_conv1 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=3)
-        in_f = self.get_in_features(h_in=scan_size, kernel_size=3)
-        self.lidar_conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3)
-        in_f = self.get_in_features(h_in=in_f, kernel_size=3)
+        self.lidar_conv1 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=16, stride=8)
+        in_f = self.get_in_features(h_in=scan_size, kernel_size=16, stride=8)
+        self.lidar_conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=8, stride=4)
+        in_f = self.get_in_features(h_in=in_f, kernel_size=8, stride=4)
 
-        features_scan = int(in_f ** 2 * 32)
+        features_scan = int((in_f**2) * 32)
         self.flatten = nn.Flatten()
-        self.lidar_flat = nn.Linear(in_features=features_scan, out_features=160)
+        self.lidar_flat = nn.Linear(in_features=128, out_features=160)
         self.concated_some = nn.Linear(in_features=180, out_features=96)
 
         # Policy
@@ -48,7 +48,12 @@ class Model(nn.Module):
 
         # Value
         self.value_temp = nn.Linear(out_features=128, in_features=96)
+        self.value_temp2 = nn.Linear(out_features=128, in_features=96)
         self.value = nn.Linear(out_features=1, in_features=128, bias=False)
+
+        # Var
+        self.dense_var = nn.Linear(in_features=96, out_features=2)
+        self.softmax = torch.nn.Softmax()
 
         print(self.summary())
 
@@ -66,14 +71,16 @@ class Model(nn.Module):
         densed = F.relu(self.concated_some(concat))
 
         mu = torch.tanh(self.mu(densed))
-        var = torch.FloatTensor([0.0, 0.0])  # TODO:
-        value = F.relu(self.value_temp(densed))
-        value = F.relu(self.value(value))
+        var = self.softmax(self.dense_var(densed)) #torch.FloatTensor([0.0, 0.0])  # TODO:
+        value1 = F.relu(self.value_temp(densed))
+        value2 = F.relu(self.value_temp2(densed))
+        value_cat = torch.cat([value1, value2])
+        value = F.relu(self.value(value_cat))
 
-        return [mu.to('cpu'), var, value.to('cpu')]
+        return [mu.to('cpu'), var.to('cpu'), value.to('cpu')]
 
     def get_in_features(self, h_in, padding=0, dilation=1, kernel_size=0, stride=1):
-        return (((h_in + 2 * padding - dilation * (kernel_size - 1) -1) / stride) + 1)
+        return (((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1)
 
     def summary(self):
         pass #summary(self, [(1, 4, 121, 121), (1, 2, 4), (1, 1, 4, 1), (1, 2, 4)])
@@ -201,8 +208,8 @@ class PPO_Network():
         num_iter = action.shape[0]
         loss = 0
         for i in range(0, num_iter):
-            #neglogp = self._neglog_continuous(action[i], net_out[0][i], net_out[1][i])
-            neglogp = self._neglog_continuous(action[i], net_out[0][i], torch.FloatTensor([0.0, 0.0]))
+            neglogp = self._neglog_continuous(action[i], net_out[0][i], net_out[1][i])
+            #neglogp = self._neglog_continuous(action[i], net_out[0][i], torch.FloatTensor([0.0, 0.0]))
 
             ratio = torch.exp(torch.FloatTensor([action_neglog_policy[i]]) - neglogp)
             pg_loss = -torch.FloatTensor([action_advantage[i]]) * ratio
@@ -214,7 +221,7 @@ class PPO_Network():
             value_loss = self.loss_fn(net_out[2][i], torch.FloatTensor([action_reward[i]])) * self._config[
                 'coefficient_value']
 
-            loss += pg_loss + value_loss - self.entropy_continuous(torch.FloatTensor([0.0, 0.0]))
+            loss += pg_loss + value_loss - self.entropy_continuous(net_out[1][i])
 
         return loss / num_iter
 
