@@ -127,7 +127,7 @@ class Simulation:
 
         for i, robot in enumerate(self.robots):
             if robot.isActive():
-                tarLinVel, tarAngVel = robotsTarVels[i]
+                tarLinVel, tarAngVel = robotsTarVels[i][0]
                 self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
 
         if self.args.mode == 'sonar':

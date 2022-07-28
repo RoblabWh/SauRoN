@@ -39,7 +39,7 @@ class Model(nn.Module):
         in_f = self.get_in_features(h_in=in_f, kernel_size=3)
 
         features_scan = int(in_f ** 2 * 32)
-
+        self.flatten = nn.Flatten()
         self.lidar_flat = nn.Linear(in_features=features_scan, out_features=160)
         self.concated_some = nn.Linear(in_features=180, out_features=96)
 
@@ -55,14 +55,14 @@ class Model(nn.Module):
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         laser = F.relu(self.lidar_conv1(laser))
         laser = F.relu(self.lidar_conv2(laser))
-        laser_flat = torch.flatten(laser)
+        laser_flat = self.flatten(laser)
+
         laser_flat = F.relu(self.lidar_flat(laser_flat))
 
-        orientation_flat = torch.flatten(orientation_to_goal)
-        distance_flat = torch.flatten(distance_to_goal)
-        velocity_flat = torch.flatten(velocity)
-
-        concat = torch.cat([orientation_flat, distance_flat, velocity_flat, laser_flat])
+        orientation_flat = self.flatten(orientation_to_goal)
+        distance_flat = self.flatten(distance_to_goal)
+        velocity_flat = self.flatten(velocity)
+        concat = torch.cat([orientation_flat, distance_flat, velocity_flat, laser_flat], dim=1)
         densed = F.relu(self.concated_some(concat))
 
         mu = torch.tanh(self.mu(densed))
@@ -70,7 +70,7 @@ class Model(nn.Module):
         value = F.relu(self.value_temp(densed))
         value = F.relu(self.value(value))
 
-        return [mu.to('cpu'), var.to('cpu'), value.to('cpu')]
+        return [mu.to('cpu'), var, value.to('cpu')]
 
     def get_in_features(self, h_in, padding=0, dilation=1, kernel_size=0, stride=1):
         return (((h_in + 2 * padding - dilation * (kernel_size - 1) -1) / stride) + 1)
@@ -137,11 +137,11 @@ class PPO_Network():
         For the lidar with stack_size 4 and 2 agents: (2, 1081, 4)
         '''
         logging.info(f'Tracing predict function of {self.__class__}')
-       obs_laser = torch.from_numpy(obs_laser).float()
+        obs_laser = torch.from_numpy(obs_laser).float()
         obs_laser = obs_laser.transpose(1, 3).to(self.device)
-        obs_orientation_to_goal = torch.from_numpy(obs_orientation_to_goal).float().to(self.device)
-        obs_distance_to_goal = torch.from_numpy(obs_distance_to_goal).float().to(self.device)
-        obs_velocity = torch.from_numpy(obs_velocity).float().to(self.device)
+        obs_orientation_to_goal = torch.from_numpy(obs_orientation_to_goal).transpose(1, 2).float().to(self.device)
+        obs_distance_to_goal = torch.from_numpy(obs_distance_to_goal).float()[0].to(self.device)
+        obs_velocity = torch.from_numpy(obs_velocity).transpose(1, 2).float().to(self.device)
 
         net_out = self._model.forward(obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity)
 
@@ -176,14 +176,18 @@ class PPO_Network():
         obs_distance_to_goal = torch.from_numpy(observation['distance_to_goal']).float()
         obs_velocity = torch.from_numpy(observation['velocity']).float()
 
-        batch_size = 1
+        batch_size = len(obs_laser)
         worker = 0
         dataset = CustomDataset(obs_laser, obs_distance_to_goal, obs_orientation_to_goal, obs_velocity, action)
         train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=worker, pin_memory=True)#, pin_memory_device=self.device)
 
         for laser, dist_to_goal, ori_to_goal, velocity, action, action_neglog_policy, action_advantage, action_reward in train_loader:
             self.optimizer.zero_grad()
-            outputs = self._model.forward(laser.to(self.device), dist_to_goal.to(self.device), ori_to_goal.to(self.device), velocity.to(self.device))
+            laser = laser.to(self.device)
+            dist_to_goal = dist_to_goal.to(self.device)
+            ori_to_goal = ori_to_goal.to(self.device)
+            velocity = velocity.to(self.device)
+            outputs = self._model.forward(laser, dist_to_goal, ori_to_goal, velocity)
             loss = self.calculate_loss(action, action_neglog_policy, action_advantage, action_reward, outputs)
             loss.backward()
             self.optimizer.step()
@@ -193,21 +197,24 @@ class PPO_Network():
         return {'loss': loss}
 
     def calculate_loss(self, action, action_neglog_policy, action_advantage, action_reward, net_out):
-        neglogp = self._neglog_continuous(action, net_out[0], net_out[1])
+        num_iter = action.shape[0]
+        loss = 0
+        for i in range(0, num_iter):
+            neglogp = self._neglog_continuous(action[i], net_out[i][0], net_out[i][1])
 
-        ratio = torch.exp(torch.FloatTensor([action_neglog_policy]) - neglogp)
-        pg_loss = -torch.FloatTensor([action_advantage]) * ratio
-        pg_loss_cliped = -torch.FloatTensor([action_advantage]) * torch.clamp(ratio, 1.0 - self._config[
-            'clipping_range'], 1.0 + self._config['clipping_range'])
+            ratio = torch.exp(torch.FloatTensor([action_neglog_policy[i]]) - neglogp)
+            pg_loss = -torch.FloatTensor([action_advantage[i]]) * ratio
+            pg_loss_cliped = -torch.FloatTensor([action_advantage[i]]) * torch.clamp(ratio, 1.0 - self._config[
+                'clipping_range'], 1.0 + self._config['clipping_range'])
 
-        pg_loss = torch.mean(torch.max(pg_loss, pg_loss_cliped))
+            pg_loss = torch.mean(torch.max(pg_loss, pg_loss_cliped))
 
-        value_loss = self.loss_fn(net_out[2], torch.FloatTensor([action_reward])) * self._config[
-            'coefficient_value']
+            value_loss = self.loss_fn(net_out[i][2], torch.FloatTensor([action_reward[i]])) * self._config[
+                'coefficient_value']
 
-        loss = pg_loss + value_loss - self.entropy_continuous(net_out[1])
+            loss += pg_loss + value_loss - self.entropy_continuous(net_out[i][1])
 
-        return loss
+        return loss / num_iter
 
     def load_weights(self, path):
         self._model.load_weights(path)
