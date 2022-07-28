@@ -10,15 +10,23 @@ from torchsummary import summary
 from torch.utils.data import DataLoader, Dataset
 
 class CustomDataset(Dataset):
-    def __init__(self, laser, dist_to_goal, ori_to_goal, velocity):
-        self.data = [laser, dist_to_goal, ori_to_goal, velocity]
+    def __init__(self, laser, dist_to_goal, ori_to_goal, velocity, action):
+        self.laser = laser
+        self.dist_to_goal = dist_to_goal
+        self.ori_to_goal = ori_to_goal
+        self.velocity = velocity
+        self.action = action['action']
+        self.action_neglog_policy = action['neglog_policy']
+        self.action_advantage = action['advantage']
+        self.action_reward = action['reward']
         self.length_dataset = len(laser)
 
     def __len__(self):
         return self.length_dataset
 
     def __getitem__(self, idx):
-        return self.data[0][idx], self.data[1][idx], self.data[2][idx], self.data[3][idx]
+        return self.laser[idx], self.dist_to_goal[idx], self.ori_to_goal[idx], self.velocity[idx], self.action[idx], self.action_neglog_policy[idx], self.action_advantage[idx], self.action_reward[idx]
+
 
 class Model(nn.Module):
 
@@ -169,59 +177,39 @@ class PPO_Network():
         obs_distance_to_goal = torch.from_numpy(observation['distance_to_goal']).float()
         obs_velocity = torch.from_numpy(observation['velocity']).float()
 
-        batch_size = 30
-        worker = 1
-        dataset = CustomDataset(obs_laser, obs_distance_to_goal, obs_orientation_to_goal, obs_velocity)
+        batch_size = 1
+        worker = 0
+        dataset = CustomDataset(obs_laser, obs_distance_to_goal, obs_orientation_to_goal, obs_velocity, action)
         train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=worker, pin_memory=True)#, pin_memory_device=self.device)
 
-        #for i, batch in enumerate(train_loader, start=0):
-        for laser, dist_to_goal, ori_to_goal, velocity in train_loader:
-            #laser, dist_to_goal, ori_to_goal, velocity = batch
+        for laser, dist_to_goal, ori_to_goal, velocity, action, action_neglog_policy, action_advantage, action_reward in train_loader:
             self.optimizer.zero_grad()
-            outputs = self._model(laser.to(self.device), dist_to_goal.to(self.device), ori_to_goal.to(self.device), velocity.to(self.device)).to('cpu')
-            loss = self.calculate_loss(action, outputs)
+            outputs = self._model.forward(laser.to(self.device), dist_to_goal.to(self.device), ori_to_goal.to(self.device), velocity.to(self.device))
+            loss = self.calculate_loss(action, action_neglog_policy, action_advantage, action_reward, outputs)
             loss.backward()
             self.optimizer.step()
-
-        #loss = []
-        #for i in range(obs_laser.shape[0]):
-        #    laser = obs_laser[i].unsqueeze(0)
-        #    laser = obs_laser[i].to(self.device)
-        #    ori_to_goal = obs_orientation_to_goal[i].unsqueeze(0)
-        #    ori_to_goal = ori_to_goal.to(self.device)
-        #    distance_to_goal = obs_distance_to_goal[i].unsqueeze(0)
-        #    distance_to_goal = distance_to_goal.to(self.device)
-        #    velocity = obs_velocity[i].unsqueeze(0)
-        #    velocity = velocity.to(self.device)
-
-        #    loss += self.calculate_loss(action, self._model.forward(laser, ori_to_goal, distance_to_goal, velocity))
-
-        #loss /= obs_laser.shape[0]
-        #loss.backward()
-        #self.optimizer.step()
+            self.optimizer.zero_grad()
 
         self._model.eval()
         return {'loss': loss}
 
-    def calculate_loss(self, action, net_out):
-        length = len(net_out)
-        loss = 0
-        for i in range(length):
-            neglogp = self._neglog_continuous(torch.FloatTensor(action['action'][i]), net_out[i][0], net_out[i][1])
+    def calculate_loss(self, action, action_neglog_policy, action_advantage, action_reward, net_out):
+        #float_action = torch.FloatTensor(action)
+        neglogp = self._neglog_continuous(action, net_out[0], net_out[1])
 
-            ratio = torch.exp(torch.FloatTensor([action['neglog_policy'][i]]) - neglogp)
-            pg_loss = -torch.FloatTensor([action['advantage'][i]]) * ratio
-            pg_loss_cliped = -torch.FloatTensor([action['advantage'][i]]) * torch.clamp(ratio, 1.0 - self._config[
-                'clipping_range'], 1.0 + self._config['clipping_range'])
+        ratio = torch.exp(torch.FloatTensor([action_neglog_policy]) - neglogp)
+        pg_loss = -torch.FloatTensor([action_advantage]) * ratio
+        pg_loss_cliped = -torch.FloatTensor([action_advantage]) * torch.clamp(ratio, 1.0 - self._config[
+            'clipping_range'], 1.0 + self._config['clipping_range'])
 
-            pg_loss = torch.mean(torch.max(pg_loss, pg_loss_cliped))
+        pg_loss = torch.mean(torch.max(pg_loss, pg_loss_cliped))
 
-            value_loss = self.loss_fn(net_out[0][2], torch.FloatTensor([action['reward'][i]])) * self._config[
-                'coefficient_value']
+        value_loss = self.loss_fn(net_out[2], torch.FloatTensor([action_reward])) * self._config[
+            'coefficient_value']
 
-            loss += pg_loss + value_loss
+        loss = pg_loss + value_loss - self.entropy_continuous(net_out[1])
 
-        return loss / length
+        return loss
 
     def load_weights(self, path):
         self._model.load_weights(path)
@@ -263,7 +251,7 @@ class PPO_Network():
         return self._model.state_dict()
 
     def save_model_weights(self, path):
-        self._model.save_weights(path + '.h5')
+        torch.save(self._model, path + ".pt")
 
     def make_gradcam_heatmap(self, laser, orientation, distance, velocity, pred_index=0):
         """
