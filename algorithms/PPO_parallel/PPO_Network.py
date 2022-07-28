@@ -137,8 +137,7 @@ class PPO_Network():
         For the lidar with stack_size 4 and 2 agents: (2, 1081, 4)
         '''
         logging.info(f'Tracing predict function of {self.__class__}')
-        # net_out = self._model.forward(obs_laser.to(self.device), obs_orientation_to_goal.to(self.device), obs_distance_to_goal.to(self.device), obs_velocity.to(self.device)).to('cpu')
-        obs_laser = torch.from_numpy(obs_laser).float()
+       obs_laser = torch.from_numpy(obs_laser).float()
         obs_laser = obs_laser.transpose(1, 3).to(self.device)
         obs_orientation_to_goal = torch.from_numpy(obs_orientation_to_goal).float().to(self.device)
         obs_distance_to_goal = torch.from_numpy(obs_distance_to_goal).float().to(self.device)
@@ -194,7 +193,6 @@ class PPO_Network():
         return {'loss': loss}
 
     def calculate_loss(self, action, action_neglog_policy, action_advantage, action_reward, net_out):
-        #float_action = torch.FloatTensor(action)
         neglogp = self._neglog_continuous(action, net_out[0], net_out[1])
 
         ratio = torch.exp(torch.FloatTensor([action_neglog_policy]) - neglogp)
