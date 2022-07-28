@@ -200,7 +200,8 @@ class PPO_Network():
         num_iter = action.shape[0]
         loss = 0
         for i in range(0, num_iter):
-            neglogp = self._neglog_continuous(action[i], net_out[i][0], net_out[i][1])
+            #neglogp = self._neglog_continuous(action[i], net_out[0][i], net_out[1][i])
+            neglogp = self._neglog_continuous(action[i], net_out[0][i], torch.FloatTensor([0.0, 0.0]))
 
             ratio = torch.exp(torch.FloatTensor([action_neglog_policy[i]]) - neglogp)
             pg_loss = -torch.FloatTensor([action_advantage[i]]) * ratio
@@ -209,10 +210,10 @@ class PPO_Network():
 
             pg_loss = torch.mean(torch.max(pg_loss, pg_loss_cliped))
 
-            value_loss = self.loss_fn(net_out[i][2], torch.FloatTensor([action_reward[i]])) * self._config[
+            value_loss = self.loss_fn(net_out[2][i], torch.FloatTensor([action_reward[i]])) * self._config[
                 'coefficient_value']
 
-            loss += pg_loss + value_loss - self.entropy_continuous(net_out[i][1])
+            loss += pg_loss + value_loss - self.entropy_continuous(torch.FloatTensor([0.0, 0.0]))
 
         return loss / num_iter
 
