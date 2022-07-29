@@ -6,6 +6,7 @@ from tensorflow.keras.layers import Input, Conv1D, Flatten, Concatenate, Lambda,
 from tensorflow.keras.models import Model as KerasModel
 from algorithms.PPO_parallel.continous_layer import ContinuousLayer
 import numpy as np
+from DebugListener import DebugListener
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 if len(physical_devices) > 0:
@@ -26,6 +27,8 @@ class PPO_Network(AbstractModel):
         }
         self.args = args
         super().__init__(config)
+
+        self.debugListener = DebugListener()
 
         self.config = (config)
         self._load_weights = load_weights
@@ -106,7 +109,8 @@ class PPO_Network(AbstractModel):
 
         # Policy
         mu = Dense(units=2, activation='tanh', name='output_mu')(densed)
-        var = ContinuousLayer(name='output_continous')(mu) # Lambda(lambda x: x/5)
+        var = Dense(units=2, activation='softplus', name="actor_output_sigma")(densed)
+        #var = ContinuousLayer(name='output_continous')(mu) # Lambda(lambda x: x/5)
         #var = ContinuousLayer(name='output_continous')(densed) # Lambda(lambda x: x/5)
 
         # Value
@@ -125,19 +129,40 @@ class PPO_Network(AbstractModel):
     def _create_input_layer(self, input_dim, name) -> Input:
         return Input(shape=(input_dim, self._config['stack_size']), dtype='float32', name='input_' + name)
 
-    def _select_action_continuous_clip(self, mu, var):
+    def _select_action_continuous_clip(self, mu, sigma):
+        self.debugListener.debug2(sigma)
+        return tf.clip_by_value(tf.random.normal(tf.shape(mu), mu, sigma), -1.0, 1.0)
+
+    def _select_action_continuous_clip2(self, mu, var):
         # original, if you restore this. set variance_start in continous layer to 0.0
         #var = tf.Variable([-6, -6], dtype='float32') # why variance so biggg???
-        return tf.clip_by_value(mu + tf.exp(var) * tf.random.normal(tf.shape(mu), 0, 0.5), -1.0, 1.0)
-        #return tf.clip_by_value(tf.random.normal(tf.shape(mu), mu, tf.sqrt(var)), -1.0, 1.0)
+        self.debugListener.debug2(var)
+        #return tf.clip_by_value(mu + tf.exp(var) * tf.random.normal(tf.shape(mu), 0, 0.5), -1.0, 1.0)
+        return tf.clip_by_value(tf.random.normal(tf.shape(mu), mu, tf.sqrt(var)), -1.0, 1.0)
         #return clip(mu + exp(var) * random_normal(shape(mu)), -1.0, 1.0)
 
-    def _neglog_continuous(self, action, mu, var):
+    def _neglog_continuous(self, action, mu, sigma):
+
+        variance = tf.math.square(sigma)
+        pdf = 1. / tf.math.sqrt(2. * np.pi * variance) * tf.exp(
+            -tf.math.square(action - mu) / (2. * variance))
+        pdf = tf.reduce_sum(pdf)
+        log_pdf = tf.math.log(pdf + tf.keras.backend.epsilon())
+        return log_pdf
+
+    def _neglog_continuous2(self, action, mu, var):
         return 0.5 * tf.reduce_sum(tf.square((action - mu) / tf.exp(var)), axis=-1) \
                 + 0.5 * tf.math.log(2.0 * np.pi) * tf.cast(tf.shape(action)[-1], dtype='float32') \
                 + tf.reduce_sum(var, axis=-1)
 
-    def entropy_continuous(self, var):
+    def entropy_continuous(self, sigma):
+        #loss_entropy = self.ENTROPY_LOSS_RATIO * K.backend.mean(
+        #    -(K.backend.log(2 * np.pi * variance) + 1) / 2)  # see move37 chap 9.5
+        loss_entropy = 0.0001 * tf.math.reduce_mean(- (tf.math.log(2 * np.pi * tf.math.square(sigma)) + 1) / 2)
+        #return tf.reduce_sum(tf.math.square(sigma) + 0.5 * tf.math.log(2.0 * np.pi * np.e), axis=-1)
+        return loss_entropy
+
+    def entropy_continuous2(self, var):
         return tf.reduce_sum(var + 0.5 * tf.math.log(2.0 * np.pi * np.e), axis=-1)
 
     def predict(self, obs_laser, obs_orientation_to_goal, obs_distance_to_goal, obs_velocity):
@@ -179,6 +204,7 @@ class PPO_Network(AbstractModel):
             #net_out = self._model(observation['lidar_0'], observation['orientation_to_goal'], observation['distance_to_goal'], observation['velocity'])
             loss = self.calculate_loss(observation, action, net_out)
 
+        self.debugListener.debug(loss)
         gradients = tape.gradient(loss, self._model.trainable_variables)
         self._optimizer.apply_gradients(zip(gradients, self._model.trainable_variables))
 
@@ -203,6 +229,40 @@ class PPO_Network(AbstractModel):
         loss = pg_loss + value_loss - self.entropy_continuous(net_out[1])
 
         return loss
+
+    def calculate_loss(self, observation, action, net_out):
+        neglogp = self._neglog_continuous(action['action'], net_out[0], net_out[1])
+
+        ratio = tf.exp(neglogp - action['neglog_policy'])
+
+        # surrogate1 = ratio * advantage
+        # clip_ratio = K.backend.clip(ratio, min_value=1 - self.CLIPPING_LOSS_RATIO,
+        #                             max_value=1 + self.CLIPPING_LOSS_RATIO)
+        # surrogate2 = clip_ratio * advantage
+        # # loss is the mean of the minimum of either of the surrogates
+        # loss_actor = - K.backend.mean(K.backend.minimum(surrogate1, surrogate2))
+        # # entropy bonus in accordance with move37 explanation https://youtu.be/kWHSH2HgbNQ
+        # sigma = y_pred[:, self.action_n:]
+        # variance = K.backend.square(sigma)
+        # loss_entropy = self.ENTROPY_LOSS_RATIO * K.backend.mean(
+        #     -(K.backend.log(2 * np.pi * variance) + 1) / 2)  # see move37 chap 9.5
+        # # total bonus is all losses combined. Add MSE-value-loss here as well?
+        # return loss_actor + loss_entropy
+
+        pg_loss = action['advantage'] * ratio
+        pg_loss_cliped = action['advantage'] * tf.clip_by_value(ratio, 1.0 - self._config['clipping_range'],
+                                                                 1.0 + self._config['clipping_range'])
+
+        pg_loss = tf.reduce_mean(tf.minimum(pg_loss, pg_loss_cliped))
+
+        value_loss = keras.losses.mean_squared_error(net_out[2],
+                                                     tf.convert_to_tensor(action['reward'], dtype='float32')) * \
+                                                     self._config['coefficient_value']
+
+        loss = pg_loss + value_loss - self.entropy_continuous(net_out[1])
+
+        return loss
+
 
     def load_weights(self, path):
         self._model.load_weights(path)

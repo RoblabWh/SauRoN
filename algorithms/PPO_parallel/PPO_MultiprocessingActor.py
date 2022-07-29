@@ -219,7 +219,7 @@ class PPO_MultiprocessingActor:
                     aTmp = self.policy_action(old_observations[i][0])
                     action = np.ndarray.tolist(aTmp[0].numpy())[0]  # Tensoren in Numpy in List umwandeln
                     value = np.ndarray.tolist(aTmp[1].numpy())[0]
-                    negL = np.ndarray.tolist(aTmp[2].numpy())
+                    negL = [aTmp[2].numpy()]
 
                 else:
                     action = [None, None]

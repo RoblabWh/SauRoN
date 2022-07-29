@@ -119,7 +119,7 @@ class PPO_Multi:
         if len(activeActors) > 0:
             activeActor = activeActors[0]
             #allTrainingResults = [actor.trainSteps(self.args.train_interval) for actor in activeActors] #Liste mit Listen von Observations aus den Environments
-            allTrainingResults = activeActor.trainSteps(self.args.train_interval) #Liste mit Listen von Observations aus den Environments
+            allTrainingResults = activeActor.trainSteps(self.args.train_interval) # Liste mit Listen von Observations aus den Environments
 
             # aufjed ändern
             # train for K steps??

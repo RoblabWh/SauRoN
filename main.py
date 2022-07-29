@@ -19,7 +19,7 @@ import warnings
 training = True  # if training is set to false the trained model defined in the variable filename is loaded
 load_old = False
 #filename = "A2C_Network_2021-11-22--00-12_200"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
-filename = "best_2"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
+filename = "PPO_22-07-14--14-10"    # enter the filename of the model file that you want to load (without .h5 or .yml, can be found in models folder)
 manual = False   # manual lets you control a robot with w, a, s, d. (!!Maybe useful for testing rewards in combination with a print ;)  you should also lower the amount of robots during manual testing.)
 
 # HYPERPARAMETERS
