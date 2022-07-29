@@ -8,6 +8,7 @@ import datetime
 import math
 from torchsummary import summary
 from torch.utils.data import DataLoader, Dataset
+from DebugListener import DebugListener
 
 class CustomDataset(Dataset):
     def __init__(self, laser, dist_to_goal, ori_to_goal, velocity, action):
@@ -55,7 +56,7 @@ class Model(nn.Module):
 
         # Var
         self.dense_var = nn.Linear(in_features=96, out_features=2)
-        self.softmax = torch.nn.Softmax()
+        self.softplus = torch.nn.Softplus()
 
         print(self.summary())
 
@@ -73,7 +74,7 @@ class Model(nn.Module):
         densed = F.relu(self.concated_some(concat))
 
         mu = torch.tanh(self.mu(densed))
-        var = self.softmax(self.dense_var(densed)) #torch.FloatTensor([0.0, 0.0])  # TODO:
+        var = self.softplus(self.dense_var(densed)) #torch.FloatTensor([0.0, 0.0])  # TODO:
         value1 = F.relu(self.value_temp(densed))
         value2 = F.relu(self.value_temp2(densed))
         value_cat = torch.cat([value1, value2], dim=1)
@@ -115,6 +116,7 @@ class PPO_Network():
         self._model.train()
         print("Done!")
         self.criterion = nn.CrossEntropyLoss()
+        self.debugListener = DebugListener()
         #self.optimizer = torch.optim.SGD(self._model.parameters(), lr=self.config["learn_rate"], momentum=0.9)
         self.optimizer = torch.optim.Adam(self._model.parameters(), lr=self.config["learn_rate"])
 
@@ -130,6 +132,7 @@ class PPO_Network():
         pass
 
     def _select_action_continuous_clip(self, mu, sigma):
+        self.debugListener.debug2(sigma)
         return torch.clamp(torch.normal(mu, sigma), -1.0, 1.0)
         #return torch.clamp(mu + torch.exp(var) * mu.normal_(0, 0.5), -1.0, 1.0)
 
