@@ -3,7 +3,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
-from algorithms.PPO_parallel.PPO_Multi import PPO_Multi
+from PPO.PPO_Multi import PPO_Multi
 
 
 class ControlWindow(QtWidgets.QMainWindow):

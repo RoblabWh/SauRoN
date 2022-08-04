@@ -36,10 +36,9 @@ class RobotRepresentation:
         self.lineColorNegAct = QColor.fromHsv((colorIndex * 39) % 255, 255, brightness-100)
 
 
-
     def paint(self, painter, sonarShowing):
 
-        if self.mode == 'sonar' and self.isActive:
+        if self.isActive:
             if sonarShowing:
 
                 if self.hasPieSlice and self.sensorPos != None:

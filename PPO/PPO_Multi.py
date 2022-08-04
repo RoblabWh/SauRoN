@@ -1,16 +1,16 @@
+from Environment.Environment import Environment
+from utils import AverageMeter
+from PPO.PPOAlgorithm import PPO_Network
+from PPO.PPO_MultiprocessingActor import PPO_MultiprocessingActor
+
 import numpy as np
 from PyQt5.QtWidgets import QApplication
-from simulation.Environment import Environment
-from algorithms.utils  import AverageMeter
-from algorithms.PPO_parallel.PPO_MultiprocessingActor import PPO_MultiprocessingActor
-from algorithms.PPO_parallel.PPO_Network import PPO_Network
 from tqdm import tqdm
 import yaml
 import tensorflow as tf
 from random import shuffle
 import multiprocessing
 import copy
-
 
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
@@ -82,30 +82,6 @@ class PPO_Multi:
         self.tqdm_e = tqdm(range(self.args.nb_episodes), desc='Score', leave=True, unit=" episodes")
 
         return False, levelNames
-
-    def train_with_feedback_for_n_steps2(self, visibleLevels):
-
-        for actor in self.activeActors:
-            actor.take_steps_in_env(self.args.train_interval)
-            training_data = actor.restructureRobotsData(actor.robotsDataBackup)
-
-            for i in range(10):
-                trainedWeights = self.train_models_with_obs(training_data, self.multiActors[0])
-                self.multiActors[0].setWeights(trainedWeights)
-                observations = actor.robotsOldStateBackup
-                for i, robot_data in enumerate(actor.robotsDataBackup):
-                    robot_observations = robot_data[1]
-                    for j, obs in enumerate(robot_observations):
-                        aTmp = actor.policy_action(obs)
-                        value = np.ndarray.tolist(aTmp[1].numpy())[0]
-                        negL = np.ndarray.tolist(aTmp[2].numpy())
-                        ## fuuuuck fuck
-                        training_data['neglog_policy'][(i+1)*j] = negL
-
-                net_outs = []
-                for obs in observations:
-                    net_out = actor.policy_action(obs[0])
-                    net_outs.append(net_out)
 
     def train_with_feedback_for_n_steps(self, visibleLevels):
         """
@@ -332,69 +308,3 @@ class PPO_Multi:
                     robotsOldState[i] = new_state
                     if not robotsDone[i]:
                         robotsDone[i] = done
-
-    def trainPerception(self, args, env_dim):
-        """
-        Trains a pretrained network to detect other robots or obstacles in a straight corridor in front of the robot.
-        During the training only the convolutional layers are optimized
-
-        :param args: args defined in main
-        :param env_dim:
-        """
-        app = QApplication(sys.argv)
-        env = Environment(app, args, env_dim, 0)
-        env.simulation.showWindow(app)
-        self.network.create_perception_model()
-
-        inspectedRobot = 0
-
-        traingDataStates = []
-        traingDataProximityCategories = []
-
-        for e in range(10):
-            env.reset(e % len(env.simulation.levelFiles))
-            robotsCount = env.simulation.getCurrentNumberOfRobots()
-            robotsOldState = [np.expand_dims(env.get_observation(i), axis=0) for i in range(0, robotsCount)]
-            robotsDone = [False for i in range(0, robotsCount)]
-
-            while not env.is_done():
-                robotsActions = []
-                # Actor picks an action (following the policy)
-                proximityCategory = 0
-                for i in range(0, robotsCount):
-                    if not robotsDone[i]:
-                        aTmp, heatmap = self.network.pedict_certain(robotsOldState[i][0])
-                        a = np.ndarray.tolist(aTmp[0].numpy())
-                        traingDataProximityCategories += [env.getMinDistOnVirtualRoadway(i)]
-
-                        traingDataStates += [robotsOldState[i][0]]
-                        if i == inspectedRobot:
-                            proximityCategory = self.network.make_proximity_prediction(robotsOldState[i][0])[0].numpy()
-
-                    else:
-                        a = [None, None]
-                    robotsActions.append(a)
-
-                robotsStates = env.step(robotsActions, activations = None, proximity = proximityCategory)
-
-                rewards = ''
-                for i, stateData in enumerate(robotsStates):
-                    new_state = stateData[0]
-                    rewards += (str(i) + ': ' + str(stateData[1]) + '   ')
-                    done = stateData[2]
-                    robotsOldState[i] = new_state
-                    if not robotsDone[i]:
-                        robotsDone[i] = done
-            if (e+1)%3 == 0:
-                self.network.train_perception(traingDataStates, traingDataProximityCategories)
-                traingDataStates = []
-                traingDataProximityCategories = []
-
-                #Saving enhanced perception model
-                path = self.args.path
-                path += 'PPO_enhanced_perception' + self.args.model_timestamp
-                self.network.save_model_weights(path)
-                data = [self.args]
-                with open(path + '.yml', 'w') as outfile:
-                    print("save model at episode ", e)
-                    yaml.dump(data, outfile, default_flow_style=False)

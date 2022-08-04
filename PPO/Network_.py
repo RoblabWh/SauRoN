@@ -8,7 +8,7 @@ import datetime
 import math
 from torchsummary import summary
 from torch.utils.data import DataLoader, Dataset
-from DebugListener import DebugListener
+#from DebugListener import DebugListener
 
 class CustomDataset(Dataset):
     def __init__(self, laser, dist_to_goal, ori_to_goal, velocity, action):
@@ -116,7 +116,7 @@ class PPO_Network():
         self._model.train()
         print("Done!")
         self.criterion = nn.CrossEntropyLoss()
-        self.debugListener = DebugListener()
+        #self.debugListener = DebugListener()
         #self.optimizer = torch.optim.SGD(self._model.parameters(), lr=self.config["learn_rate"], momentum=0.9)
         self.optimizer = torch.optim.Adam(self._model.parameters(), lr=self.config["learn_rate"])
 
@@ -132,7 +132,7 @@ class PPO_Network():
         pass
 
     def _select_action_continuous_clip(self, mu, sigma):
-        self.debugListener.debug2(sigma)
+        #self.debugListener.debug2(sigma)
         return torch.clamp(torch.normal(mu, sigma), -1.0, 1.0)
         #return torch.clamp(mu + torch.exp(var) * mu.normal_(0, 0.5), -1.0, 1.0)
 
@@ -212,7 +212,7 @@ class PPO_Network():
             outputs = self._model.forward(laser, dist_to_goal, ori_to_goal, velocity)
             loss = self.calculate_loss(action, action_neglog_policy, action_advantage, action_reward, outputs)
             self.optimizer.zero_grad()
-            loss.sum().backward()
+            loss.mean().backward()
             self.optimizer.step()
 
         self._model.eval()
@@ -280,96 +280,3 @@ class PPO_Network():
 
     def save_model_weights(self, path):
         torch.save(self._model, path + ".pt")
-
-    def make_gradcam_heatmap(self, laser, orientation, distance, velocity, pred_index=0):
-        """
-
-        :param laser:
-        :param orientation:
-        :param distance:
-        :param velocity:
-        :param pred_index: 0 for activations of linVel 1 for activations of angular velocity
-        :return:
-        """
-
-        # First, we create a model that maps the input image to the activations
-        # of the last conv layer as well as the output predictions
-        grad_model = tf.keras.models.Model(
-            [self._model.inputs], [self._model.get_layer('body_lidar-conv_2').output, self._model.output[0]])
-
-        # Then, we compute the gradient of the top predicted class for our input image
-        # with respect to the activations of the last conv layer
-        with tf.GradientTape() as tape:
-            last_conv_layer_output, preds = grad_model([np.expand_dims(laser, 0), np.expand_dims(orientation, 0), np.expand_dims(distance, 0), np.expand_dims(velocity, 0)])
-            class_channel = preds[:, pred_index]
-
-
-        # This is the gradient of the output neuron (top predicted or chosen)
-        # with regard to the output feature map of the last conv layer
-        grads = tape.gradient(class_channel, last_conv_layer_output)
-
-
-        # This is a vector where each entry is the mean intensity of the gradient
-        # over a specific feature map channel
-        pooled_grads = tf.reduce_mean(grads, axis=(0, 1))
-
-
-        # We multiply each channel in the feature map array
-        # by "how important this channel is" with regard to the top predicted class
-        # then sum all the channels to obtain the heatmap class activation
-        last_conv_layer_output = last_conv_layer_output[0]
-        heatmap = last_conv_layer_output @ pooled_grads[..., tf.newaxis]
-        heatmap = tf.squeeze(heatmap)
-
-        # For visualization purpose, we will also normalize the heatmap between 0 & 1
-        heatmap = tf.maximum(heatmap, 0) / tf.math.reduce_max(heatmap)
-        return (preds, heatmap.numpy())
-
-    def create_perception_model(self):
-        layer_name = 'body_lidar-dense'
-        proximity_predictions = Dense(3, activation='softmax')(self._model.get_layer(layer_name).output)
-        self._perception_model = keras.Model([self._model.inputs],[proximity_predictions])
-        self._perception_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
-        print(self._perception_model.summary())
-
-    def make_proximity_prediction(self, s):
-        laser = np.array([np.array(s[i][0]) for i in range(0, len(s))]).swapaxes(0, 1)
-        orientation = np.array([np.array(s[i][1]) for i in range(0, len(s))]).swapaxes(0, 1)
-        distance = np.array([np.array(s[i][2]) for i in range(0, len(s))]).swapaxes(0, 1)
-        velocity = np.array([np.array(s[i][3]) for i in range(0, len(s))]).swapaxes(0, 1)
-
-        proximity_categories = self._perception_model([np.expand_dims(laser, axis=0), np.expand_dims(orientation, axis=0), np.expand_dims(distance, axis=0), np.expand_dims(velocity, axis=0)])
-        #
-        # proximity_categories = proximityFunc(tf.convert_to_tensor(np.expand_dims(laser, axis=0), dtype='float64'),
-        #                                     tf.convert_to_tensor(np.expand_dims(orientation, axis=0), dtype='float64'),
-        #                                     tf.convert_to_tensor(np.expand_dims(distance, axis=0), dtype='float64'),
-        #                                     tf.convert_to_tensor(np.expand_dims(velocity, axis=0), dtype='float64'))
-        return proximity_categories
-
-    def train_perception(self, states, proximity_categories):
-        inputsL = np.array([])
-        inputsO = np.array([])
-        inputsD = np.array([])
-        inputsV = np.array([])
-        inputs = np.array([])
-        for i, s in enumerate(states):
-            laser = np.array([np.array(s[i][0]).astype('float32') for i in range(0, len(s))]).swapaxes(0, 1)
-            orientation = np.array([np.array(s[i][1]).astype('float32') for i in range(0, len(s))]).swapaxes(0, 1)
-            distance = np.array([np.array(s[i][2]).astype('float32') for i in range(0, len(s))]).swapaxes(0, 1)
-            velocity = np.array([np.array(s[i][3]).astype('float32') for i in range(0, len(s))]).swapaxes(0, 1)
-
-            if i == 0:
-                inputsL = np.array([laser])
-                inputsO = np.array([orientation])
-                inputsD = np.array([distance])
-                inputsV = np.array([velocity])
-            else:
-                # inputs = np.append(inputs, np.array([laser, orientation, distance, velocity]))
-                inputsL = np.append(inputsL, np.expand_dims(laser, axis=0), axis=0)
-                inputsO = np.append(inputsO, np.expand_dims(orientation, axis=0), axis=0)
-                inputsD = np.append(inputsD, np.expand_dims(distance, axis=0), axis=0)
-                inputsV = np.append(inputsV, np.expand_dims(velocity, axis=0), axis=0)
-
-        proximity_categories = np.asarray(proximity_categories)
-        self._perception_model.fit([inputsL, inputsO, inputsD, inputsV], proximity_categories, shuffle=True)
-

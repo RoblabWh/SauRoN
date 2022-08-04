@@ -1,10 +1,10 @@
-import simulation.SVGParser as SVGParser
-import simulation.SimulationWindow as SimulationWindow
+import Environment.SVGParser as SVGParser
+from Environment.Components.Border import ColliderLine
+import Visualization.EnvironmentWindow as SimulationWindow
 import math, random
 import numpy as np
-from simulation.Borders import ColliderLine
-
 closedFirst = False
+
 
 class Simulation:
     """
@@ -28,7 +28,7 @@ class Simulation:
         self.scaleFactor = args.scale_factor
         self.steps = args.steps
         self.hasUI = app is not None
-        
+
         # Parameter width & length über args
 
         self.simulationWindow = None
@@ -37,7 +37,8 @@ class Simulation:
         self.reset(level)
 
         if self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls, self.circleWalls, self.arenaSize)
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls,
+                                                                      self.circleWalls, self.arenaSize)
             self.simulationWindow.show()
 
         self.simTime = 0  # s
@@ -61,7 +62,7 @@ class Simulation:
         random_pos = random.sample(self.level[0], k=len(self.level[0]))
         for i, r in enumerate(self.robots):
             # r.reset(self.stations, self.level[level][0][i], self.level[level][1][i]+(random.uniform(0, math.pi)*self.noiseStrength[level]), self.level[level][3])
-            r.reset(self.stations, random_pos[i], self.level[1][i]+(random.uniform(0, math.pi)), self.level[3])
+            r.reset(self.stations, random_pos[i], self.level[1][i] + (random.uniform(0, math.pi)), self.level[3])
 
         print("Resetting the simulation ", end='')
         for robot in self.robots:
@@ -91,8 +92,8 @@ class Simulation:
 
         """
         for pos in stationPositions:
-            dist = math.sqrt((pos[0]-randPos[0])**2+(pos[1]-randPos[1])**2)
-            if(dist<minDist):
+            dist = math.sqrt((pos[0] - randPos[0]) ** 2 + (pos[1] - randPos[1]) ** 2)
+            if (dist < minDist):
                 return False
         return True
 
@@ -125,15 +126,26 @@ class Simulation:
         # self.plotterWindow.plot(self.robot.getAngularVelocity(), self.simTime)
         self.simTime += self.simTimestep
 
+        # schöner ??!
+        relativeIndices = []
+        missing = 0
         for i, robot in enumerate(self.robots):
             if robot.isActive():
-                tarLinVel, tarAngVel = robotsTarVels[i][0]
+                relativeIndices.append(i - missing)
+            else:
+                missing += 1
+                relativeIndices.append(None)
+        ####
+
+        for i, robot in enumerate(self.robots):
+            if robot.isActive():
+                tarLinVel, tarAngVel = robotsTarVels[relativeIndices[i]]
                 self.robots[i].update(self.simTimestep, tarLinVel, tarAngVel)
 
-        if self.args.mode == 'sonar':
-            for i, robot in enumerate(self.robots):
-                if robotsTarVels[i] != (None, None):
-                    robot.lidarReading(self.robots, stepsLeft, self.steps)
+        for i, robot in enumerate(self.robots):
+            # watch this ?!
+            if robot.isActive():
+                robot.lidarReading(self.robots, stepsLeft, self.steps)
 
         robotsTerminations = []
         for robot in self.robots:
@@ -145,7 +157,7 @@ class Simulation:
                 if stepsLeft <= 0:
                     runOutOfTime = True
 
-                if(np.min(robot.collisionDistances) <= robot.radius + 0.0 ):
+                if (np.min(robot.collisionDistances) <= robot.radius + 0.0):
                     collision = True
 
                 if robot.collideWithTargetStationCircular():
@@ -163,14 +175,15 @@ class Simulation:
             if self.simulationWindow != None:
                 for i, robot in enumerate(self.robots):
                     activationsR = activations[i] if activations is not None else None
-                    self.simulationWindow.updateRobot(robot, i, self.steps-stepsLeft, activationsR)
+                    self.simulationWindow.updateRobot(robot, i, self.steps - stepsLeft, activationsR)
                 self.simulationWindow.updateTrafficLights(proximity)
                 self.simulationWindow.paintUpdates()
         return robotsTerminations
 
     def showWindow(self, app):
         if not self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args, self.walls, self.circleWalls, self.arenaSize)
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args,
+                                                                      self.walls, self.circleWalls, self.arenaSize)
             self.simulationWindow.show()
             self.hasUI = True
 
@@ -193,7 +206,9 @@ class Simulation:
         self.stations = selectedLevel.getStations()
         self.walls = selectedLevel.getWalls()
         self.circleWalls = selectedLevel.getCircleWalls()
-        self.level = (selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls, self.circleWalls)
+        self.level = (
+        selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls,
+        self.circleWalls)
         self.levelID = levelID
         self.arenaSize = selectedLevel.getArenaSize()
 

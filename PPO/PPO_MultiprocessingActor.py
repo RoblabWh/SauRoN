@@ -1,8 +1,8 @@
+from Environment.Environment import Environment
+from PPO.PPOAlgorithm import PPO_Network
+
 import numpy as np
 import yaml
-
-from simulation.Environment import Environment
-from algorithms.PPO_parallel.PPO_Network import PPO_Network
 import os
 
 
@@ -173,7 +173,6 @@ class PPO_MultiprocessingActor:
         self.robotsDataBackup = robotsData
         self.robotsOldStateBackup = old_observations
         self.cumul_reward += cumul_reward
-
 
     def trainSteps(self, numbrOfSteps):
         """

@@ -128,7 +128,6 @@ class CircleWall:
         self.posY = cy
         self.radius = r
 
-
     def paint(self, painter, scaleFactor):
         self.scaleFactor = scaleFactor
         painter.setPen(QPen(Qt.black, 3))

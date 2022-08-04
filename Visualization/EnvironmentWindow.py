@@ -1,12 +1,12 @@
 import time
 
+import Visualization.Components.RobotRepresentation as RobotRepresentation
+from Environment.Components.Station import Station
+
 from PyQt5.QtGui import QPainter, QFont, QPen, QColor
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QSlider, QHBoxLayout
 from PyQt5 import QtWidgets
-import simulation.RobotRepresentation as RobotRepresentation
-from simulation.Station import Station
-import DistanceGraph
 import numpy as np
 
 
@@ -69,8 +69,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.monitorGraph = None
 
         self.app.aboutToQuit.connect(self.closeEvent)
-        if (False):
-            self.monitorGraph = DistanceGraph.DistanceGraph(application)
 
     def resizeEvent(self, event):
         QtWidgets.QMainWindow.resizeEvent(self, event)
@@ -116,7 +114,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         spacingWidget = QWidget(self)
         spacingWidget.setLayout(QHBoxLayout())
 
-        if self.mode == 'sonar':
+        if True:
             self.btSonar = QPushButton(self)
             self.btSonar.clicked.connect(self.clickedSonar)
             self.btSonar.setFixedWidth(120)
@@ -199,11 +197,11 @@ class SimulationWindow(QtWidgets.QMainWindow):
         elif not self.simShowing:
             self.btSimulation.setText("Visualisierung fortsetzen")
 
-        if self.mode == 'sonar':
-            if self.sonarShowing:
-                self.btSonar.setText("Sonar ausblenden")
-            elif not self.sonarShowing:
-                self.btSonar.setText("Sonar einblenden")
+
+        if self.sonarShowing:
+            self.btSonar.setText("Sonar ausblenden")
+        elif not self.sonarShowing:
+            self.btSonar.setText("Sonar einblenden")
 
     def paintEvent(self, event):
 
@@ -311,11 +309,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
                                               self.simShowing, robot.isActive(), robot.debugAngle, activations,
                                               robot.getPieSliceWalls(), robot.posSensor)
         if self.simShowing:
-            observatedRobot = 0
-            if self.monitorGraph != None and num == observatedRobot:
-                distancesNormRob0 = robot.stateLidar[len(robot.stateLidar) - 1][0]
-                self.monitorGraph.plot(range(len(distancesNormRob0)), distancesNormRob0)
-
             self.lbSteps.setText(str(stepsLeft))
 
     def paintUpdates(self):
