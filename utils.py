@@ -38,7 +38,7 @@ def _scan1DTo2D(lidarHits):
     image[data[:, 0], data[:, 1]] = 1
     return image
 
-def scan1DTo2D(distancesNorm, img_size, print=False):
+def scan1DTo2D(distancesNorm, img_size, print=True):
     scanplot = []
     angle_min = 0
     angle_increment = np.radians(0.25)

@@ -106,9 +106,9 @@ class Memory:   # collected from old policy
         del self.logprobs[:]
 
 
-def train(env_name, env, render, solved_reward,
+def train(env_name, env, render, solved_reward, input_style,
     max_episodes, max_timesteps, update_timestep, action_std, K_epochs, eps_clip,
-    gamma, lr, betas, ckpt_folder, restore, scan_size=121, tb=False, print_interval=10, save_interval=100):
+    gamma, lr, betas, ckpt_folder, restore, scan_size=121, print_interval=10, save_interval=100):
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
     if restore:
@@ -116,7 +116,7 @@ def train(env_name, env, render, solved_reward,
 
     memory = SwarmMemory(env.getNumberOfRobots())
 
-    ppo = PPO(scan_size, action_std, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
+    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
 
     running_reward, avg_length, time_step = 0, 0, 0
 
@@ -139,7 +139,7 @@ def train(env_name, env, render, solved_reward,
                 memory.clear_memory()
                 time_step = 0
 
-            running_reward += np.sum(rewards)
+            running_reward += np.mean(rewards)
             if render:
                 env.render()
 
@@ -166,14 +166,14 @@ def train(env_name, env, render, solved_reward,
             running_reward, avg_length = 0, 0
 
 
-def test(env_name, env, render, action_std, K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes, scan_size=121):
+def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes, scan_size=121):
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
     print('Load checkpoint from {}'.format(ckpt))
 
     memory = SwarmMemory(env.getNumberOfRobots())
 
-    ppo = PPO(scan_size, action_std, lr, betas, gamma, K_epochs, eps_clip, restore=True, ckpt=ckpt)
+    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=True, ckpt=ckpt)
 
     episode_reward, time_step = 0, 0
     avg_episode_reward, avg_length = 0, 0
@@ -185,7 +185,7 @@ def test(env_name, env, render, action_std, K_epochs, eps_clip, gamma, lr, betas
             time_step += 1
 
             # Run old policy
-            actions = ppo.select_action_certain(states, memory)
+            actions = ppo.select_action(states, memory)
 
             states, rewards, dones, _ = env.step(actions)
             memory.insertIsTerminal(dones)

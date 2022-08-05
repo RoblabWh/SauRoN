@@ -10,15 +10,23 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class Inputspace(nn.Module):
 
-    def __init__(self, scan_size):
+    def __init__(self, scan_size, input_style):
         super(Inputspace, self).__init__()
 
-        self.lidar_conv1 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=16, stride=8)
-        in_f = self.get_in_features(h_in=scan_size, kernel_size=16, stride=8)
-        self.lidar_conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=8, stride=4)
-        in_f = self.get_in_features(h_in=in_f, kernel_size=8, stride=4)
+        if input_style == 'image':
+            self.lidar_conv1 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=16, stride=4)
+            in_f = self.get_in_features(h_in=scan_size, kernel_size=16, stride=4)
+            self.lidar_conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2)
+            in_f = self.get_in_features(h_in=in_f, kernel_size=4, stride=2)
+            features_scan = (int(in_f) ** 2) * 32
+        else:
+            self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=16, kernel_size=3, stride=2)
+            in_f = self.get_in_features(h_in=scan_size, kernel_size=3, stride=2)
+            self.lidar_conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=2, stride=2)
+            in_f = self.get_in_features(h_in=in_f, kernel_size=2, stride=2)
+            features_scan = (int(in_f)) * 32
 
-        features_scan = (int(in_f) ** 2) * 32
+
         self.flatten = nn.Flatten()
         self.lidar_flat = nn.Linear(in_features=features_scan, out_features=160)
         self.concated_some = nn.Linear(in_features=180, out_features=96)
@@ -43,9 +51,9 @@ class Inputspace(nn.Module):
 
 
 class Actor(nn.Module):
-    def __init__(self, scan_size):
+    def __init__(self, scan_size, input_style):
         super(Actor, self).__init__()
-        self.Inputspace = Inputspace(scan_size)
+        self.Inputspace = Inputspace(scan_size, input_style)
 
         # Mu
         self.mu = nn.Linear(in_features=96, out_features=2)
@@ -61,9 +69,9 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    def __init__(self, scan_size):
+    def __init__(self, scan_size, input_style):
         super(Critic, self).__init__()
-        self.Inputspace = Inputspace(scan_size)
+        self.Inputspace = Inputspace(scan_size, input_style)
         # Value
         self.value_temp = nn.Linear(out_features=128, in_features=96)
         self.value_temp2 = nn.Linear(out_features=128, in_features=96)
@@ -79,12 +87,12 @@ class Critic(nn.Module):
 
 
 class ActorCritic(nn.Module):
-    def __init__(self, action_std, scan_size):
+    def __init__(self, action_std, scan_size, input_style):
         super(ActorCritic, self).__init__()
         action_dim = 2
         self.cnt = 0
-        self.actor = Actor(scan_size)
-        self.critic = Critic(scan_size)
+        self.actor = Actor(scan_size, input_style)
+        self.critic = Critic(scan_size, input_style)
 
         # TODO statische var testen
         #self.action_var = torch.full((action_dim, ), action_std * action_std).to(device)
@@ -134,7 +142,7 @@ class ActorCritic(nn.Module):
 
 
 class PPO:
-    def __init__(self, scan_size, action_std, lr, betas, gamma, K_epochs, eps_clip, restore=False, ckpt=None):
+    def __init__(self, scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=False, ckpt=None):
         self.lr = lr
         self.betas = betas
         self.gamma = gamma
@@ -142,14 +150,14 @@ class PPO:
         self.K_epochs = K_epochs
 
         # current policy
-        self.policy = ActorCritic(action_std, scan_size).to(device)
+        self.policy = ActorCritic(action_std, scan_size, input_style).to(device)
         if restore:
             pretained_model = torch.load(ckpt, map_location=lambda storage, loc: storage)
             self.policy.load_state_dict(pretained_model)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, betas=betas)
 
         # old policy: initialize old policy with current policy's parameter
-        self.old_policy = ActorCritic(action_std, scan_size).to(device)
+        self.old_policy = ActorCritic(action_std, scan_size, input_style).to(device)
         self.old_policy.load_state_dict(self.policy.state_dict())
 
         self.MSE_loss = nn.MSELoss()
