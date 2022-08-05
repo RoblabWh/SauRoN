@@ -2,7 +2,7 @@ from Environment.Simulation import Simulation
 
 import math
 import numpy as np
-from utils import statesToTensor
+
 
 class Environment:
     """
@@ -121,7 +121,6 @@ class Environment:
 
         ############ State Robot i ############
         next_state = self.get_observation(i)
-        #next_state = np.expand_dims(np.asarray(next_state, dtype=object), axis=0)
 
         ############ Euklidsche Distanz und Orientierung ##############
 

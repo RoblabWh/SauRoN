@@ -1,8 +1,6 @@
-from pynput.keyboard import Key, Listener
 import argparse
 import numpy as np
 import torch
-
 from PIL import Image
 import os
 
@@ -15,24 +13,19 @@ def statesToTensor(list):
     return [torch.tensor(laser, dtype=torch.float32), torch.tensor(ori, dtype=torch.float32),
             torch.tensor(dist, dtype=torch.float32), torch.tensor(vel, dtype=torch.float32)]
 
-def scan1DTo2D2(lidarHits):
+# TODO maybe use this ???!?!!
+def _scan1DTo2D(lidarHits):
 
     #theta = np.radians(-135)
     #rotMatrix = np.array([[np.cos(theta), -np.sin(theta)],
     #                     [np.sin(theta), np.cos(theta)]])
     #data = np.dot(lidarHits, rotMatrix.T)
     data = lidarHits * 5
-    #data = ((data * 20) + 20) * 3
     data = data.astype(int)
     image = np.zeros((121, 121))
 
     # comment in to print scans in folder
     image[data[:,0], data[:,1]] = 255
-
-  #  theta = np.radians(-135)
-  #  rotMatrix = np.array([[np.cos(theta), -np.sin(theta)],
-  #                      [np.sin(theta), np.cos(theta)]])
-#    image = np.dot(image, rotMatrix.T)
 
     im = Image.fromarray(image).convert('RGB')
     frmt = "{0:06d}"
@@ -45,8 +38,7 @@ def scan1DTo2D2(lidarHits):
     image[data[:, 0], data[:, 1]] = 1
     return image
 
-def scan1DTo2D(distancesNorm):
-    ## WRAP THIS
+def scan1DTo2D(distancesNorm, print=False):
     scanplot = []
     angle_min = 0
     angle_increment = np.radians(0.25)
@@ -64,18 +56,18 @@ def scan1DTo2D(distancesNorm):
     data = data.astype(int)
     image = np.zeros((121, 121))
 
-    # comment in to print scans in folder
-    # image[data[:,0], data[:,1]] = 255
-    #
-    # im = Image.fromarray(image).convert('RGB')
-    # frmt = "{0:06d}"
-    # idx_ = len(os.listdir("./scans")) - 1
-    # idx = frmt.format(idx_)
-    # name = "./scans/" + idx + "_scan.png"
-    # im.save(name)
-    ######################################
+    image[data[:, 0], data[:, 1]] = 255
 
-    image[data[:, 0], data[:, 1]] = 1
+    # prints scans in folder
+    if print:
+        im = Image.fromarray(image).convert('RGB')
+        frmt = "{0:06d}"
+        idx_ = len(os.listdir("./scans")) - 1
+        idx = frmt.format(idx_)
+        name = "./scans/" + idx + "_scan.png"
+        im.save(name)
+
+    #image[data[:, 0], data[:, 1]] = 1
     return image
 
 class AverageMeter(object):

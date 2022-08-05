@@ -1,13 +1,12 @@
-import time
-
 import Visualization.Components.RobotRepresentation as RobotRepresentation
 from Environment.Components.Station import Station
 
-from PyQt5.QtGui import QPainter, QFont, QPen, QColor
+from PyQt5.QtGui import QPainter, QFont
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QSlider, QHBoxLayout
 from PyQt5 import QtWidgets
 import numpy as np
+import time
 
 
 def initRobots(robots, scaleFactor, mode, args):
@@ -119,7 +118,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
             self.btSonar.clicked.connect(self.clickedSonar)
             self.btSonar.setFixedWidth(120)
 
-        if self.args.training == False:
+        if self.args.mode == 'test':
             self.slDelay = QSlider(Qt.Horizontal)
             self.slDelay.setRange(0, 100)
             self.slDelay.setValue(0)
@@ -211,7 +210,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
             station.paint(painter)
         for i, robot in enumerate(self.robotRepresentations):
             sonarShowing = self.sonarShowing
-            if self.args.training == False:
+            if self.args.mode == 'test':
                 if i != self.getActivationRobotIndex():
                     sonarShowing = False
             robot.paint(painter, sonarShowing)
@@ -220,85 +219,6 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         for circleWall in self.circleWalls:
             circleWall.paint(painter, self.scaleFactor)
-
-        if self.args.train_perception_only:
-            showProximityCircle = False
-            rep = self.robotRepresentations[0]
-            pos = (rep.posX, rep.posY)
-            painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
-            if not showProximityCircle:
-                # color = QColor.fromHsv(55, 255, 255)
-                # color.setAlphaF(0.0)
-                # self.painter.setBrush(color)
-                # self.painter.drawEllipse(pos[0] - self.scaleFactor * 3, pos[1] - self.scaleFactor * 3,
-                #                          6 * self.scaleFactor,
-                #                          6 * self.scaleFactor)
-                dir = rep.direction
-                dirV = [np.cos(dir) * self.scaleFactor, np.sin(dir) * self.scaleFactor]
-                dirVRotOrth = [-dirV[1]* 0.35, dirV[0]* 0.35]
-
-                lineStartTop = [pos[0] + dirVRotOrth[0], pos[1] + dirVRotOrth[1]]
-                lineMiddleTop = [lineStartTop[0] + dirV[0] * 1.25, lineStartTop[1] + dirV[1] * 1.25]
-                lineEndTop = [lineMiddleTop[0] + dirV[0] * 1.75, lineMiddleTop[1] + dirV[1] * 1.75]
-
-                lineStartBottom = [pos[0] - dirVRotOrth[0], pos[1] - dirVRotOrth[1]]
-                lineMiddleBottom = [lineStartBottom[0] + dirV[0] * 1.25, lineStartBottom[1] + dirV[1] * 1.25]
-                lineEndBottom = [lineMiddleBottom[0] + dirV[0] * 1.75, lineMiddleBottom[1] + dirV[1] * 1.75]
-
-
-                if self.selectedCategory == 1:
-                    painter.setPen(QPen(Qt.red, 2.5, Qt.SolidLine))
-                else:
-                    painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
-
-                painter.drawLine(lineMiddleTop[0], lineMiddleTop[1], lineMiddleBottom[0], lineMiddleBottom[1])
-                painter.drawLine(lineEndTop[0], lineEndTop[1], lineEndBottom[0], lineEndBottom[1])
-                painter.drawLine(lineEndTop[0], lineEndTop[1], lineMiddleTop[0], lineMiddleTop[1])
-                painter.drawLine(lineEndBottom[0], lineEndBottom[1], lineMiddleBottom[0], lineMiddleBottom[1])
-
-                if self.selectedCategory == 2:
-                    painter.setPen(QPen(Qt.red, 2.5, Qt.SolidLine))
-                    painter.drawLine(lineMiddleTop[0], lineMiddleTop[1], lineMiddleBottom[0], lineMiddleBottom[1])
-                else:
-                    painter.setPen(QPen(Qt.gray, 1.5, Qt.DotLine))
-
-                painter.drawLine(lineStartTop[0], lineStartTop[1], lineMiddleTop[0], lineMiddleTop[1])
-                painter.drawLine(lineStartBottom[0], lineStartBottom[1], lineMiddleBottom[0], lineMiddleBottom[1])
-                painter.drawLine(pos[0], pos[1], lineStartBottom[0], lineStartBottom[1])
-                painter.drawLine(pos[0], pos[1], lineStartTop[0], lineStartTop[1])
-
-
-            else:
-                if self.selectedCategory == 1:
-                    color = QColor.fromHsv(55, 255 ,255)
-                    color.setAlphaF(0.5)
-                    painter.setBrush(color)
-                    painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
-                                             4 * self.scaleFactor)
-                    color.setAlphaF(0.0)
-                    painter.setBrush(color)
-                    painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75, 1.5 * self.scaleFactor,
-                                             1.5 * self.scaleFactor)
-                elif self.selectedCategory == 2:
-                    color = QColor.fromHsv(0, 255, 255)
-                    color.setAlphaF(0.5)
-                    painter.setBrush(color)
-                    painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75,
-                                             1.5 * self.scaleFactor,
-                                             1.5 * self.scaleFactor)
-                    color.setAlphaF(0.0)
-                    painter.setBrush(color)
-                    painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
-                                             4 * self.scaleFactor)
-                else:
-                    color = QColor.fromHsv(0, 255,255)
-                    color.setAlphaF(0.0)
-                    painter.setBrush(color)
-                    painter.drawEllipse(pos[0] - self.scaleFactor * 0.75, pos[1] - self.scaleFactor * 0.75,
-                                             1.5 * self.scaleFactor,
-                                             1.5 * self.scaleFactor)
-                    painter.drawEllipse(pos[0] - self.scaleFactor * 2, pos[1] - self.scaleFactor * 2, 4 * self.scaleFactor,
-                                             4 * self.scaleFactor)
 
         painter.end()
 

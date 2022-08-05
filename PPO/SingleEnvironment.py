@@ -1,4 +1,5 @@
 from PPO.PPOAlgorithm import PPO
+
 import numpy as np
 import torch
 
@@ -88,6 +89,7 @@ class SwarmMemory:
     def __len__(self):
         return len(self.robotMemory)
 
+
 class Memory:   # collected from old policy
     def __init__(self):
         self.states = []
@@ -102,6 +104,7 @@ class Memory:   # collected from old policy
         del self.rewards[:]
         del self.is_terminals[:]
         del self.logprobs[:]
+
 
 def train(env_name, env, render, solved_reward,
     max_episodes, max_timesteps, update_timestep, action_std, K_epochs, eps_clip,
@@ -160,8 +163,45 @@ def train(env_name, env, render, solved_reward,
 
             print('Episode {} \t Avg length: {} \t Avg reward: {}'.format(i_episode, avg_length, running_reward))
 
-            if tb:
-                writer.add_scalar('scalar/reward', running_reward, i_episode)
-                writer.add_scalar('scalar/length', avg_length, i_episode)
-
             running_reward, avg_length = 0, 0
+
+
+def test(env_name, env, render, action_std, K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes, scan_size=121):
+
+    ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
+    print('Load checkpoint from {}'.format(ckpt))
+
+    memory = SwarmMemory(env.getNumberOfRobots())
+
+    ppo = PPO(scan_size, action_std, lr, betas, gamma, K_epochs, eps_clip, restore=True, ckpt=ckpt)
+
+    episode_reward, time_step = 0, 0
+    avg_episode_reward, avg_length = 0, 0
+
+    # test
+    for i_episode in range(1, test_episodes+1):
+        states = env.reset(0)
+        while True:
+            time_step += 1
+
+            # Run old policy
+            actions = ppo.select_action_certain(states, memory)
+
+            states, rewards, dones, _ = env.step(actions)
+            memory.insertIsTerminal(dones)
+
+            episode_reward += np.sum(rewards)
+
+            if render:
+                env.render()
+
+            if env.is_done():
+                print('Episode {} \t Length: {} \t Reward: {}'.format(i_episode, time_step, episode_reward))
+                avg_episode_reward += episode_reward
+                avg_length += time_step
+                memory.clear_memory()
+                time_step, episode_reward = 0, 0
+                break
+
+    print('Test {} episodes DONE!'.format(test_episodes))
+    print('Avg episode reward: {} | Avg length: {}'.format(avg_episode_reward/test_episodes, avg_length/test_episodes))

@@ -1,5 +1,6 @@
-import math
 from Environment.Components.Border import ColliderLine
+
+import math
 from pynput.keyboard import Listener
 import copy
 import numpy as np
@@ -52,6 +53,7 @@ class Robot:
         self.collisionDistances = []
         self.collisionDistancesRobots = []
         self.angularDeviation = 0
+        self.fieldOfView = args.field_of_view / 180 * np.pi
 
         # Robot Hardware Params
         self.width = 0.35  # m
@@ -329,7 +331,7 @@ class Robot:
         :param steps: number of steps in one epoch
         """
 
-        dir = (self.getDirectionAngle() - (self.args.field_of_view / 2)) % (2 * math.pi)
+        dir = (self.getDirectionAngle() - (self.fieldOfView / 2)) % (2 * math.pi)
 
         colliderLines = self.walls + self.collidorStationsWalls + self.robotsPieSliceWalls
         collidorCirclePosWithoutRobots = [(wall.getPosX(), wall.getPosY(), wall.getRadius()) for wall in self.circleWalls]
@@ -365,7 +367,7 @@ class Robot:
 
         circlesPositions = np.array([circleX, circleY])
 
-        rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.args.field_of_view)
+        rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.fieldOfView)
         distances, lidarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
 
         circleX = [r[0] for r in collidorCircleAllForTerminations]

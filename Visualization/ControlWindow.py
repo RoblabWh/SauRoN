@@ -229,9 +229,9 @@ class Progressbar(QWidget):
 
     def updateProgressbar(self, currentEpisode):
 
-        value = (currentEpisode / self.args.nb_episodes) * 100
+        value = (currentEpisode / self.args.max_episodes) * 100
         self.progressbar.setValue(value)
-        self.progressbar.setFormat(str(currentEpisode) + " / " + str(self.args.nb_episodes) + " Episoden")
+        self.progressbar.setFormat(str(currentEpisode) + " / " + str(self.args.max_episodes) + " Episoden")
         self.progressbar.setAlignment(Qt.AlignCenter)
 
 

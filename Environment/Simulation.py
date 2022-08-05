@@ -1,8 +1,9 @@
 import Environment.SVGParser as SVGParser
-from Environment.Components.Border import ColliderLine
 import Visualization.EnvironmentWindow as SimulationWindow
+
 import math, random
 import numpy as np
+
 closedFirst = False
 
 

@@ -1,14 +1,12 @@
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.distributions import MultivariateNormal
-import torch
-import numpy as np
-import random
-import math
 from utils import statesToTensor
 
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.distributions import MultivariateNormal
+import torch
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 class Inputspace(nn.Module):
 
@@ -43,6 +41,7 @@ class Inputspace(nn.Module):
 
         return densed
 
+
 class Actor(nn.Module):
     def __init__(self, scan_size):
         super(Actor, self).__init__()
@@ -52,13 +51,14 @@ class Actor(nn.Module):
         self.mu = nn.Linear(in_features=96, out_features=2)
         # Var
         self.dense_var = nn.Linear(in_features=96, out_features=2)
-        self.softplus = torch.nn.Softplus()
+        self.softmax = torch.nn.Softmax()
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser.to(device), orientation_to_goal.to(device), distance_to_goal.to(device), velocity.to(device))
         mu = torch.tanh(self.mu(x))
-        var = self.softplus(self.dense_var(x)) #torch.FloatTensor([0.0, 0.0])  # TODO:
+        var = self.softmax(self.dense_var(x)) # TODO: check if softmax is needed
         return [mu.to('cpu'), var.to('cpu')]
+
 
 class Critic(nn.Module):
     def __init__(self, scan_size):
@@ -77,18 +77,27 @@ class Critic(nn.Module):
         value = F.relu(self.value(value_cat))
         return value.to('cpu')
 
+
 class ActorCritic(nn.Module):
     def __init__(self, action_std, scan_size):
         super(ActorCritic, self).__init__()
         action_dim = 2
+        self.cnt = 0
         self.actor = Actor(scan_size)
         self.critic = Critic(scan_size)
 
+        # TODO statische var testen
         #self.action_var = torch.full((action_dim, ), action_std * action_std).to(device)
 
     def act(self, states, memory):
         laser, orientation, distance, velocity = states
         action_mean, action_std = self.actor(laser, orientation, distance, velocity)
+        # TODO Werte prüfen ?!?!??!
+        # if self.cnt % 500 == 0:
+        #     print(action_mean)
+        #     print(action_std)
+        #     self.cnt = 0
+        # self.cnt += 1
         cov_mat = torch.diag_embed(action_std)
         dist = MultivariateNormal(action_mean, cov_mat)
         action = dist.sample()
@@ -98,6 +107,15 @@ class ActorCritic(nn.Module):
         memory.insertState(laser.to(device).detach(), orientation.to(device).detach(), distance.to(device).detach(), velocity.to(device).detach())
         memory.insertAction(action)
         memory.insertLogProb(action_logprob)
+
+        return action.detach()
+
+    def act_certain(self, states, memory):
+        laser, orientation, distance, velocity = states
+        action, _ = self.actor(laser, orientation, distance, velocity)
+
+        memory.insertState(laser.to(device).detach(), orientation.to(device).detach(), distance.to(device).detach(), velocity.to(device).detach())
+        memory.insertAction(action)
 
         return action.detach()
 
@@ -137,14 +155,20 @@ class PPO:
         self.MSE_loss = nn.MSELoss()
 
     def select_action(self, states, memory):
-        #state = torch.FloatTensor(state.reshape(1, -1)).to(device)  # flatten the state
-
         # prepare data
         states = statesToTensor(states)
         return self.old_policy.act(states, memory).cpu().numpy()
 
+    def select_action_certain(self, states, memory):
+        # prepare data
+        states = statesToTensor(states)
+        return self.old_policy.act_certain(states, memory).cpu().numpy()
+
     def update(self, memory):
         # Monte Carlo estimation of rewards
+
+        # TODO check if same ???!?!
+
         # rewards = []
         # discounted_reward = 0
         # for reward, is_terminal in zip(reversed(memory.rewards), reversed(memory.is_terminals)):
@@ -174,8 +198,6 @@ class PPO:
         old_states = memory.getStatesOfAllRobots()
         old_actions = torch.stack(memory.getActionsOfAllRobots()).to(device).detach()
         old_logprobs = torch.stack(memory.getLogProbsOfAllRobots()).to(device).detach()
-        #old_actions_ = torch.squeeze(torch.stack(memory.actions).to(device)).detach()
-        #old_logprobs_ = torch.squeeze(torch.stack(memory.logprobs)).to(device).detach()
 
         # Train policy for K epochs: sampling and updating
         for _ in range(self.K_epochs):
