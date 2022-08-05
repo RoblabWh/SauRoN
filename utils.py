@@ -57,10 +57,9 @@ def scan1DTo2D(distancesNorm, img_size, print=False):
     data = data.astype(int)
     image = np.zeros((img_size, img_size))
 
-    image[data[:, 0], data[:, 1]] = 255
-
     # prints scans in folder
     if print:
+        image[data[:, 0], data[:, 1]] = 255
         im = Image.fromarray(image).convert('RGB')
         frmt = "{0:06d}"
         idx_ = len(os.listdir("./scans")) - 1
@@ -68,7 +67,7 @@ def scan1DTo2D(distancesNorm, img_size, print=False):
         name = "./scans/" + idx + "_scan.png"
         im.save(name)
 
-    #image[data[:, 0], data[:, 1]] = 1
+    image[data[:, 0], data[:, 1]] = 1
     return image
 
 class AverageMeter(object):

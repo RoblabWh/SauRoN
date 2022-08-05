@@ -181,13 +181,18 @@ class PPO:
         rewards = []
         for robotmemory in memory.robotMemory:
             discounted_reward = 0
+            _rewards = []
             for reward, is_terminal in zip(reversed(robotmemory.rewards), reversed(robotmemory.is_terminals)):
                 if is_terminal:
                     discounted_reward = 0
                 discounted_reward = reward + self.gamma * discounted_reward
-                rewards.insert(0, discounted_reward)
+                _rewards.insert(0, discounted_reward)
                 if is_terminal:
                     discounted_reward = 0
+            rewards.append(_rewards)
+
+        # flatten the rewards
+        rewards = [item for sublist in rewards for item in sublist]
 
         # Normalize rewards
         rewards = torch.tensor(rewards).to(device)

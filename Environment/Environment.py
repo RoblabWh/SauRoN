@@ -158,8 +158,8 @@ class Environment:
         """
 
         reward = 0
-        r_arrival = 15
-        r_collision = -15
+        r_arrival = 2
+        r_collision = -1
         w_g = 2.5
         w_w = -0.01
 

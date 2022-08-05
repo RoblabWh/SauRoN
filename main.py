@@ -28,7 +28,7 @@ parser.add_argument('--K_epochs', type=int, default=5, help='update the policy f
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
-parser.add_argument('--solved_reward', type=float, default=55, help='stop training if avg_reward > solved_reward')
+parser.add_argument('--solved_reward', type=float, default=8, help='stop training if avg_reward > solved_reward')
 parser.add_argument('--image_size', type=float, default=256, help='size of the image that goes into the neural net')
 
 
