@@ -199,4 +199,8 @@ class Environment:
         if self.simulation.hasUI:
             self.simulation.simulationWindow.setSaveListener(observer)
 
+    # returns number of robots in the simulation
+    def getNumberOfRobots(self):
+        return self.simulation.getCurrentNumberOfRobots()
+
 

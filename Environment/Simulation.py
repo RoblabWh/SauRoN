@@ -64,11 +64,11 @@ class Simulation:
             # r.reset(self.stations, self.level[level][0][i], self.level[level][1][i]+(random.uniform(0, math.pi)*self.noiseStrength[level]), self.level[level][3])
             r.reset(self.stations, random_pos[i], self.level[1][i] + (random.uniform(0, math.pi)), self.level[3])
 
-        print("Resetting the simulation ", end='')
+        #print("Resetting the simulation ", end='')
         for robot in self.robots:
-            print('.', end='')
+            #print('.', end='')
             robot.resetLidar(self.robots)
-        print("")
+        #print("")
 
         if self.hasUI and self.simulationWindow != None:
             if levelChanged:

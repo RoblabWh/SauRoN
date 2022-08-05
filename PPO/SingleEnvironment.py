@@ -43,9 +43,43 @@ class SwarmMemory:
     def insertIsTerminal(self, isTerminal):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
-            self.robotMemory[relativeIndices[i]].isTerminal.append(isTerminal[i])
+            self.robotMemory[relativeIndices[i]].is_terminals.append(isTerminal[i])
             if isTerminal[i]:
                 self.currentTerminalStates[relativeIndices[i]] = True
+
+        # check if currentTerminalStates is all True
+        if all(self.currentTerminalStates):
+            self.currentTerminalStates = [False for _ in range(len(self.currentTerminalStates))]
+
+    def getStatesOfAllRobots(self):
+        laser = []
+        orientation = []
+        distance = []
+        velocity = []
+        for robotmemory in self.robotMemory:
+            for state in robotmemory.states:
+                laser.append(state[0])
+                orientation.append(state[1])
+                distance.append(state[2])
+                velocity.append(state[3])
+
+        return [torch.stack(laser), torch.stack(orientation), torch.stack(distance), torch.stack(velocity)]
+
+    def getActionsOfAllRobots(self):
+        actions = []
+        for robotmemory in self.robotMemory:
+            for action in robotmemory.actions:
+                actions.append(action)
+
+        return actions
+
+    def getLogProbsOfAllRobots(self):
+        logprobs = []
+        for robotmemory in self.robotMemory:
+            for logprob in robotmemory.logprobs:
+                logprobs.append(logprob)
+
+        return logprobs
 
     def clear_memory(self):
         for memory in self.robotMemory:
@@ -77,7 +111,7 @@ def train(env_name, env, render, solved_reward,
     if restore:
         print('Load checkpoint from {}'.format(ckpt))
 
-    memory = Memory()
+    memory = SwarmMemory(env.getNumberOfRobots())
 
     ppo = PPO(scan_size, action_std, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
 
@@ -94,8 +128,8 @@ def train(env_name, env, render, solved_reward,
 
             states, rewards, dones, _ = env.step(actions)
 
-            memory.rewards.append(rewards)
-            memory.is_terminals.append(dones)
+            memory.insertReward(rewards)
+            memory.insertIsTerminal(dones)
 
             if time_step % update_timestep == 0:
                 ppo.update(memory)

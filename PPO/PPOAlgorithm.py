@@ -95,22 +95,14 @@ class ActorCritic(nn.Module):
         action = torch.clip(action, -1, 1)
         action_logprob = dist.log_prob(action)
 
-        memory.states.append(laser.to(device).detach(), orientation.to(device).detach(), distance.to(device).detach(), velocity.to(device).detach())
-        # memory.laser.append(laser[0].to(device).detach())
-        # memory.orientation.append(orientation[0].to(device).detach())
-        # memory.distance.append(distance[0].to(device).detach())
-        # memory.velocity.append(velocity[0].to(device).detach())
-        memory.actions.append(action)
-        memory.logprobs.append(action_logprob)
+        memory.insertState(laser.to(device).detach(), orientation.to(device).detach(), distance.to(device).detach(), velocity.to(device).detach())
+        memory.insertAction(action)
+        memory.insertLogProb(action_logprob)
 
         return action.detach()
 
     def evaluate(self, state, action):
-        laser, orientation, distance, velocity = zip(*state)
-        laser = torch.stack(laser)
-        orientation = torch.stack(orientation)
-        distance = torch.stack(distance)
-        velocity = torch.stack(velocity)
+        laser, orientation, distance, velocity = state
         state_value = self.critic(laser, orientation, distance, velocity)
 
         # to calculate action score(logprobs) and distribution entropy
@@ -153,13 +145,25 @@ class PPO:
 
     def update(self, memory):
         # Monte Carlo estimation of rewards
+        # rewards = []
+        # discounted_reward = 0
+        # for reward, is_terminal in zip(reversed(memory.rewards), reversed(memory.is_terminals)):
+        #     if is_terminal:
+        #         discounted_reward = 0
+        #     discounted_reward = reward + self.gamma * discounted_reward
+        #     rewards.insert(0, discounted_reward)
+
+        # computes the discounted reward for every robots in memory
         rewards = []
-        discounted_reward = 0
-        for reward, is_terminal in zip(reversed(memory.rewards), reversed(memory.is_terminals)):
-            if is_terminal:
-                discounted_reward = 0
-            discounted_reward = reward + self.gamma * discounted_reward
-            rewards.insert(0, discounted_reward)
+        for robotmemory in memory.robotMemory:
+            discounted_reward = 0
+            for reward, is_terminal in zip(reversed(robotmemory.rewards), reversed(robotmemory.is_terminals)):
+                if is_terminal:
+                    discounted_reward = 0
+                discounted_reward = reward + self.gamma * discounted_reward
+                rewards.insert(0, discounted_reward)
+                if is_terminal:
+                    discounted_reward = 0
 
         # Normalize rewards
         rewards = torch.tensor(rewards).to(device)
@@ -167,9 +171,11 @@ class PPO:
         rewards = rewards.type(torch.float32)
 
         # convert list to tensor
-        old_states = memory.states
-        old_actions = torch.squeeze(torch.stack(memory.actions).to(device)).detach()
-        old_logprobs = torch.squeeze(torch.stack(memory.logprobs)).to(device).detach()
+        old_states = memory.getStatesOfAllRobots()
+        old_actions = torch.stack(memory.getActionsOfAllRobots()).to(device).detach()
+        old_logprobs = torch.stack(memory.getLogProbsOfAllRobots()).to(device).detach()
+        #old_actions_ = torch.squeeze(torch.stack(memory.actions).to(device)).detach()
+        #old_logprobs_ = torch.squeeze(torch.stack(memory.logprobs)).to(device).detach()
 
         # Train policy for K epochs: sampling and updating
         for _ in range(self.K_epochs):

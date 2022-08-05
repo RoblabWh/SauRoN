@@ -25,19 +25,19 @@ parser = argparse.ArgumentParser(description='PyTorch PPO for continuous control
 parser.add_argument('--gpus', default=1, type=int, help='number of gpu')
 parser.add_argument('--env', type=str, default='BipedalWalker-v2', help='continuous env')
 parser.add_argument('--render', default=False, action='store_true', help='Render?')
-parser.add_argument('--solved_reward', type=float, default=300, help='stop training if avg_reward > solved_reward')
+parser.add_argument('--solved_reward', type=float, default=55, help='stop training if avg_reward > solved_reward')
 parser.add_argument('--print_interval', type=int, default=10, help='how many episodes to print the results out')
-parser.add_argument('--save_interval', type=int, default=100, help='how many episodes to save a checkpoint')
+parser.add_argument('--save_interval', type=int, default=10, help='how many episodes to save a checkpoint')
 parser.add_argument('--max_episodes', type=int, default=100000)
 parser.add_argument('--max_timesteps', type=int, default=1500)
-parser.add_argument('--update_timesteps', type=int, default=100, help='how many timesteps to update the policy')
+parser.add_argument('--update_timesteps', type=int, default=500, help='how many timesteps to update the policy')
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)')
 parser.add_argument('--K_epochs', type=int, default=80, help='update the policy for how long time everytime')
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
 parser.add_argument('--seed', type=int, default=123, help='random seed to use')
-parser.add_argument('--ckpt_folder', default='./checkpoints', help='Location to save checkpoint models')
+parser.add_argument('--ckpt_folder', default='./models', help='Location to save checkpoint models')
 parser.add_argument('--tb', default=False, action='store_true', help='Use tensorboardX?')
 parser.add_argument('--log_folder', default='./logs', help='Location to save logs')
 parser.add_argument('--mode', default='train', help='choose train or test')
@@ -69,22 +69,22 @@ parser.add_argument('--display_normals', type=bool, default=True,
 parser.add_argument('--train_perception_only', type=bool, default=False,
                     help='Improve existing net (works only if training is set to false')
 
-opt = parser.parse_args()
+args = parser.parse_args()
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-opt.field_of_view = opt.field_of_view / 180 * np.pi
+args.field_of_view = args.field_of_view / 180 * np.pi
 
 env_name = "tunnel"
 
 states = int(1081 + 7)
 env_dim = (4, states)  # Timeframes, Robotstates
 app = QApplication(sys.argv)
-env = Environment(app, opt, env_dim[0], 0)
+env = Environment(app, args, env_dim[0], 0)
 
 train(env_name, env,
-      render=opt.render, solved_reward=opt.solved_reward,
-      max_episodes=opt.max_episodes, max_timesteps=opt.max_timesteps, update_timestep=opt.update_timesteps,
-      action_std=opt.action_std, K_epochs=opt.K_epochs, eps_clip=opt.eps_clip,
-      gamma=opt.gamma, lr=opt.lr, betas=[0.9, 0.990], ckpt_folder=opt.ckpt_folder,
-      restore=opt.restore, tb=opt.tb, print_interval=opt.print_interval, save_interval=opt.save_interval)
+      render=args.render, solved_reward=args.solved_reward,
+      max_episodes=args.max_episodes, max_timesteps=args.max_timesteps, update_timestep=args.update_timesteps,
+      action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
+      gamma=args.gamma, lr=args.lr, betas=[0.9, 0.990], ckpt_folder=args.ckpt_folder,
+      restore=args.restore, tb=args.tb, print_interval=args.print_interval, save_interval=args.save_interval)
