@@ -2,13 +2,61 @@ from PPO.PPOAlgorithm import PPO
 import numpy as np
 import torch
 
+
+class SwarmMemory:
+    def __init__(self, robotsCount):
+        self.robotMemory = [Memory() for _ in range(robotsCount)]
+        self.currentTerminalStates = [False for _ in range(robotsCount)]
+
+    def __getitem__(self, item):
+        return self.robotMemory[item]
+
+    # Gets relative Index according to currentTerminalStates
+    def getRelativeIndices(self):
+        relativeIndices = []
+        for i in range(len(self.currentTerminalStates)):
+            if not self.currentTerminalStates[i]:
+                relativeIndices.append(i)
+
+        return relativeIndices
+
+    def insertState(self, laser, orientation, distance, velocity):
+        relativeIndices = self.getRelativeIndices()
+        for i in range(len(relativeIndices)):
+            self.robotMemory[relativeIndices[i]].states.append([laser[i], orientation[i], distance[i], velocity[i]])
+
+    def insertAction(self, action):
+        relativeIndices = self.getRelativeIndices()
+        for i in range(len(relativeIndices)):
+            self.robotMemory[relativeIndices[i]].actions.append(action[i])
+
+    def insertReward(self, reward):
+        relativeIndices = self.getRelativeIndices()
+        for i in range(len(relativeIndices)):
+            self.robotMemory[relativeIndices[i]].rewards.append(reward[i])
+
+    def insertLogProb(self, logprob):
+        relativeIndices = self.getRelativeIndices()
+        for i in range(len(relativeIndices)):
+            self.robotMemory[relativeIndices[i]].logprobs.append(logprob[i])
+
+    def insertIsTerminal(self, isTerminal):
+        relativeIndices = self.getRelativeIndices()
+        for i in range(len(relativeIndices)):
+            self.robotMemory[relativeIndices[i]].isTerminal.append(isTerminal[i])
+            if isTerminal[i]:
+                self.currentTerminalStates[relativeIndices[i]] = True
+
+    def clear_memory(self):
+        for memory in self.robotMemory:
+            memory.clear_memory()
+
+    def __len__(self):
+        return len(self.robotMemory)
+
 class Memory:   # collected from old policy
     def __init__(self):
         self.states = []
-        self.laser = []
-        self.orientation = []
-        self.distance = []
-        self.velocity = []
         self.actions = []
         self.rewards = []
         self.is_terminals = []
@@ -16,10 +64,6 @@ class Memory:   # collected from old policy
 
     def clear_memory(self):
         del self.states[:]
-        del self.laser[:]
-        del self.orientation[:]
-        del self.distance[:]
-        del self.velocity[:]
         del self.actions[:]
         del self.rewards[:]
         del self.is_terminals[:]

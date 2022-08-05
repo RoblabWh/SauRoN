@@ -92,9 +92,10 @@ class ActorCritic(nn.Module):
         cov_mat = torch.diag_embed(action_std)
         dist = MultivariateNormal(action_mean, cov_mat)
         action = dist.sample()
+        action = torch.clip(action, -1, 1)
         action_logprob = dist.log_prob(action)
 
-        memory.states.append([laser.to(device).detach(), orientation.to(device).detach(), distance.to(device).detach(), velocity.to(device).detach()])
+        memory.states.append(laser.to(device).detach(), orientation.to(device).detach(), distance.to(device).detach(), velocity.to(device).detach())
         # memory.laser.append(laser[0].to(device).detach())
         # memory.orientation.append(orientation[0].to(device).detach())
         # memory.distance.append(distance[0].to(device).detach())
