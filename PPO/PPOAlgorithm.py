@@ -18,9 +18,9 @@ class Inputspace(nn.Module):
         self.lidar_conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=8, stride=4)
         in_f = self.get_in_features(h_in=in_f, kernel_size=8, stride=4)
 
-        features_scan = int((in_f**2) * 32)
+        features_scan = (int(in_f) ** 2) * 32
         self.flatten = nn.Flatten()
-        self.lidar_flat = nn.Linear(in_features=128, out_features=160)
+        self.lidar_flat = nn.Linear(in_features=features_scan, out_features=160)
         self.concated_some = nn.Linear(in_features=180, out_features=96)
 
     def get_in_features(self, h_in, padding=0, dilation=1, kernel_size=0, stride=1):

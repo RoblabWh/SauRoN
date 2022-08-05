@@ -38,7 +38,7 @@ def _scan1DTo2D(lidarHits):
     image[data[:, 0], data[:, 1]] = 1
     return image
 
-def scan1DTo2D(distancesNorm, print=False):
+def scan1DTo2D(distancesNorm, img_size, print=False):
     scanplot = []
     angle_min = 0
     angle_increment = np.radians(0.25)
@@ -52,9 +52,10 @@ def scan1DTo2D(distancesNorm, print=False):
     rotMatrix = np.array([[np.cos(theta), -np.sin(theta)],
                          [np.sin(theta), np.cos(theta)]])
     data = np.dot(scanplot, rotMatrix.T)
-    data = ((data * 20) + 20) * 3
+    data = ((data + 1) * int(img_size / 2)) - 1
+    #data = ((data * 20) + 20) * 3
     data = data.astype(int)
-    image = np.zeros((121, 121))
+    image = np.zeros((img_size, img_size))
 
     image[data[:, 0], data[:, 1]] = 255
 

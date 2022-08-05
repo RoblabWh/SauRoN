@@ -420,7 +420,7 @@ class Robot:
         #distancesNorm = distancesNorm.tolist()
 
         # Convert 1D scan to 2D Scan
-        image = scan1DTo2D(distancesNorm)
+        image = scan1DTo2D(distancesNorm, img_size=self.args.image_size)
         #image = scan1DTo2D(self.lidarHits)
 
         currentTimestep = (steps - stepsLeft)/steps
