@@ -87,7 +87,10 @@ class SwarmMemory:
             memory.clear_memory()
 
     def __len__(self):
-        return len(self.robotMemory)
+        length = 0
+        for memory in self.robotMemory:
+            length += len(memory)
+        return length
 
 
 class Memory:   # collected from old policy
@@ -105,6 +108,9 @@ class Memory:   # collected from old policy
         del self.is_terminals[:]
         del self.logprobs[:]
 
+    def __len__(self):
+        return len(self.states)
+
 
 def train(env_name, env, render, solved_reward, input_style,
     max_episodes, max_timesteps, update_timestep, action_std, K_epochs, eps_clip,
@@ -119,7 +125,7 @@ def train(env_name, env, render, solved_reward, input_style,
     ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
 
     running_reward, avg_length, time_step = 0, 0, 0
-
+    best_reward = 0
     # training loop
     for i_episode in range(1, max_episodes+1):
         states = env.reset(0)
@@ -134,7 +140,7 @@ def train(env_name, env, render, solved_reward, input_style,
             memory.insertReward(rewards)
             memory.insertIsTerminal(dones)
 
-            if time_step % update_timestep == 0:
+            if len(memory) >= update_timestep:
                 ppo.update(memory)
                 memory.clear_memory()
                 time_step = 0
@@ -153,13 +159,18 @@ def train(env_name, env, render, solved_reward, input_style,
             print('Save a checkpoint!')
             break
 
-        if i_episode % save_interval == 0:
-            torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
-            print('Save a checkpoint!')
+        # if i_episode % save_interval == 0:
+        #     torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
+        #     print('Save a checkpoint!')
 
         if i_episode % print_interval == 0:
             avg_length = int(avg_length / print_interval)
-            running_reward = int((running_reward / print_interval))
+            running_reward = (running_reward / print_interval)
+
+            if running_reward > best_reward:
+                best_reward = running_reward
+                torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
+                print('Save a checkpoint!')
 
             print('Episode {} \t Avg length: {} \t Avg reward: {}'.format(i_episode, avg_length, running_reward))
 
@@ -185,7 +196,7 @@ def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gam
             time_step += 1
 
             # Run old policy
-            actions = ppo.select_action(states, memory)
+            actions = ppo.select_action_certain(states, memory)
 
             states, rewards, dones, _ = env.step(actions)
             memory.insertIsTerminal(dones)

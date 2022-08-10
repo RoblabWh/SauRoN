@@ -206,9 +206,10 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         painter = QPainter(self)
 
-        for station in self.stations:
-            station.paint(painter)
+        # for station in self.stations:
+        #     station.paint(painter)
         for i, robot in enumerate(self.robotRepresentations):
+            self.stations[i].paint(painter)
             sonarShowing = self.sonarShowing
             if self.args.mode == 'test':
                 if i != self.getActivationRobotIndex():

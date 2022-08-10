@@ -108,7 +108,7 @@ class Robot:
             self.linTast = 0
             self.angTast = 0
 
-    def reset(self, allStations, pos = None, orientation = None, walls = None):
+    def reset(self, allStations, pos = None, orientation = None, walls = None, goalStation = None):
         """
         resets the robots position (to his starting position), his orientation (to his starting orientation)
         and sets all velocities back to zero.
@@ -145,6 +145,10 @@ class Robot:
         directionX = self.startDirectionX
         directionY = self.startDirectionY
 
+        if (goalStation != None):
+            self.station = goalStation
+        self.goalX = self.station.getPosX()
+        self.goalY = self.station.getPosY()
 
         if walls != None:
             self.walls = walls
@@ -160,8 +164,6 @@ class Robot:
         angVel = 0
         tarLinVel = 0
         tarAngVel = 0
-        self.goalX = self.station.getPosX()
-        self.goalY = self.station.getPosY()
         goalDist = math.sqrt((posX - self.goalX) ** 2 + (posY - self.goalY) ** 2)
 
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
@@ -614,6 +616,10 @@ class Robot:
             return self.state_raw[self.time_steps - 1][9]
         return self.state_raw[self.time_steps - 2][9]
 
+    def setGoal(self, goal):
+        goalX, goalY = goal
+        self.goalX = goalX
+        self.goalY = goalY
 
     def on_press(self, key):
         if key.char == 'w':

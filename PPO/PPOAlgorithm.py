@@ -20,16 +20,17 @@ class Inputspace(nn.Module):
             in_f = self.get_in_features(h_in=in_f, kernel_size=4, stride=2)
             features_scan = (int(in_f) ** 2) * 32
         else:
-            self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=16, kernel_size=3, stride=2)
-            in_f = self.get_in_features(h_in=scan_size, kernel_size=3, stride=2)
-            self.lidar_conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=2, stride=2)
-            in_f = self.get_in_features(h_in=in_f, kernel_size=2, stride=2)
-            features_scan = (int(in_f)) * 32
+            self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=8, kernel_size=7, stride=3)
+            in_f = self.get_in_features(h_in=scan_size, kernel_size=7, stride=3)
+            self.lidar_conv2 = nn.Conv1d(in_channels=8, out_channels=16, kernel_size=5, stride=2)
+            in_f = self.get_in_features(h_in=in_f, kernel_size=5, stride=2)
+            features_scan = (int(in_f)) * 16
 
 
         self.flatten = nn.Flatten()
-        self.lidar_flat = nn.Linear(in_features=features_scan, out_features=160)
-        self.concated_some = nn.Linear(in_features=180, out_features=96)
+        lidar_out_features = 128
+        self.lidar_flat = nn.Linear(in_features=features_scan, out_features=lidar_out_features)
+        self.concated_some = nn.Linear(in_features=lidar_out_features + 20, out_features=128)
 
     def get_in_features(self, h_in, padding=0, dilation=1, kernel_size=0, stride=1):
         return (((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1)
@@ -56,9 +57,9 @@ class Actor(nn.Module):
         self.Inputspace = Inputspace(scan_size, input_style)
 
         # Mu
-        self.mu = nn.Linear(in_features=96, out_features=2)
+        self.mu = nn.Linear(in_features=128, out_features=2)
         # Var
-        self.dense_var = nn.Linear(in_features=96, out_features=2)
+        self.dense_var = nn.Linear(in_features=128, out_features=2)
         self.softmax = torch.nn.Softmax()
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
@@ -73,8 +74,8 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.Inputspace = Inputspace(scan_size, input_style)
         # Value
-        self.value_temp = nn.Linear(out_features=128, in_features=96)
-        self.value_temp2 = nn.Linear(out_features=128, in_features=96)
+        self.value_temp = nn.Linear(out_features=128, in_features=128)
+        self.value_temp2 = nn.Linear(out_features=128, in_features=128)
         self.value = nn.Linear(out_features=1, in_features=256, bias=False)
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
