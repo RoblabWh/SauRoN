@@ -102,11 +102,12 @@ class ActorCritic(nn.Module):
         laser, orientation, distance, velocity = states
         action_mean, action_std = self.actor(laser, orientation, distance, velocity)
         # TODO Werte prüfen ?!?!??!
-        # if self.cnt % 500 == 0:
-        #     print(action_mean)
-        #     print(action_std)
-        #     self.cnt = 0
-        # self.cnt += 1
+        if self.cnt % 500 == 0:
+            print("Actor")
+            print("action_mean: ", action_mean)
+            print("action_std: ", action_std)
+            self.cnt = 0
+        self.cnt += 1
         cov_mat = torch.diag_embed(action_std)
         dist = MultivariateNormal(action_mean, cov_mat)
         action = dist.sample()
@@ -173,7 +174,7 @@ class PPO:
         states = statesToTensor(states)
         return self.old_policy.act_certain(states, memory).cpu().numpy()
 
-    def update(self, memory):
+    def update(self, memory, batch_size):
         # Monte Carlo estimation of rewards
 
         # TODO check if same ???!?!
@@ -210,35 +211,44 @@ class PPO:
 
         # convert list to tensor
         old_states = memory.getStatesOfAllRobots()
+        laser, orientation, distance, velocity = old_states
         old_actions = torch.stack(memory.getActionsOfAllRobots()).to(device).detach()
         old_logprobs = torch.stack(memory.getLogProbsOfAllRobots()).to(device).detach()
 
         # Train policy for K epochs: sampling and updating
         for _ in range(self.K_epochs):
-            # Evaluate old actions and values using current policy
-            logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
+            for rewards_minibatch, old_laser_minibatch, old_orientation_minibatch, old_distance_minibatch, \
+                old_velocity_minibatch, old_actions_minibatch, old_logprobs_minibatch in \
+                zip(torch.tensor_split(rewards, batch_size), torch.tensor_split(laser, batch_size),
+                    torch.tensor_split(orientation, batch_size), torch.tensor_split(distance, batch_size),
+                    torch.tensor_split(velocity, batch_size), torch.tensor_split(old_actions, batch_size),
+                    torch.tensor_split(old_logprobs, batch_size)):
+                # Evaluate old actions and values using current policy
+                old_states_minibatch = [old_laser_minibatch, old_orientation_minibatch, old_distance_minibatch, old_velocity_minibatch]
+                logprobs, state_values, dist_entropy = self.policy.evaluate(old_states_minibatch, old_actions_minibatch)
 
-            # Importance ratio: p/q
-            ratios = torch.exp(logprobs - old_logprobs.to('cpu').detach())
+                # Importance ratio: p/q
+                ratios = torch.exp(logprobs - old_logprobs_minibatch.to('cpu').detach())
 
-            # Advantages
-            advantages = rewards.to('cpu') - state_values.detach()
+                # Advantages
+                advantages = rewards_minibatch.to('cpu') - state_values.detach()
 
-            # Actor loss using Surrogate loss
-            surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
-            actor_loss = - torch.min(surr1, surr2).type(torch.float32)
+                # Actor loss using Surrogate loss
+                surr1 = ratios * advantages
+                surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+                actor_loss = - torch.min(surr1, surr2).type(torch.float32)
 
-            # Critic loss: critic loss - entropy
-            critic_loss = 0.5 * self.MSE_loss(rewards.to('cpu'), state_values) - 0.01 * dist_entropy
+                # Critic loss: critic loss - entropy
+                critic_loss = 0.5 * self.MSE_loss(rewards.to('cpu'), state_values) - 0.01 * dist_entropy
 
-            # Total loss
-            loss = actor_loss + critic_loss
+                # Total loss
+                loss = actor_loss + critic_loss
 
-            # Backward gradients
-            self.optimizer.zero_grad()
-            loss.mean().backward()
-            self.optimizer.step()
+                # Backward gradients
+                self.optimizer.zero_grad()
+                #with torch.cuda.amp.autocast(True):
+                loss.mean().backward()
+                self.optimizer.step()
 
         # Copy new weights to old_policy
         self.old_policy.load_state_dict(self.policy.state_dict())

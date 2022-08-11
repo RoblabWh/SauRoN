@@ -113,8 +113,8 @@ class Memory:   # collected from old policy
 
 
 def train(env_name, env, render, solved_reward, input_style,
-    max_episodes, max_timesteps, update_timestep, action_std, K_epochs, eps_clip,
-    gamma, lr, betas, ckpt_folder, restore, scan_size=121, print_interval=10, save_interval=100):
+          max_episodes, max_timesteps, update_experience, action_std, K_epochs, eps_clip,
+          gamma, lr, betas, ckpt_folder, restore, scan_size=121, print_interval=10, save_interval=100, batch_size=1):
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
     if restore:
@@ -140,8 +140,8 @@ def train(env_name, env, render, solved_reward, input_style,
             memory.insertReward(rewards)
             memory.insertIsTerminal(dones)
 
-            if len(memory) >= update_timestep:
-                ppo.update(memory)
+            if len(memory) >= update_experience:
+                ppo.update(memory, batch_size)
                 memory.clear_memory()
                 time_step = 0
 

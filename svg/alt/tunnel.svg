@@ -43,7 +43,7 @@
    stroke-miterlimit="10"
    cx="22.875294"
    cy="116.63219"
-   r="5.5" />
+   r="13.668" />
 <circle
    id="goal_2_1_"
    fill="#66b32e"
@@ -51,7 +51,7 @@
    stroke-miterlimit="10"
    cx="23.068768"
    cy="150.30153"
-   r="5.5" />
+   r="13.668" />
 <circle
    id="goal_3_1_"
    fill="#66b32e"
@@ -59,7 +59,7 @@
    stroke-miterlimit="10"
    cx="601.35144"
    cy="114.16814"
-   r="5.5" />
+   r="13.99" />
 <circle
    id="goal_4_1_"
    fill="#66b32e"
@@ -67,7 +67,7 @@
    stroke-miterlimit="10"
    cx="602.01337"
    cy="145.7778"
-   r="5.5" />
+   r="13.99" />
 
 <polygon
    fill="none"

@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from PIL import Image
 import os
+import time
 
 def statesToTensor(list):
     states = np.asarray(list, dtype=object)
@@ -98,4 +99,25 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+# a wrapper function that computes computation time of a function
+def timeit(f):
+    def timed(*args, **kwargs):
+        ts = time.time()
+        result = f(*args, **kwargs)
+        te = time.time()
+        print('func:%r args:[%r, %r] took: %2.4f sec' % \
+              (f.__name__, args, kwargs, te-ts))
+        return result
+    return timed
 
+# check if arguments are valid
+def check_args(args):
+    assert args.image_size > 0, "Image size must be positive"
+    assert args.batch_size > 0, "Batch size must be positive"
+    assert args.lr > 0, "Learning rate must be positive"
+    assert args.max_episodes > 0, "Number of episodes must be positive"
+    assert args.time_frames > 0, "Number of time frames must be positive"
+    assert args.print_interval > 0, "Print every must be positive"
+    assert args.number_of_rays > 0, "Number of scans must be positive"
+    assert args.update_experience > 0, "Update experience must be positive"
+    assert args.update_experience > args.batch_size, "Update experience must be greater than batch size"
