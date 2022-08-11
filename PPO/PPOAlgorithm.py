@@ -239,7 +239,7 @@ class PPO:
                 actor_loss = - torch.min(surr1, surr2).type(torch.float32)
 
                 # Critic loss: critic loss - entropy
-                critic_loss = 0.5 * self.MSE_loss(rewards.to('cpu'), state_values) - 0.01 * dist_entropy
+                critic_loss = 0.5 * self.MSE_loss(rewards_minibatch.to('cpu'), state_values) - 0.01 * dist_entropy
 
                 # Total loss
                 loss = actor_loss + critic_loss

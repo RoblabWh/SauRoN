@@ -1,10 +1,11 @@
 from PPO.PPOAlgorithm import PPO
+from torch.utils.data import Dataset, DataLoader
 
 import numpy as np
 import torch
 
 
-class SwarmMemory:
+class SwarmMemory():
     def __init__(self, robotsCount):
         self.robotMemory = [Memory() for _ in range(robotsCount)]
         self.currentTerminalStates = [False for _ in range(robotsCount)]
