@@ -92,6 +92,7 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
         action_dim = 2
         self.cnt = 0
+        self.critic_cnt = 0
         self.actor = Actor(scan_size, input_style)
         self.critic = Critic(scan_size, input_style)
 
@@ -102,10 +103,10 @@ class ActorCritic(nn.Module):
         laser, orientation, distance, velocity = states
         action_mean, action_std = self.actor(laser, orientation, distance, velocity)
         # TODO Werte prüfen ?!?!??!
-        if self.cnt % 500 == 0:
+        if self.cnt % 100000 == 0:
             print("Actor")
-            print("action_mean: ", action_mean)
-            print("action_std: ", action_std)
+            print("action_mean: %0.4f %0.4f" % (action_mean[0][0].item(), action_mean[1][0].item()))
+            print("action_std: %0.4f %0.4f" % (action_std[0][0].item(), action_std[1][0].item()))
             self.cnt = 0
         self.cnt += 1
         cov_mat = torch.diag_embed(action_std)
@@ -135,6 +136,12 @@ class ActorCritic(nn.Module):
 
         # to calculate action score(logprobs) and distribution entropy
         action_mean, action_std = self.actor(laser, orientation, distance, velocity)
+        if self.critic_cnt % 100 == 0:
+            print("Critic")
+            print("action_mean: %0.4f %0.4f" % (action_mean[0][0].item(), action_mean[1][0].item()))
+            print("action_std: %0.4f %0.4f" % (action_std[0][0].item(), action_std[1][0].item()))
+            self.critic_cnt = 0
+        self.critic_cnt += 1
         cov_mat = torch.diag_embed(action_std)
         dist = MultivariateNormal(action_mean, cov_mat)
         action_logprobs = dist.log_prob(action.to('cpu'))
