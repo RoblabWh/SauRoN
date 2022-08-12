@@ -209,6 +209,7 @@ def train(env_name, render, solved_reward, input_style,
     print("Create shared memory")
     create_shared_memory_nparray(numOfProcesses, numOfRobots, update_experience, 4)
     print("Finished!")
+    print("####################")
 
     #ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
     futures = []
@@ -221,6 +222,8 @@ def train(env_name, render, solved_reward, input_style,
                                                              eps_clip, restore, ckpt)))
 
     done, not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
+
+    print("####################")
     print("Done!")
 
 
@@ -234,23 +237,26 @@ def runMultiprocessPPO(args):
     #print("#{} is running!".format(processID))
 
     app = QApplication(sys.argv)
-    #print("QApplication created")
+    print("QApplication created #{}".format(processID))
     env = Environment(app, args_, args_.time_frames, processID)
-    print("Environment created")
+    print("Environment created #{}".format(processID))
+    ckpt = ckpt_folder + '/PPO_continuous_' + env_name + '.pth'
+
     ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
-    print("PPO created")
-    ckpt += str(processID)
-    ckpt += '.pth'
+    print("PPO created #{}".format(processID))
+    #ckpt += str(processID)
+    #ckpt += '.pth'
 
     memory = SwarmMemory(processID, env.getNumberOfRobots())
-    print("Created swarmMemory")
+    print("Created swarmMemory #{}".format(processID))
 
 
     running_reward, avg_length, time_step = 0, 0, 0
     best_reward = 0
-    print("End of test interval")
-    return
+    #print("End of test interval #{}".format(processID))
+    #return
     # training loop
+    update_experience = 1000
     for i_episode in range(1, max_episodes + 1):
         states = env.reset(0)
         for t in range(max_timesteps):
@@ -264,17 +270,24 @@ def runMultiprocessPPO(args):
             memory.insertReward(rewards)
             memory.insertIsTerminal(dones)
 
+            print("Test0")
             if len(memory) >= update_experience:
+                print("0")
                 ppo.update(memory, batch_size)
+                print("1")
                 memory.clear_memory()
+                print("2")
                 time_step = 0
 
+            print("Test")
             running_reward += np.mean(rewards)
+            print("Test2")
             if render:
                 env.render()
-
+            print("Test3")
             if env.is_done():
                 break
+            print("Test4")
         avg_length += t
 
         if running_reward > (print_interval * solved_reward):
