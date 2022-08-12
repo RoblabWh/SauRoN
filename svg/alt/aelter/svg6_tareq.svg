@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg viewBox = "0 0 470 470" version = "1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<line x1="0" y1 ="-3.05176e-05" x2="0" y2="470" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="0" y1 ="470" x2="470" y2="470" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="470" y1 ="470" x2="470" y2="-3.05176e-05" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="470" y1 ="-3.05176e-05" x2="0" y2="-3.05176e-05" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="150" y1 ="-3.05176e-05" x2="220" y2="-3.05176e-05" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="280" y1 ="10" x2="340" y2="10" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="340" y1 ="10" x2="350" y2="-3.05176e-05" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="280" y1 ="10" x2="280" y2="70" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="280" y1 ="70" x2="350" y2="70" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="350" y1 ="70" x2="350" y2="110" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="350" y1 ="110" x2="370" y2="130" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="370" y1 ="130" x2="380" y2="130" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="380" y1 ="130" x2="380" y2="30" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="380" y1 ="30" x2="420" y2="30" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="420" y1 ="30" x2="420" y2="-3.05176e-05" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="410" y1 ="80" x2="440" y2="80" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="440" y1 ="80" x2="450" y2="90" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="450" y1 ="90" x2="470" y2="90" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="410" y1 ="80" x2="410" y2="120" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="410" y1 ="120" x2="430" y2="140" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="430" y1 ="140" x2="460" y2="140" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="460" y1 ="140" x2="460" y2="220" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="460" y1 ="220" x2="470" y2="220" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="50" y1 ="110" x2="90" y2="110" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="90" y1 ="110" x2="90" y2="150" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="90" y1 ="150" x2="50" y2="150" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="50" y1 ="150" x2="50" y2="110" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="290" y1 ="150" x2="300" y2="150" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="300" y1 ="150" x2="320" y2="170" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="320" y1 ="170" x2="320" y2="190" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="320" y1 ="190" x2="290" y2="190" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="290" y1 ="190" x2="290" y2="150" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="300" y1 ="150" x2="290" y2="150" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="0" y1 ="280" x2="30" y2="250" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="30" y1 ="250" x2="30" y2="200" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="30" y1 ="200" x2="220" y2="200" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="220" y1 ="200" x2="230" y2="190" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="230" y1 ="190" x2="260" y2="190" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="260" y1 ="190" x2="260" y2="210" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="260" y1 ="210" x2="230" y2="240" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="230" y1 ="240" x2="210" y2="240" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="210" y1 ="240" x2="210" y2="270" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="210" y1 ="270" x2="180" y2="270" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="180" y1 ="270" x2="180" y2="340" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="180" y1 ="340" x2="110" y2="340" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="110" y1 ="340" x2="90" y2="320" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="90" y1 ="320" x2="0" y2="320" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="280" y1 ="240" x2="390" y2="240" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="390" y1 ="240" x2="390" y2="380" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="390" y1 ="380" x2="340" y2="380" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="340" y1 ="380" x2="320" y2="360" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="320" y1 ="360" x2="320" y2="340" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="320" y1 ="340" x2="350" y2="340" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="350" y1 ="340" x2="350" y2="310" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="350" y1 ="310" x2="340" y2="300" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="340" y1 ="300" x2="340" y2="280" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="340" y1 ="280" x2="280" y2="280" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="280" y1 ="280" x2="280" y2="240" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="420" y1 ="250" x2="430" y2="250" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="430" y1 ="250" x2="470" y2="290" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="470" y1 ="290" x2="470" y2="410" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="470" y1 ="410" x2="420" y2="410" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="420" y1 ="410" x2="420" y2="250" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="430" y1 ="250" x2="420" y2="250" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="210" y1 ="310" x2="290" y2="310" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="290" y1 ="310" x2="290" y2="440" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="290" y1 ="440" x2="270" y2="440" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="270" y1 ="440" x2="250" y2="420" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="250" y1 ="420" x2="250" y2="380" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="250" y1 ="380" x2="240" y2="370" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="240" y1 ="370" x2="240" y2="350" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="240" y1 ="350" x2="210" y2="350" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="210" y1 ="350" x2="210" y2="310" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="180" y1 ="400" x2="210" y2="400" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="210" y1 ="400" x2="210" y2="430" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="210" y1 ="430" x2="180" y2="430" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="180" y1 ="430" x2="180" y2="400" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="330" y1 ="410" x2="350" y2="410" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="350" y1 ="410" x2="370" y2="430" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="370" y1 ="430" x2="370" y2="450" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="370" y1 ="450" x2="330" y2="450" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="330" y1 ="450" x2="330" y2="410" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="250" y1 ="470" x2="280" y2="470" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="41.7006" y1 ="77.3567" x2="44.6446" y2="60.2882" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="44.6446" y1 ="60.2882" x2="49.7651" y2="61.1714" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="49.7651" y1 ="61.1714" x2="46.8212" y2="78.2398" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="46.8212" y1 ="78.2398" x2="41.7006" y2="77.3567" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="39.9369" y1 ="45.2573" x2="58.9203" y2="43.3526" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="58.9203" y1 ="43.3526" x2="59.4917" y2="49.0476" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="59.4917" y1 ="49.0476" x2="40.5083" y2="50.9523" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="40.5083" y1 ="50.9523" x2="39.9369" y2="45.2573" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="402.477" y1 ="188.148" x2="403.702" y2="170.871" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="403.702" y1 ="170.871" x2="408.885" y2="171.239" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="408.885" y1 ="171.239" x2="407.66" y2="188.516" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="407.66" y1 ="188.516" x2="402.477" y2="188.148" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="80.3806" y1 ="370.643" x2="77.4817" y2="469.878" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="77.4817" y1 ="469.878" x2="71.5276" y2="469.704" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="71.5276" y1 ="469.704" x2="74.4265" y2="370.469" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="74.4265" y1 ="370.469" x2="80.3806" y2="370.643" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="449.828" y1 ="456.484" x2="464.565" y2="450.253" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="464.565" y1 ="450.253" x2="466.434" y2="454.674" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="466.434" y1 ="454.674" x2="451.697" y2="460.905" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<line x1="451.697" y1 ="460.905" x2="449.828" y2="456.484" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
+<circle id="start_1_1_" cx="70" cy ="67" r="7" fill="none" stroke = "black" stroke-width = "1"/>
+<circle id="start_2_1_" cx="160.146" cy ="78.3003" r="40" fill="none" stroke = "black" stroke-width = "1"/>
+<circle id="goal_1_1_" cx="25" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle id="goal_2_1_" cx="265" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="435" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="15" cy ="245" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="225" cy ="255" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="315" cy ="145" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="445" cy ="155" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="15" cy ="335" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="225" cy ="365" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="325" cy ="295" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="445" cy ="425" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="155" cy ="445" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="305" cy ="445" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+</svg>

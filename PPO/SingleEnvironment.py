@@ -1,0 +1,223 @@
+from PPO.PPOAlgorithm import PPO
+from torch.utils.data import Dataset, DataLoader
+
+from Environment.Environment import Environment
+from PyQt5.QtWidgets import QApplication
+import numpy as np
+import torch
+
+
+class SwarmMemory():
+    def __init__(self, robotsCount):
+        self.robotMemory = [Memory() for _ in range(robotsCount)]
+        self.currentTerminalStates = [False for _ in range(robotsCount)]
+
+    def __getitem__(self, item):
+        return self.robotMemory[item]
+
+    # Gets relative Index according to currentTerminalStates
+    def getRelativeIndices(self):
+        relativeIndices = []
+        for i in range(len(self.currentTerminalStates)):
+            if not self.currentTerminalStates[i]:
+                relativeIndices.append(i)
+
+        return relativeIndices
+
+    def insertState(self, laser, orientation, distance, velocity):
+        relativeIndices = self.getRelativeIndices()
+        for i in range(len(relativeIndices)):
+            self.robotMemory[relativeIndices[i]].states.append([laser[i], orientation[i], distance[i], velocity[i]])
+
+    def insertAction(self, action):
+        relativeIndices = self.getRelativeIndices()
+        for i in range(len(relativeIndices)):
+            self.robotMemory[relativeIndices[i]].actions.append(action[i])
+
+    def insertReward(self, reward):
+        relativeIndices = self.getRelativeIndices()
+        for i in range(len(relativeIndices)):
+            self.robotMemory[relativeIndices[i]].rewards.append(reward[i])
+
+    def insertLogProb(self, logprob):
+        relativeIndices = self.getRelativeIndices()
+        for i in range(len(relativeIndices)):
+            self.robotMemory[relativeIndices[i]].logprobs.append(logprob[i])
+
+    def insertIsTerminal(self, isTerminal):
+        relativeIndices = self.getRelativeIndices()
+        for i in range(len(relativeIndices)):
+            self.robotMemory[relativeIndices[i]].is_terminals.append(isTerminal[i])
+            if isTerminal[i]:
+                self.currentTerminalStates[relativeIndices[i]] = True
+
+        # check if currentTerminalStates is all True
+        if all(self.currentTerminalStates):
+            self.currentTerminalStates = [False for _ in range(len(self.currentTerminalStates))]
+
+    def getStatesOfAllRobots(self):
+        laser = []
+        orientation = []
+        distance = []
+        velocity = []
+        for robotmemory in self.robotMemory:
+            for state in robotmemory.states:
+                laser.append(state[0])
+                orientation.append(state[1])
+                distance.append(state[2])
+                velocity.append(state[3])
+
+        return [torch.stack(laser), torch.stack(orientation), torch.stack(distance), torch.stack(velocity)]
+
+    def getActionsOfAllRobots(self):
+        actions = []
+        for robotmemory in self.robotMemory:
+            for action in robotmemory.actions:
+                actions.append(action)
+
+        return actions
+
+    def getLogProbsOfAllRobots(self):
+        logprobs = []
+        for robotmemory in self.robotMemory:
+            for logprob in robotmemory.logprobs:
+                logprobs.append(logprob)
+
+        return logprobs
+
+    def clear_memory(self):
+        for memory in self.robotMemory:
+            memory.clear_memory()
+
+    def __len__(self):
+        length = 0
+        for memory in self.robotMemory:
+            length += len(memory)
+        return length
+
+
+class Memory:   # collected from old policy
+    def __init__(self):
+        self.states = []
+        self.actions = []
+        self.rewards = []
+        self.is_terminals = []
+        self.logprobs = []
+
+    def clear_memory(self):
+        del self.states[:]
+        del self.actions[:]
+        del self.rewards[:]
+        del self.is_terminals[:]
+        del self.logprobs[:]
+
+    def __len__(self):
+        return len(self.states)
+
+
+def train(env_name, render, solved_reward, input_style,
+          max_episodes, max_timesteps, update_experience, action_std, K_epochs, eps_clip,
+          gamma, lr, betas, ckpt_folder, restore, scan_size=121, print_interval=10, save_interval=100, batch_size=1):
+
+    app = QApplication(sys.argv)
+    env = Environment(app, args, args.time_frames, 0)
+    ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
+    if restore:
+        print('Load checkpoint from {}'.format(ckpt))
+
+    memory = SwarmMemory(env.getNumberOfRobots())
+
+    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
+
+    running_reward, avg_length, time_step = 0, 0, 0
+    best_reward = 0
+    # training loop
+    for i_episode in range(1, max_episodes+1):
+        states = env.reset(0)
+        for t in range(max_timesteps):
+            time_step += 1
+
+            # Run old policy
+            actions = ppo.select_action(states, memory)
+
+            states, rewards, dones, _ = env.step(actions)
+
+            memory.insertReward(rewards)
+            memory.insertIsTerminal(dones)
+
+            if len(memory) >= update_experience:
+                ppo.update(memory, batch_size)
+                memory.clear_memory()
+                time_step = 0
+
+            running_reward += np.mean(rewards)
+            if render:
+                env.render()
+
+            if env.is_done():
+                break
+        avg_length += t
+
+        if running_reward > (print_interval * solved_reward):
+            print("########## Solved! ##########")
+            torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
+            print('Save a checkpoint!')
+            break
+
+        # if i_episode % save_interval == 0:
+        #     torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
+        #     print('Save a checkpoint!')
+
+        if i_episode % print_interval == 0:
+            avg_length = int(avg_length / print_interval)
+            running_reward = (running_reward / print_interval)
+
+            if running_reward > best_reward:
+                best_reward = running_reward
+                torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
+                print('Save a checkpoint!')
+
+            print('Episode {} \t Avg length: {} \t Avg reward: {}'.format(i_episode, avg_length, running_reward))
+
+            running_reward, avg_length = 0, 0
+
+
+def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes, scan_size=121):
+
+    ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
+    print('Load checkpoint from {}'.format(ckpt))
+
+    memory = SwarmMemory(env.getNumberOfRobots())
+
+    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=True, ckpt=ckpt)
+
+    episode_reward, time_step = 0, 0
+    avg_episode_reward, avg_length = 0, 0
+
+    # test
+    for i_episode in range(1, test_episodes+1):
+        states = env.reset(0)
+        while True:
+            time_step += 1
+
+            # Run old policy
+            actions = ppo.select_action_certain(states, memory)
+
+            states, rewards, dones, _ = env.step(actions)
+            memory.insertIsTerminal(dones)
+
+            episode_reward += np.sum(rewards)
+
+            if render:
+                env.render()
+
+            if env.is_done():
+                print('Episode {} \t Length: {} \t Reward: {}'.format(i_episode, time_step, episode_reward))
+                avg_episode_reward += episode_reward
+                avg_length += time_step
+                memory.clear_memory()
+                time_step, episode_reward = 0, 0
+                break
+
+    print('Test {} episodes DONE!'.format(test_episodes))
+    print('Avg episode reward: {} | Avg length: {}'.format(avg_episode_reward/test_episodes, avg_length/test_episodes))

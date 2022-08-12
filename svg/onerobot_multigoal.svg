@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Adobe Illustrator 16.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+
+<svg
+   version="1.1"
+   id="Ebene_1"
+   x="0px"
+   y="0px"
+   width="623.619px"
+   height="283.46px"
+   viewBox="0 0 623.619 283.46"
+   enable-background="new 0 0 623.619 283.46"
+   xml:space="preserve"
+   sodipodi:docname="onerobot_multigoal.svg"
+   inkscape:version="1.2 (1:1.2+202206011327+fc4e4096c5)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+   id="defs15" /><sodipodi:namedview
+   id="namedview13"
+   pagecolor="#505050"
+   bordercolor="#eeeeee"
+   borderopacity="1"
+   inkscape:showpageshadow="0"
+   inkscape:pageopacity="0"
+   inkscape:pagecheckerboard="0"
+   inkscape:deskcolor="#505050"
+   showgrid="false"
+   inkscape:zoom="0.83256899"
+   inkscape:cx="312.28643"
+   inkscape:cy="141.73"
+   inkscape:window-width="1920"
+   inkscape:window-height="1031"
+   inkscape:window-x="0"
+   inkscape:window-y="25"
+   inkscape:window-maximized="1"
+   inkscape:current-layer="Ebene_1" />
+
+<circle
+   id="start_2_1_"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="317.35352"
+   cy="144.76855"
+   r="7.5" />
+
+
+
+
+
+<circle
+   id="goal_4_1_-3"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="591.85321"
+   cy="31.231504"
+   r="13.99" /><circle
+   id="goal_4_1_-3-3"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="398.76575"
+   cy="33.630848"
+   r="13.99" /><circle
+   id="goal_4_1_-3-6"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="206.35439"
+   cy="29.66609"
+   r="13.99" /><circle
+   id="goal_4_1_-3-7"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="30.02754"
+   cy="26.424236"
+   r="13.99" /><circle
+   id="goal_4_1_-3-5"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="596.94751"
+   cy="255.25"
+   r="13.99" /><circle
+   id="goal_4_1_-3-35"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="496.69278"
+   cy="146.54094"
+   r="13.99" /><circle
+   id="goal_4_1_-3-62"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="26.543804"
+   cy="257.70529"
+   r="13.99" /><circle
+   id="goal_4_1_-3-9"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="409.57568"
+   cy="255.27986"
+   r="13.99" /><circle
+   id="goal_4_1_-3-1"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="124.46664"
+   cy="141.62164"
+   r="13.99" /><circle
+   id="goal_4_1_-3-2"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="212.68993"
+   cy="250.09064"
+   r="13.99" />
+<polygon
+   fill="none"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   points="619.977,279.897 619.977,2.563 3.31,2.563 3.31,279.563 "
+   id="polygon10" />
+</svg>

@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Adobe Illustrator 16.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+
+<svg
+   version="1.1"
+   id="Ebene_1"
+   x="0px"
+   y="0px"
+   width="623.619px"
+   height="470px"
+   viewBox="0 0 623.619 470"
+   enable-background="new 0 0 623.619 470"
+   xml:space="preserve"
+   sodipodi:docname="SimpleObstacles.svg"
+   inkscape:version="1.2 (1:1.2+202206011327+fc4e4096c5)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+   id="defs31" /><sodipodi:namedview
+   id="namedview29"
+   pagecolor="#505050"
+   bordercolor="#eeeeee"
+   borderopacity="1"
+   inkscape:showpageshadow="0"
+   inkscape:pageopacity="0"
+   inkscape:pagecheckerboard="0"
+   inkscape:deskcolor="#505050"
+   showgrid="false"
+   inkscape:zoom="0.50212766"
+   inkscape:cx="312.66949"
+   inkscape:cy="462.0339"
+   inkscape:window-width="1920"
+   inkscape:window-height="1031"
+   inkscape:window-x="0"
+   inkscape:window-y="25"
+   inkscape:window-maximized="1"
+   inkscape:current-layer="Ebene_1" />
+<circle
+   id="start_1_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="153.707"
+   cy="193.793"
+   r="7.499" />
+<circle
+   id="start_2_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="278.557"
+   cy="193.793"
+   r="7.5" />
+<circle
+   id="start_3_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="400.986"
+   cy="193.793"
+   r="7.499" />
+<circle
+   id="start_4_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="498.649"
+   cy="193.793"
+   r="7.5" />
+
+<circle
+   id="start_5_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="153.707"
+   cy="250.793"
+   r="7.499" />
+<circle
+   id="start_6_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="278.557"
+   cy="250.793"
+   r="7.5" />
+<circle
+   id="start_7_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="400.986"
+   cy="250.793"
+   r="7.499" />
+<circle
+   id="start_8_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="498.649"
+   cy="250.793"
+   r="7.5" />
+
+<circle
+   id="start_9_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="153.707"
+   cy="310.793"
+   r="7.499" />
+<circle
+   id="start_10_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="278.557"
+   cy="310.793"
+   r="7.5" />
+<circle
+   id="start_11_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="400.986"
+   cy="310.793"
+   r="7.499" />
+<circle
+   id="start_12_1_"
+   fill="#E52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="498.649"
+   cy="310.793"
+   r="7.5" />
+
+<circle
+   id="goal_1_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="100.042"
+   cy="80.891"
+   r="13.668" />
+<circle
+   id="goal_2_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="195.042"
+   cy="90.891"
+   r="13.668" />
+<circle
+   id="goal_3_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="288.224"
+   cy="100.891"
+   r="13.668" />
+<circle
+   id="goal_4_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="368.81"
+   cy="95.891"
+   r="13.99" />
+<circle
+   id="goal_5_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="459.816"
+   cy="105.891"
+   r="13.99" />
+<circle
+   id="goal_6_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="540.816"
+   cy="85.891"
+   r="13.99" />
+
+<circle
+   id="goal_7_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="100.042"
+   cy="395.891"
+   r="13.668" />
+<circle
+   id="goal_8_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="195.042"
+   cy="405.891"
+   r="13.668" />
+<circle
+   id="goal_9_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="288.224"
+   cy="390.891"
+   r="13.668" />
+<circle
+   id="goal_10_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="368.81"
+   cy="420.891"
+   r="13.99" />
+<circle
+   id="goal_11_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="459.816"
+   cy="410.891"
+   r="13.99" />
+<circle
+   id="goal_12_1_"
+   fill="#66B32E"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="540.816"
+   cy="400.891"
+   r="13.99" />
+<polygon
+   fill="none"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   points="619.977,460 619.977,2.563 3.31,2.563 3.31,460 "
+   id="polygon26" />
+<rect
+   style="fill:#0000ff;fill-rule:evenodd"
+   id="rect243"
+   width="96.231857"
+   height="88.984627"
+   x="36.200691"
+   y="152.48073" /><rect
+   style="fill:#0000ff;fill-rule:evenodd"
+   id="rect245"
+   width="46.318768"
+   height="51.011505"
+   x="436.90863"
+   y="177.15752" /><rect
+   style="fill:#0000ff;fill-rule:evenodd"
+   id="rect247"
+   width="25.353294"
+   height="307.79837"
+   x="315.94437"
+   y="87.826103" /><rect
+   style="fill:#0000ff;fill-rule:evenodd"
+   id="rect249"
+   width="36.567295"
+   height="33.535397"
+   x="478.06772"
+   y="350.86087" /><rect
+   style="fill:#0000ff;fill-rule:evenodd"
+   id="rect251"
+   width="67.771545"
+   height="67.54303"
+   x="187.70723"
+   y="221.24117" /><rect
+   style="fill:#0000ff;fill-rule:evenodd"
+   id="rect253"
+   width="207.39761"
+   height="12.304817"
+   x="67.681595"
+   y="348.58514" /></svg>
