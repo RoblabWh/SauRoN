@@ -12,7 +12,7 @@ import sys
 from Environment.Environment import Environment
 from PyQt5.QtWidgets import QApplication
 
-args = None
+args_ = None
 
 shared_array_laser_np = None
 shared_array_distance_np = None
@@ -173,11 +173,12 @@ class Memory:   # collected from old policy
     def __init__(self, processID, robotID):
         self.processID = processID
         self.robotID = robotID
-        self.states = [shared_array_laser_np[processID], ]
-        self.actions = []
-        self.rewards = []
-        self.is_terminals = []
-        self.logprobs = []
+        self.states = [shared_array_laser_np[processID][robotID], shared_array_distance_np[processID][robotID],
+                       shared_array_orientation_np[processID][robotID], shared_array_velocity_np[processID][robotID]]
+        self.actions = [shared_array_action_np[processID][robotID]]
+        self.rewards = [shared_array_reward_np[processID][robotID]]
+        self.is_terminals = [shared_array_terminal_np[processID][robotID]]
+        self.logprobs = [shared_array_logprob_np[processID][robotID]]
 
     def clear_memory(self):
         del self.states[:]
@@ -193,9 +194,9 @@ class Memory:   # collected from old policy
 def train(env_name, render, solved_reward, input_style,
           max_episodes, max_timesteps, update_experience, action_std, K_epochs, eps_clip,
           gamma, lr, betas, ckpt_folder, restore, scan_size=121, print_interval=10, save_interval=100, batch_size=1,
-          numOfRobots=4, args_=None):
-    global args
-    args = args_
+          numOfRobots=4, args=None):
+    global args_
+    args_ = args
 
     numOfProcesses = 3
 
@@ -225,25 +226,30 @@ def train(env_name, render, solved_reward, input_style,
 
 
 def runMultiprocessPPO(args):
+    global args_
     processID, max_episodes, env_name, max_timesteps, render, print_interval, solved_reward, ckpt_folder, scan_size, \
     action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt = args
 
-    print("#{} is running!".format(processID))
 
+    #print("#{} is running!".format(processID))
 
     app = QApplication(sys.argv)
-    print("QApplication created")
-    env = Environment(app, args, args.time_frames, 0)
+    #print("QApplication created")
+    env = Environment(app, args_, args_.time_frames, processID)
     print("Environment created")
     ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
     print("PPO created")
     ckpt += str(processID)
     ckpt += '.pth'
 
+    memory = SwarmMemory(processID, env.getNumberOfRobots())
+    print("Created swarmMemory")
+
+
     running_reward, avg_length, time_step = 0, 0, 0
     best_reward = 0
     print("End of test interval")
-
+    return
     # training loop
     for i_episode in range(1, max_episodes + 1):
         states = env.reset(0)

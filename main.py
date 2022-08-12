@@ -89,7 +89,7 @@ if args.mode == 'train':
                                     gamma=args.gamma, lr=args.lr, betas=[0.9, 0.990], ckpt_folder=args.ckpt_folder,
                                     restore=args.restore, print_interval=args.print_interval,
                                     save_interval=args.save_interval,
-                                    scan_size=args.image_size, batch_size=args.batch_size, numOfRobots=4)
+                                    scan_size=args.image_size, batch_size=args.batch_size, numOfRobots=4, args=args)
 elif args.mode == 'test':
     PPO.SingleEnvironment.test(env_name, input_style=args.input_style,
          render=args.render, action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
