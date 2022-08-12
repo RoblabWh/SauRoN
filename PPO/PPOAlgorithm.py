@@ -26,7 +26,6 @@ class Inputspace(nn.Module):
             in_f = self.get_in_features(h_in=in_f, kernel_size=5, stride=2)
             features_scan = (int(in_f)) * 16
 
-
         self.flatten = nn.Flatten()
         lidar_out_features = 128
         self.lidar_flat = nn.Linear(in_features=features_scan, out_features=lidar_out_features)
@@ -59,14 +58,19 @@ class Actor(nn.Module):
         # Mu
         self.mu = nn.Linear(in_features=128, out_features=2)
         # Var
-        self.dense_var = nn.Linear(in_features=128, out_features=2)
-        self.softmax = torch.nn.Softmax()
+        #self.dense_var = nn.Linear(in_features=128, out_features=2)
+        logstds_param = nn.Parameter(torch.full((2,), 0.1))
+        self.register_parameter("logstds", logstds_param)
+        #self.softplus = torch.nn.Softplus()
+        #self.softmax = torch.nn.Softmax()
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser.to(device), orientation_to_goal.to(device), distance_to_goal.to(device), velocity.to(device))
         mu = torch.tanh(self.mu(x))
-        var = self.softmax(self.dense_var(x)) # TODO: check if softmax is needed
-        return [mu.to('cpu'), var.to('cpu')]
+        #var = self.softplus(self.dense_var(x))
+        #var = self.softmax(self.dense_var(x)) # TODO: check if softmax is needed
+        stds = torch.clamp(self.logstds.exp(), 1e-3, 50)
+        return [mu.to('cpu'), stds.to('cpu')]
 
 
 class Critic(nn.Module):
@@ -88,27 +92,29 @@ class Critic(nn.Module):
 
 
 class ActorCritic(nn.Module):
-    def __init__(self, action_std, scan_size, input_style):
+    def __init__(self, action_std, scan_size, input_style, logger):
         super(ActorCritic, self).__init__()
         action_dim = 2
-        self.cnt = 0
+        self.actor_cnt = 0
         self.critic_cnt = 0
+        self.logger = logger
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.actor = Actor(scan_size, input_style)
         self.critic = Critic(scan_size, input_style)
 
         # TODO statische var testen
+        #self.logstds_param = nn.Parameter(torch.full((n_actions,), 0.1))
         #self.action_var = torch.full((action_dim, ), action_std * action_std).to(device)
 
     def act(self, states, memory):
         laser, orientation, distance, velocity = states
         action_mean, action_std = self.actor(laser, orientation, distance, velocity)
         # TODO Werte prüfen ?!?!??!
-        if self.cnt % 100000 == 0:
-            print("Actor")
-            print("action_mean: %0.4f %0.4f" % (action_mean[0][0].item(), action_mean[1][0].item()))
-            print("action_std: %0.4f %0.4f" % (action_std[0][0].item(), action_std[1][0].item()))
-            self.cnt = 0
-        self.cnt += 1
+
+        self.logger.add_actor_output(action_mean[0][0].item(), action_mean[0][1].item(), action_std[0].item(), action_std[1].item())
+
+        action_std = action_std.repeat((action_mean.shape[0], 1))
+        #action_std = action_std[:action_mean.shape[0]]
         cov_mat = torch.diag_embed(action_std)
         dist = MultivariateNormal(action_mean, cov_mat)
         action = dist.sample()
@@ -136,12 +142,8 @@ class ActorCritic(nn.Module):
 
         # to calculate action score(logprobs) and distribution entropy
         action_mean, action_std = self.actor(laser, orientation, distance, velocity)
-        if self.critic_cnt % 100 == 0:
-            print("Critic")
-            print("action_mean: %0.4f %0.4f" % (action_mean[0][0].item(), action_mean[1][0].item()))
-            print("action_std: %0.4f %0.4f" % (action_std[0][0].item(), action_std[1][0].item()))
-            self.critic_cnt = 0
-        self.critic_cnt += 1
+
+        action_std = action_std.repeat((action_mean.shape[0], 1))
         cov_mat = torch.diag_embed(action_std)
         dist = MultivariateNormal(action_mean, cov_mat)
         action_logprobs = dist.log_prob(action.to('cpu'))
@@ -151,22 +153,23 @@ class ActorCritic(nn.Module):
 
 
 class PPO:
-    def __init__(self, scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=False, ckpt=None):
+    def __init__(self, scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, logger, restore=False, ckpt=None):
         self.lr = lr
         self.betas = betas
         self.gamma = gamma
+        self.logger = logger
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
 
         # current policy
-        self.policy = ActorCritic(action_std, scan_size, input_style).to(device)
+        self.policy = ActorCritic(action_std, scan_size, input_style, logger).to(device)
         if restore:
             pretained_model = torch.load(ckpt, map_location=lambda storage, loc: storage)
             self.policy.load_state_dict(pretained_model)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, betas=betas)
 
         # old policy: initialize old policy with current policy's parameter
-        self.old_policy = ActorCritic(action_std, scan_size, input_style).to(device)
+        self.old_policy = ActorCritic(action_std, scan_size, input_style, logger).to(device)
         self.old_policy.load_state_dict(self.policy.state_dict())
 
         self.MSE_loss = nn.MSELoss()
@@ -180,6 +183,10 @@ class PPO:
         # prepare data
         states = statesToTensor(states)
         return self.old_policy.act_certain(states, memory).cpu().numpy()
+
+    def saveCurrentWeights(self, ckpt_folder, env_name):
+        print('Saving current weights to ' + ckpt_folder + '/' + env_name + '_current.pth')
+        torch.save(self.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
 
     def update(self, memory, batch_size):
         # Monte Carlo estimation of rewards
@@ -250,6 +257,7 @@ class PPO:
 
                 # Total loss
                 loss = actor_loss + critic_loss
+                self.logger.add_loss(loss.mean().item())
 
                 # Backward gradients
                 self.optimizer.zero_grad()

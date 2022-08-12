@@ -1,3 +1,4 @@
+from torch.utils.tensorboard import SummaryWriter
 import argparse
 import numpy as np
 import torch
@@ -121,3 +122,71 @@ def check_args(args):
     assert args.number_of_rays > 0, "Number of scans must be positive"
     assert args.update_experience > 0, "Update experience must be positive"
     assert args.update_experience > args.batch_size, "Update experience must be greater than batch size"
+
+
+class Logger(object):
+    def __init__(self, log_dir, update_interval):
+        self.writer = None
+        self.log_dir = log_dir
+        self.logging = False
+        self.episode = 0
+        self.loss = []
+        self.actor_mean_linvel = []
+        self.actor_mean_angvel = []
+        self.actor_std_linvel = []
+        self.actor_std_angvel = []
+        self.update_interval = update_interval
+
+    def __del__(self):
+        self.close()
+
+    def set_logging(self, logging):
+        self.logging = logging
+        if logging:
+            self.writer = SummaryWriter(self.log_dir)
+
+    def build_graph(self, model, device):
+        if self.logging:
+            laser = torch.rand(4, 4, 1081).to(device)
+            ori = torch.rand(4, 4, 2).to(device)
+            dist = torch.rand(4, 4).to(device)
+            vel = torch.rand(4, 4, 2).to(device)
+            self.writer.add_graph(model, (laser, ori, dist, vel))
+
+    def add_loss(self, loss):
+        self.loss.append(loss)
+
+    def summary_loss(self):
+        if self.logging and not len(self.loss) == 0:
+            self.writer.add_scalar('loss', np.mean(self.loss), self.episode)
+            self.loss = []
+
+    def add_actor_output(self, actor_mean_linvel, actor_mean_angvel, actor_std_linvel, actor_std_angvel):
+        self.actor_mean_linvel.append(actor_mean_linvel)
+        self.actor_mean_angvel.append(actor_mean_angvel)
+        self.actor_std_linvel.append(actor_std_linvel)
+        self.actor_std_angvel.append(actor_std_angvel)
+
+    def summary_actor_output(self):
+        if self.logging:
+            self.writer.add_scalars('actor_output', {'Mean LinVel': np.mean(self.actor_mean_linvel),
+                                                     'Mean AngVel': np.mean(self.actor_mean_angvel),
+                                                     'Std LinVel': np.mean(self.actor_std_linvel),
+                                                     'Std AngVel': np.mean(self.actor_std_angvel)}, self.episode)
+            self.actor_mean_linvel = []
+            self.actor_mean_angvel = []
+            self.actor_std_linvel = []
+            self.actor_std_angvel = []
+
+    def add_reward(self, reward):
+        self.scalar_summary('reward', reward)
+
+    def scalar_summary(self, tag, value):
+        if self.logging:
+            self.writer.add_scalar(tag, value, self.episode)
+
+    def set_episode(self, episode):
+        self.episode = episode
+
+    def close(self):
+        self.writer.close()

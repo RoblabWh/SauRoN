@@ -10,8 +10,7 @@ from PyQt5.QtWidgets import QApplication
 levelFiles = ['tunnel.svg']
 env_name = "smallgoals_dt"
 
-parser = argparse.ArgumentParser(description='PyTorch PPO for continuous controlling')
-parser.add_argument('--save_interval', type=int, default=50, help='how many episodes to save a checkpoint')
+parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default='./models', help='Location to save checkpoint models')
 parser.add_argument('--mode', default='train', help='choose train or test')
 
@@ -21,11 +20,11 @@ parser.add_argument('--mode', default='train', help='choose train or test')
 parser.add_argument('--restore', default=False, action='store_true', help='Restore and go on training?')
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net')
 parser.add_argument('--steps', type=int, default=1000, help='Steps in Environment per Episode')
-parser.add_argument('--max_episodes', type=int, default=100000)
-parser.add_argument('--update_experience', type=int, default=100000, help='how many experiences to update the policy')
+parser.add_argument('--max_episodes', type=int, default=1000000, help='Maximum Number of Episodes')
+parser.add_argument('--update_experience', type=int, default=4000, help='how many experiences to update the policy')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)')
-parser.add_argument('--K_epochs', type=int, default=168, help='update the policy K times')
+parser.add_argument('--K_epochs', type=int, default=10, help='update the policy K times')
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
@@ -54,7 +53,8 @@ parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=
 
 # Visualization settings
 
-parser.add_argument('--print_interval', type=int, default=500, help='how many episodes to print the results out')
+parser.add_argument('--tensorboard', type=str2bool, default=True, help='Use tensorboard')
+parser.add_argument('--print_interval', type=int, default=10, help='how many episodes to print the results out')
 parser.add_argument('--render', default=False, action='store_true', help='Render?')
 parser.add_argument('--scale_factor', type=int, default=65, help='Scale Factor for Environment')
 parser.add_argument('--display_normals', type=bool, default=True,
@@ -72,13 +72,12 @@ if args.input_style == 'laser':
     args.image_size = args.number_of_rays
 
 if args.mode == 'train':
-    train(env_name, env, input_style=args.input_style,
-          render=args.render, solved_reward=args.solved_reward,
+    train(env_name, env, input_style=args.input_style, solved_reward=args.solved_reward,
           max_episodes=args.max_episodes, max_timesteps=args.steps, update_experience=args.update_experience,
           action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
           gamma=args.gamma, lr=args.lr, betas=[0.9, 0.990], ckpt_folder=args.ckpt_folder,
-          restore=args.restore, print_interval=args.print_interval, save_interval=args.save_interval,
-          scan_size=args.image_size, batch_size=args.batch_size)
+          restore=args.restore, print_interval=args.print_interval, scan_size=args.image_size,
+          batch_size=args.batch_size, tensorboard=args.tensorboard)
 elif args.mode == 'test':
     test(env_name, env, input_style=args.input_style,
          render=args.render, action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,

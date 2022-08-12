@@ -50,6 +50,8 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.sonarShowing = True
         self.simShowing = True
         self.SaveNetClicked = False
+        self.checkpoint_folder = None
+        self.env_name = None
         self.mode = args.mode
         self.scaleFactor = args.scale_factor
         self.newScaleFactorWidth = self.geometry().width() / self.arenaWidth
@@ -99,6 +101,11 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.lbSteps.setText("0")
         self.lbSteps.setFont(QFont("Helvetica", 12, QFont.Black, ))
         self.lbSteps.setStyleSheet("color: rgba(0,0 ,0, 96);")
+
+        self.lbEpisodes = QLabel(self)
+        self.lbEpisodes.setText("Episode: 0")
+        self.lbEpisodes.setFont(QFont("Helvetica", 12, QFont.Black, ))
+        self.lbEpisodes.setStyleSheet("color: rgba(0,0 ,0, 96);")
 
         self.btSaveNet = QPushButton(self)
         self.btSaveNet.clicked.connect(self.clickedSaveNet)
@@ -158,6 +165,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
             hbox.addWidget(slWidget)
             hbox.addWidget(spacingWidget)
             hbox.addWidget(self.lbSteps)
+            hbox.addWidget(self.lbEpisodes)
 
         else:
             hbox.addWidget(self.btSimulation)
@@ -165,6 +173,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
             hbox.addWidget(self.btSaveNet)
             hbox.addWidget(spacingWidget)
             hbox.addWidget(self.lbSteps)
+            hbox.addWidget(self.lbEpisodes)
 
         self.setMenuWidget(self.optionsWidget)
 
@@ -187,7 +196,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
     def clickedSaveNet(self):
         for observer in self.saveButtonListenrs:
-            observer.saveCurrentWeights()
+            observer.saveCurrentWeights(self.checkpoint_folder, self.env_name)
 
     def updateButtons(self):
 
@@ -223,14 +232,15 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         painter.end()
 
-    def updateRobot(self, robot, num, stepsLeft, activations):
+    def updateRobot(self, robot, num, stepsLeft, activations, episode):
         if self.delay > 0: time.sleep(self.delay)
 
         self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.lidarHits,
                                               self.simShowing, robot.isActive(), robot.debugAngle, activations,
                                               robot.getPieSliceWalls(), robot.posSensor)
         if self.simShowing:
-            self.lbSteps.setText(str(stepsLeft))
+            self.lbSteps.setText("Steps: " + str(stepsLeft))
+            self.lbEpisodes.setText("Episode: " + str(episode))
 
     def paintUpdates(self):
         self.update()
@@ -242,7 +252,9 @@ class SimulationWindow(QtWidgets.QMainWindow):
     def setCircleWalls(self, circleWalls):
         self.circleWalls = circleWalls
 
-    def setSaveListener(self, observer):
+    def setSaveListener(self, observer, checkpoint_folder, env_name):
+        self.checkpoint_folder = checkpoint_folder
+        self.env_name = env_name
         self.saveButtonListenrs.append(observer)
 
     def setRobotRepresentation(self, robots):

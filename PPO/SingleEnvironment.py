@@ -1,6 +1,6 @@
 from PPO.PPOAlgorithm import PPO
 from torch.utils.data import Dataset, DataLoader
-
+from utils import Logger
 import numpy as np
 import torch
 
@@ -112,18 +112,26 @@ class Memory:   # collected from old policy
     def __len__(self):
         return len(self.states)
 
-
-def train(env_name, env, render, solved_reward, input_style,
+def train(env_name, env, solved_reward, input_style,
           max_episodes, max_timesteps, update_experience, action_std, K_epochs, eps_clip,
-          gamma, lr, betas, ckpt_folder, restore, scan_size=121, print_interval=10, save_interval=100, batch_size=1):
+          gamma, lr, betas, ckpt_folder, restore, tensorboard, scan_size=121, print_interval=10, batch_size=1):
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
     if restore:
         print('Load checkpoint from {}'.format(ckpt))
 
+    # Tensorboard
+    logger = Logger(log_dir=ckpt_folder, update_interval=print_interval)
+    if tensorboard:
+        logger.set_logging(True)
+
     memory = SwarmMemory(env.getNumberOfRobots())
 
-    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
+    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, logger=logger, restore=restore, ckpt=ckpt)
+    env.setUISaveListener(ppo, ckpt_folder, env_name)
+
+    #logger.build_graph(ppo.policy.actor, ppo.policy.device)
+    #logger.build_graph(ppo.policy.critic, ppo.policy.device)
 
     running_reward, avg_length, time_step = 0, 0, 0
     best_reward = 0
@@ -141,14 +149,15 @@ def train(env_name, env, render, solved_reward, input_style,
             memory.insertReward(rewards)
             memory.insertIsTerminal(dones)
 
+            logger.set_episode(i_episode)
+
             if len(memory) >= update_experience:
+                print('Train Network at Episode {}'.format(i_episode))
                 ppo.update(memory, batch_size)
                 memory.clear_memory()
                 time_step = 0
 
             running_reward += np.mean(rewards)
-            if render:
-                env.render()
 
             if env.is_done():
                 break
@@ -168,14 +177,23 @@ def train(env_name, env, render, solved_reward, input_style,
             avg_length = int(avg_length / print_interval)
             running_reward = (running_reward / print_interval)
 
+            logger.scalar_summary('reward', running_reward)
+            logger.scalar_summary('Avg Steps', avg_length)
+            logger.summary_actor_output()
+            logger.summary_loss()
+
             if running_reward > best_reward:
                 best_reward = running_reward
                 torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
-                print('Save a checkpoint!')
+                print(f'Best performance with avg reward of {best_reward}.2f saved at episode{i_episode}.')
 
-            print('Episode {} \t Avg length: {} \t Avg reward: {}'.format(i_episode, avg_length, running_reward))
+            if not tensorboard:
+                print(f'Episode: {i_episode}, Avg reward: {running_reward:.2f}, Avg steps: {avg_length:.2f}')
 
             running_reward, avg_length = 0, 0
+
+    if tensorboard:
+        logger.close()
 
 
 def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes, scan_size=121):
@@ -185,7 +203,7 @@ def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gam
 
     memory = SwarmMemory(env.getNumberOfRobots())
 
-    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=True, ckpt=ckpt)
+    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=True, ckpt=ckpt, logger=None)
 
     episode_reward, time_step = 0, 0
     avg_episode_reward, avg_length = 0, 0

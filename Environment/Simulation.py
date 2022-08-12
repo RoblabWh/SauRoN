@@ -29,6 +29,7 @@ class Simulation:
         self.scaleFactor = args.scale_factor
         self.steps = args.steps
         self.hasUI = app is not None
+        self.episode = 0
 
         # Parameter width & length über args
 
@@ -179,7 +180,7 @@ class Simulation:
             if self.simulationWindow != None:
                 for i, robot in enumerate(self.robots):
                     activationsR = activations[i] if activations is not None else None
-                    self.simulationWindow.updateRobot(robot, i, self.steps - stepsLeft, activationsR)
+                    self.simulationWindow.updateRobot(robot, i, self.steps - stepsLeft, activationsR, self.episode)
                 self.simulationWindow.updateTrafficLights(proximity)
                 self.simulationWindow.paintUpdates()
         return robotsTerminations

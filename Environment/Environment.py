@@ -21,6 +21,7 @@ class Environment:
         self.steps = args.steps
         self.steps_left = args.steps
         self.simulation = Simulation(app, args, timeframes, level)
+        self.episode = -1
         self.timeframs = timeframes
         self.total_reward = 0.0
         self.done = False
@@ -184,19 +185,21 @@ class Environment:
         """
         self.simulation.reset(level)
         self.steps_left = self.steps
+        self.episode += 1
+        self.simulation.episode = self.episode
         self.total_reward = 0.0
         self.done = False
 
         states = [self.get_observation(i) for i in range(self.simulation.getCurrentNumberOfRobots())]
         return states
 
-    def setUISaveListener(self, observer):
+    def setUISaveListener(self, observer, checkpoint_folder, env_name):
         """
         Sets a Listener for the save net button to detect if it's been pressed
         :param observer: observing learning algorithm
         """
         if self.simulation.hasUI:
-            self.simulation.simulationWindow.setSaveListener(observer)
+            self.simulation.simulationWindow.setSaveListener(observer, checkpoint_folder, env_name)
 
     # returns number of robots in the simulation
     def getNumberOfRobots(self):
