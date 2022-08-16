@@ -502,8 +502,8 @@ class Robot:
                 angVel = self.minAngularVelocity
 
         # maybe ändern
-        #return tarLinVel, tarAngVel
-        return linVel, angVel
+        return tarLinVel, tarAngVel
+        #return linVel, angVel
 
     def directionVectorFromAngle(self, direction):
         """

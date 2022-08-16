@@ -120,18 +120,18 @@
 <line x1="450.235" y1 ="441.171" x2="455.355" y2="440.288" stroke = "black" stroke-width = "1" stroke-linecap="square"/>
 <circle cx="429.601" cy ="16.02" r="16" fill="none" stroke = "black" stroke-width = "1"/>
 <circle cx="183.998" cy ="20.1168" r="16" fill="none" stroke = "black" stroke-width = "1"/>
-<circle cx="15" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="245" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="315" cy ="15" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="445" cy ="55" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="15" cy ="145" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="245" cy ="245" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="325" cy ="145" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="445" cy ="195" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="15" cy ="425" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="265" cy ="305" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="385" cy ="315" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="445" cy ="375" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="185" cy ="445" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
-<circle cx="305" cy ="445" r="14" fill="none" stroke = "orange" stroke-width = "1"/>
+<circle cx="15" cy ="15" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="start_4"/>
+<circle cx="245" cy ="15" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="goal_7"/>
+<circle cx="315" cy ="15" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="start_2"/>
+<circle cx="445" cy ="55" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="goal_2"/>
+<circle cx="15" cy ="145" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="goal_1"/>
+<circle cx="245" cy ="245" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="start_1"/>
+<circle cx="325" cy ="145" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="goal_3"/>
+<circle cx="445" cy ="195" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="goal_4"/>
+<circle cx="15" cy ="425" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="start_5"/>
+<circle cx="265" cy ="305" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="goal_5"/>
+<circle cx="385" cy ="315" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="goal_6"/>
+<circle cx="445" cy ="375" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="start_3"/>
+<circle cx="185" cy ="445" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="goal_8"/>
+<circle cx="305" cy ="445" r="5.5" fill="none" stroke = "green" stroke-width = "1" id="goal_9"/>
 </svg>

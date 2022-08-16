@@ -159,10 +159,10 @@ class Environment:
         """
 
         reward = 0
-        r_arrival = 20
-        r_collision = -15
+        r_arrival = 40
+        r_collision = -1
         w_g = 1.5
-        w_w = -0.01
+        w_w = -0.00
 
         if reachedPickup:
             reward += r_arrival

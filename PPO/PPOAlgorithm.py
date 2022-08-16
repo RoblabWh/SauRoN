@@ -78,17 +78,17 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.Inputspace = Inputspace(scan_size, input_style)
         # Value
-        self.value_temp = nn.Linear(out_features=128, in_features=128)
+        self.value_temp = nn.Linear(out_features=1, in_features=128)
         self.value_temp2 = nn.Linear(out_features=128, in_features=128)
         self.value = nn.Linear(out_features=1, in_features=256, bias=False)
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser, orientation_to_goal, distance_to_goal, velocity)
         value1 = F.relu(self.value_temp(x))
-        value2 = F.relu(self.value_temp2(x))
-        value_cat = torch.cat([value1, value2], dim=1)
-        value = F.relu(self.value(value_cat))
-        return value.to('cpu')
+        #value2 = F.relu(self.value_temp2(x))
+        #value_cat = torch.cat([value1, value2], dim=1)
+        #value = F.relu(self.value(value_cat))
+        return value1.to('cpu')
 
 
 class ActorCritic(nn.Module):
@@ -253,11 +253,12 @@ class PPO:
                 actor_loss = - torch.min(surr1, surr2).type(torch.float32)
 
                 # Critic loss: critic loss - entropy
-                critic_loss = 0.5 * self.MSE_loss(rewards_minibatch.to('cpu'), state_values) - 0.01 * dist_entropy
+                critic_loss_ = self.MSE_loss(rewards_minibatch.to('cpu'), state_values)
+                critic_loss = 0.5 * critic_loss_ - 0.01 * dist_entropy
 
                 # Total loss
                 loss = actor_loss + critic_loss
-                self.logger.add_loss(loss.mean().item())
+                self.logger.add_loss(loss.mean().item(), entropy=dist_entropy.mean().item(), critic_loss=critic_loss_.mean().item())
 
                 # Backward gradients
                 self.optimizer.zero_grad()

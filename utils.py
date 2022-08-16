@@ -130,7 +130,11 @@ class Logger(object):
         self.log_dir = log_dir
         self.logging = False
         self.episode = 0
+        # loss
         self.loss = []
+        self.entropy = []
+        self.critic_loss = []
+
         self.actor_mean_linvel = []
         self.actor_mean_angvel = []
         self.actor_std_linvel = []
@@ -153,13 +157,19 @@ class Logger(object):
             vel = torch.rand(4, 4, 2).to(device)
             self.writer.add_graph(model, (laser, ori, dist, vel))
 
-    def add_loss(self, loss):
+    def add_loss(self, loss, entropy, critic_loss):
         self.loss.append(loss)
+        self.entropy.append(entropy)
+        self.critic_loss.append(critic_loss)
 
     def summary_loss(self):
         if self.logging and not len(self.loss) == 0:
-            self.writer.add_scalar('loss', np.mean(self.loss), self.episode)
+            self.writer.add_scalars('loss', {'loss': np.mean(self.loss),
+                                             'entropy': np.mean(self.entropy),
+                                             'critic_loss': np.mean(self.critic_loss)}, self.episode)
             self.loss = []
+            self.entropy = []
+            self.critic_loss = []
 
     def add_actor_output(self, actor_mean_linvel, actor_mean_angvel, actor_std_linvel, actor_std_angvel):
         self.actor_mean_linvel.append(actor_mean_linvel)

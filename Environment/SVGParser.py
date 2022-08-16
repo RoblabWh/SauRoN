@@ -98,7 +98,6 @@ class SVGLevelParser:
 
                     self.lines += [Borders.ColliderLine(x1, y1, x2, y2)]
 
-
         for line in lines:
             attributes = line.attrib
             show = True

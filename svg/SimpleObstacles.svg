@@ -142,7 +142,7 @@
    stroke-miterlimit="10"
    cx="100.042"
    cy="80.891"
-   r="13.668" />
+   r="5.5" />
 <circle
    id="goal_2_1_"
    fill="#66B32E"
@@ -150,7 +150,7 @@
    stroke-miterlimit="10"
    cx="195.042"
    cy="90.891"
-   r="13.668" />
+   r="5.5" />
 <circle
    id="goal_3_1_"
    fill="#66B32E"
@@ -158,7 +158,7 @@
    stroke-miterlimit="10"
    cx="288.224"
    cy="100.891"
-   r="13.668" />
+   r="5.5" />
 <circle
    id="goal_4_1_"
    fill="#66B32E"
@@ -166,7 +166,7 @@
    stroke-miterlimit="10"
    cx="368.81"
    cy="95.891"
-   r="13.99" />
+   r="5.5" />
 <circle
    id="goal_5_1_"
    fill="#66B32E"
@@ -174,7 +174,7 @@
    stroke-miterlimit="10"
    cx="459.816"
    cy="105.891"
-   r="13.99" />
+   r="5.5" />
 <circle
    id="goal_6_1_"
    fill="#66B32E"
@@ -182,7 +182,7 @@
    stroke-miterlimit="10"
    cx="540.816"
    cy="85.891"
-   r="13.99" />
+   r="5.5" />
 
 <circle
    id="goal_7_1_"
@@ -191,7 +191,7 @@
    stroke-miterlimit="10"
    cx="100.042"
    cy="395.891"
-   r="13.668" />
+   r="5.5" />
 <circle
    id="goal_8_1_"
    fill="#66B32E"
@@ -199,7 +199,7 @@
    stroke-miterlimit="10"
    cx="195.042"
    cy="405.891"
-   r="13.668" />
+   r="5.5" />
 <circle
    id="goal_9_1_"
    fill="#66B32E"
@@ -207,7 +207,7 @@
    stroke-miterlimit="10"
    cx="288.224"
    cy="390.891"
-   r="13.668" />
+   r="5.5" />
 <circle
    id="goal_10_1_"
    fill="#66B32E"
@@ -215,7 +215,7 @@
    stroke-miterlimit="10"
    cx="368.81"
    cy="420.891"
-   r="13.99" />
+   r="5.5" />
 <circle
    id="goal_11_1_"
    fill="#66B32E"
@@ -223,7 +223,7 @@
    stroke-miterlimit="10"
    cx="459.816"
    cy="410.891"
-   r="13.99" />
+   r="5.5" />
 <circle
    id="goal_12_1_"
    fill="#66B32E"
@@ -231,7 +231,7 @@
    stroke-miterlimit="10"
    cx="540.816"
    cy="400.891"
-   r="13.99" />
+   r="5.5" />
 <polygon
    fill="none"
    stroke="#000000"

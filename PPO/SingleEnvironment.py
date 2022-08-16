@@ -188,7 +188,7 @@ def train(env_name, env, solved_reward, input_style,
                 print(f'Best performance with avg reward of {best_reward}.2f saved at episode{i_episode}.')
 
             if not tensorboard:
-                print(f'Episode: {i_episode}, Avg reward: {running_reward:.2f}, Avg steps: {avg_length:.2f}')
+                print(f'Episode: {i_episode}, Avg reward: {running_reward}.2f, Avg steps: {avg_length}.2f')
 
             running_reward, avg_length = 0, 0
 
