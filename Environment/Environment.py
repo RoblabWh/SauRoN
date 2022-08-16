@@ -20,12 +20,14 @@ class Environment:
         self.args = args
         self.steps = args.steps
         self.steps_left = args.steps
+
         self.simulation = Simulation(app, args, timeframes, level)
         self.timeframs = timeframes
         self.total_reward = 0.0
         self.done = False
         self.shape = np.asarray([0]).shape
         self.piFact = 1 / math.pi
+
 
     def get_observation(self, i):
         """

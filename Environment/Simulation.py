@@ -46,6 +46,8 @@ class Simulation:
         self.simTimestep = args.sim_time_step  # s
         # self.plotterWindow = PlotterWindow(app)
 
+
+
     def reset(self, level):
         """
         Resets the simulation after each epoch
@@ -201,7 +203,8 @@ class Simulation:
         return len(self.robots)
 
     def loadLevel(self, levelID):
-        # print("LevelID: ", levelID)
+
+
         selectedLevel = SVGParser.SVGLevelParser(self.levelFiles[levelID], self.args)
         self.robots = selectedLevel.getRobots()
         if self.args.manually:

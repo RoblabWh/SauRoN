@@ -78,9 +78,27 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shared_array_logprob_np = np.ndarray(shape_logprob, dtype=np_data_type, buffer=shared_array_logprob)
     shared_array_terminal_np = np.ndarray(shape_terminal, dtype=np_data_type, buffer=shared_array_terminal)
 
+    print("#####Shared Memory#####")
+    print("Num of Processes: {}".format(numOfProcesses))
+    print("Num of Robots: {}".format(numOfRobots))
+    print("Stack size: {}".format(learning_size))
+    print("Time size : {}".format(timesteps))
+    print("")
+    print("Laser spape: {} with size: {}".format(shape_laser, size_of_laser))
+    print("Distance spape: {} with size: {}".format(shape_distance, size_of_distance))
+    print("Orientation spape: {} with size: {}".format(shape_orientation, size_of_orientation))
+    print("Velocity spape: {} with size: {}".format(shape_velocity, size_of_velocity))
+    print("Action spape: {} with size: {}".format(shape_action, size_of_action))
+    print("Reward spape: {} with size: {}".format(shape_reward, size_of_reward))
+    print("Logprob spape: {} with size: {}".format(shape_logprob, size_of_logprob))
+    print("Terminal spape: {} with size: {}".format(shape_terminal, size_of_terminal))
+    print("")
+    print("")
+    print("#############################")
+
 
 class SwarmMemory():
-    def __init__(self, robotsCount, processID):
+    def __init__(self, processID, robotsCount):
         self.processID = processID
         self.robotMemory = [Memory(self.processID, i) for i in range(robotsCount)]
         self.currentTerminalStates = [False for _ in range(robotsCount)]
@@ -206,12 +224,11 @@ def train(env_name, render, solved_reward, input_style,
 
     #memory = [SwarmMemory(env.getNumberOfRobots()) for i in range(numOfProcesses)]
 
-    print("Create shared memory")
+
     create_shared_memory_nparray(numOfProcesses, numOfRobots, update_experience, 4)
-    print("Finished!")
+    print("Start parallel training")
     print("####################")
 
-    #ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
     futures = []
     pool = ProcessPoolExecutor(max_workers=numOfProcesses)
 
@@ -225,7 +242,8 @@ def train(env_name, render, solved_reward, input_style,
 
     print("####################")
     print("Done!")
-
+    #print("{}:{}".format(done, not_done))
+    pool.shutdown()
 
 
 def runMultiprocessPPO(args):
@@ -234,27 +252,30 @@ def runMultiprocessPPO(args):
     action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt = args
 
 
-    #print("#{} is running!".format(processID))
+    if processID == 0:
+        app = QApplication(sys.argv)
+    else:
+        app = None
 
-    app = QApplication(sys.argv)
-    print("QApplication created #{}".format(processID))
+
+
     env = Environment(app, args_, args_.time_frames, processID)
-    print("Environment created #{}".format(processID))
+
+
     ckpt = ckpt_folder + '/PPO_continuous_' + env_name + '.pth'
 
     ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
-    print("PPO created #{}".format(processID))
     #ckpt += str(processID)
     #ckpt += '.pth'
 
-    memory = SwarmMemory(processID, env.getNumberOfRobots())
-    print("Created swarmMemory #{}".format(processID))
-
+    try:
+        memory = SwarmMemory(processID, env.getNumberOfRobots())
+    except Exception as e:
+        print(e)
 
     running_reward, avg_length, time_step = 0, 0, 0
     best_reward = 0
-    #print("End of test interval #{}".format(processID))
-    #return
+    print("Starting training loop of Process #{}".format(processID))
     # training loop
     update_experience = 1000
     for i_episode in range(1, max_episodes + 1):
@@ -270,24 +291,24 @@ def runMultiprocessPPO(args):
             memory.insertReward(rewards)
             memory.insertIsTerminal(dones)
 
-            print("Test0")
+            #print("Test0")
             if len(memory) >= update_experience:
-                print("0")
+            #    print("0")
                 ppo.update(memory, batch_size)
-                print("1")
+            #    print("1")
                 memory.clear_memory()
-                print("2")
+            #    print("2")
                 time_step = 0
 
-            print("Test")
+            #print("Test")
             running_reward += np.mean(rewards)
-            print("Test2")
+            #print("Test2")
             if render:
                 env.render()
-            print("Test3")
+            #print("Test3")
             if env.is_done():
                 break
-            print("Test4")
+            #print("Test4")
         avg_length += t
 
         if running_reward > (print_interval * solved_reward):
