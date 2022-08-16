@@ -12,7 +12,7 @@ import sys
 from Environment.Environment import Environment
 from PyQt5.QtWidgets import QApplication
 
-args_ = None
+
 
 shared_array_laser_np = None
 shared_array_distance_np = None
@@ -96,6 +96,15 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     print("")
     print("#############################")
 
+def getNumOfProcesses(len):
+    global args_
+    cores = multiprocessing.cpu_count()
+    print("Cores available: {}".format(cores))
+    print("Num of levelfiles: {}".format(len))
+    if len > cores:
+        return cores
+    else:
+        return len
 
 class SwarmMemory():
     def __init__(self, processID, robotsCount):
@@ -213,63 +222,63 @@ def train(env_name, render, solved_reward, input_style,
           max_episodes, max_timesteps, update_experience, action_std, K_epochs, eps_clip,
           gamma, lr, betas, ckpt_folder, restore, scan_size=121, print_interval=10, save_interval=100, batch_size=1,
           numOfRobots=4, args=None):
-    global args_
     args_ = args
 
-    numOfProcesses = 3
+    numOfProcesses = getNumOfProcesses(len(args_.level_files))
+    print("Starting {} processes!\n".format(numOfProcesses))
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name
     if restore:
         print('Load checkpoint from {}'.format(ckpt))
 
-    #memory = [SwarmMemory(env.getNumberOfRobots()) for i in range(numOfProcesses)]
-
-
     create_shared_memory_nparray(numOfProcesses, numOfRobots, update_experience, 4)
+
     print("Start parallel training")
     print("####################")
 
+
+    multiprocessing.set_start_method('spawn', force=True)
     futures = []
     pool = ProcessPoolExecutor(max_workers=numOfProcesses)
-
     for i in range(0, numOfProcesses):
         futures.append(pool.submit(runMultiprocessPPO, args=(i, max_episodes, env_name, max_timesteps, render,
                                                              print_interval, solved_reward, ckpt_folder, scan_size,
                                                              action_std, input_style, lr, betas, gamma, K_epochs,
-                                                             eps_clip, restore, ckpt)))
+                                                             eps_clip, restore, ckpt, args_)))
 
     done, not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
 
     print("####################")
     print("Done!")
+
     #print("{}:{}".format(done, not_done))
     pool.shutdown()
 
 
+
 def runMultiprocessPPO(args):
-    global args_
     processID, max_episodes, env_name, max_timesteps, render, print_interval, solved_reward, ckpt_folder, scan_size, \
-    action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt = args
+    action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, args_obj = args
 
-
-    if processID == 0:
-        app = QApplication(sys.argv)
-    else:
-        app = None
-
-
-
-    env = Environment(app, args_, args_.time_frames, processID)
-
-
-    ckpt = ckpt_folder + '/PPO_continuous_' + env_name + '.pth'
-
-    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
-    #ckpt += str(processID)
-    #ckpt += '.pth'
-
+    app = None
+    env = None
+    ppo = None
+    memory = None
     try:
+        if processID == 0:
+            app = QApplication(sys.argv)
+        else:
+            app = None
+
+        env = Environment(app, args_obj, args_obj.time_frames, processID)
+
+
+        ckpt = ckpt_folder + '/PPO_continuous_' + env_name + '.pth'
+
+        ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
+
         memory = SwarmMemory(processID, env.getNumberOfRobots())
+
     except Exception as e:
         print(e)
 
@@ -278,62 +287,64 @@ def runMultiprocessPPO(args):
     print("Starting training loop of Process #{}".format(processID))
     # training loop
     update_experience = 1000
-    for i_episode in range(1, max_episodes + 1):
-        states = env.reset(0)
-        for t in range(max_timesteps):
-            time_step += 1
+    try:
+        for i_episode in range(1, max_episodes + 1):
+            states = env.reset(0)
+            for t in range(max_timesteps):
+                time_step += 1
 
-            # Run old policy
-            actions = ppo.select_action(states, memory)
+                # Run old policy
+                actions = ppo.select_action(states, memory)
 
-            states, rewards, dones, _ = env.step(actions)
+                states, rewards, dones, _ = env.step(actions)
 
-            memory.insertReward(rewards)
-            memory.insertIsTerminal(dones)
+                memory.insertReward(rewards)
+                memory.insertIsTerminal(dones)
 
-            #print("Test0")
-            if len(memory) >= update_experience:
-            #    print("0")
-                ppo.update(memory, batch_size)
-            #    print("1")
-                memory.clear_memory()
-            #    print("2")
-                time_step = 0
+                #print("Test0")
+                if len(memory) >= update_experience:
+                #    print("0")
+                    ppo.update(memory, batch_size)
+                #    print("1")
+                    memory.clear_memory()
+                #    print("2")
+                    time_step = 0
 
-            #print("Test")
-            running_reward += np.mean(rewards)
-            #print("Test2")
-            if render:
-                env.render()
-            #print("Test3")
-            if env.is_done():
-                break
-            #print("Test4")
-        avg_length += t
+                #print("Test")
+                running_reward += np.mean(rewards)
+                #print("Test2")
+                if render:
+                    env.render()
+                #print("Test3")
+                if env.is_done():
+                    break
+                #print("Test4")
+            avg_length += t
 
-        if running_reward > (print_interval * solved_reward):
-            print("########## Solved! ##########")
-            torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
-            print('Save a checkpoint!')
-            break
-
-        # if i_episode % save_interval == 0:
-        #     torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
-        #     print('Save a checkpoint!')
-
-        if i_episode % print_interval == 0:
-            avg_length = int(avg_length / print_interval)
-            running_reward = (running_reward / print_interval)
-
-            if running_reward > best_reward:
-                best_reward = running_reward
+            if running_reward > (print_interval * solved_reward):
+                print("########## Solved! ##########")
                 torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
                 print('Save a checkpoint!')
+                break
 
-            print('Episode {} \t Avg length: {} \t Avg reward: {}'.format(i_episode, avg_length, running_reward))
+            # if i_episode % save_interval == 0:
+            #     torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
+            #     print('Save a checkpoint!')
 
-            running_reward, avg_length = 0, 0
+            if i_episode % print_interval == 0:
+                avg_length = int(avg_length / print_interval)
+                running_reward = (running_reward / print_interval)
 
+                if running_reward > best_reward:
+                    best_reward = running_reward
+                    torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
+                    print('Save a checkpoint!')
+
+                print('Episode {} \t Avg length: {} \t Avg reward: {}'.format(i_episode, avg_length, running_reward))
+
+                running_reward, avg_length = 0, 0
+    except Exception as e:
+        print(e)
 
 def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes, scan_size=121):
 
