@@ -11,8 +11,10 @@ import ctypes
 import sys
 from Environment.Environment import Environment
 from PyQt5.QtWidgets import QApplication
+from multiprocessing.managers import SharedMemoryManager
 
-
+shm = None
+b = None
 
 shared_array_laser_np = None
 shared_array_distance_np = None
@@ -32,6 +34,12 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     global shared_array_logprob_np
     global shared_array_terminal_np
 
+    global b
+    global shm
+    shm = multiprocessing.shared_memory.SharedMemory(create=True, size=12, name="shm_memory")
+    b = np.ndarray((3,), dtype=np.float32, buffer=shm.buf)
+
+    return
     size_of_laser = 1081
     size_of_distance = 1
     size_of_orientation = 2
@@ -95,6 +103,8 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     print("")
     print("")
     print("#############################")
+
+
 
 def getNumOfProcesses(len):
     global args_
@@ -251,14 +261,24 @@ def train(env_name, render, solved_reward, input_style,
     print("####################")
     print("Done!")
 
+    global b
+    global shm
+    print(b[0])
+    print(b[1])
+    print(b[2])
     #print("{}:{}".format(done, not_done))
     pool.shutdown()
+
+    shm.close()
+    shm.unlink()
 
 
 
 def runMultiprocessPPO(args):
     processID, max_episodes, env_name, max_timesteps, render, print_interval, solved_reward, ckpt_folder, scan_size, \
     action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, args_obj = args
+
+
 
     app = None
     env = None
