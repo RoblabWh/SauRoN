@@ -3,6 +3,7 @@ import os
 from PPO.PPOAlgorithm import PPO
 from torch.utils.data import Dataset, DataLoader
 import multiprocessing
+from multiprocessing import shared_memory
 from concurrent.futures.process import ProcessPoolExecutor
 import concurrent
 import numpy as np
@@ -11,10 +12,15 @@ import ctypes
 import sys
 from Environment.Environment import Environment
 from PyQt5.QtWidgets import QApplication
-from multiprocessing.managers import SharedMemoryManager
 
-shm = None
-b = None
+shared_array_laser = None
+shared_array_distance = None
+shared_array_orientation = None
+shared_array_velocity = None
+shared_array_action = None
+shared_array_reward = None
+shared_array_logprob = None
+shared_array_terminal = None
 
 shared_array_laser_np = None
 shared_array_distance_np = None
@@ -34,12 +40,16 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     global shared_array_logprob_np
     global shared_array_terminal_np
 
-    global b
-    global shm
-    shm = multiprocessing.shared_memory.SharedMemory(create=True, size=12, name="shm_memory")
-    b = np.ndarray((3,), dtype=np.float32, buffer=shm.buf)
+    global shared_array_laser
+    global shared_array_distance
+    global shared_array_orientation
+    global shared_array_velocity
+    global shared_array_action
+    global shared_array_reward
+    global shared_array_logprob
+    global shared_array_terminal
 
-    return
+
     size_of_laser = 1081
     size_of_distance = 1
     size_of_orientation = 2
@@ -49,16 +59,15 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     size_of_logprob = 1
     size_of_terminal = 1
 
-    array_size_laser = numOfProcesses * numOfRobots * size_of_laser * learning_size * timesteps
-    array_size_distance = numOfProcesses * numOfRobots * size_of_distance * learning_size * timesteps
-    array_size_orientation = numOfProcesses * numOfRobots * size_of_orientation * learning_size * timesteps
-    array_size_velocity = numOfProcesses * numOfRobots * size_of_velocity * learning_size * timesteps
-    array_size_action = numOfProcesses * numOfRobots * size_of_action * learning_size * timesteps
-    array_size_reward = numOfProcesses * numOfRobots * size_of_reward * learning_size * timesteps
-    array_size_logprob = numOfProcesses * numOfRobots * size_of_logprob * learning_size * timesteps
-    array_size_terminal = numOfProcesses * numOfRobots * size_of_terminal * learning_size * timesteps
+    array_size_laser = numOfProcesses * numOfRobots * size_of_laser * learning_size * timesteps * 4 #Sizeof(float)
+    array_size_distance = numOfProcesses * numOfRobots * size_of_distance * learning_size * timesteps * 4 #Sizeof(float)
+    array_size_orientation = numOfProcesses * numOfRobots * size_of_orientation * learning_size * timesteps * 4 #Sizeof(float)
+    array_size_velocity = numOfProcesses * numOfRobots * size_of_velocity * learning_size * timesteps * 4 #Sizeof(float)
+    array_size_action = numOfProcesses * numOfRobots * size_of_action * learning_size * timesteps * 4 #Sizeof(float)
+    array_size_reward = numOfProcesses * numOfRobots * size_of_reward * learning_size * timesteps * 4 #Sizeof(float)
+    array_size_logprob = numOfProcesses * numOfRobots * size_of_logprob * learning_size * timesteps * 4 #Sizeof(float)
+    array_size_terminal = numOfProcesses * numOfRobots * size_of_terminal * learning_size * timesteps * 4 #Sizeof(float)
 
-    np_data_type = np.float32
     shape_laser = (numOfProcesses, learning_size, timesteps, size_of_laser)
     shape_distance = (numOfProcesses, learning_size, timesteps, size_of_distance)
     shape_orientation = (numOfProcesses, learning_size, timesteps, size_of_orientation)
@@ -68,23 +77,24 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shape_logprob = (numOfProcesses, learning_size, timesteps, size_of_logprob)
     shape_terminal = (numOfProcesses, learning_size, timesteps, size_of_terminal)
 
-    shared_array_laser = multiprocessing.RawArray(ctypes.c_float, array_size_laser)
-    shared_array_distance = multiprocessing.RawArray(ctypes.c_float, array_size_distance)
-    shared_array_orientation = multiprocessing.RawArray(ctypes.c_float, array_size_orientation)
-    shared_array_velocity = multiprocessing.RawArray(ctypes.c_float, array_size_velocity)
-    shared_array_action = multiprocessing.RawArray(ctypes.c_float, array_size_action)
-    shared_array_reward = multiprocessing.RawArray(ctypes.c_float, array_size_reward)
-    shared_array_logprob = multiprocessing.RawArray(ctypes.c_float, array_size_logprob)
-    shared_array_terminal = multiprocessing.RawArray(ctypes.c_float, array_size_terminal)
+    shared_array_laser = shared_memory.SharedMemory(create=True, size=array_size_laser, name="shared_array_laser")
+    shared_array_distance = shared_memory.SharedMemory(create=True, size=array_size_distance, name="shared_array_distance")
+    shared_array_orientation = shared_memory.SharedMemory(create=True, size=array_size_orientation, name="shared_array_orientation")
+    shared_array_velocity = shared_memory.SharedMemory(create=True, size=array_size_velocity, name="shared_array_velocity")
+    shared_array_action = shared_memory.SharedMemory(create=True, size=array_size_action, name="shared_array_action")
+    shared_array_reward = shared_memory.SharedMemory(create=True, size=array_size_reward, name="shared_array_reward")
+    shared_array_logprob = shared_memory.SharedMemory(create=True, size=array_size_logprob, name="shared_array_logprob")
+    shared_array_terminal = shared_memory.SharedMemory(create=True, size=array_size_terminal, name="shared_array_terminal")
 
-    shared_array_laser_np = np.ndarray(shape_laser, dtype=np_data_type, buffer=shared_array_laser)
-    shared_array_distance_np = np.ndarray(shape_distance, dtype=np_data_type, buffer=shared_array_distance)
-    shared_array_orientation_np = np.ndarray(shape_orientation, dtype=np_data_type, buffer=shared_array_orientation)
-    shared_array_velocity_np = np.ndarray(shape_velocity, dtype=np_data_type, buffer=shared_array_velocity)
-    shared_array_action_np = np.ndarray(shape_action, dtype=np_data_type, buffer=shared_array_action)
-    shared_array_reward_np = np.ndarray(shape_reward, dtype=np_data_type, buffer=shared_array_reward)
-    shared_array_logprob_np = np.ndarray(shape_logprob, dtype=np_data_type, buffer=shared_array_logprob)
-    shared_array_terminal_np = np.ndarray(shape_terminal, dtype=np_data_type, buffer=shared_array_terminal)
+    np_data_type = np.float32
+    shared_array_laser_np = np.ndarray(shape_laser, dtype=np_data_type, buffer=shared_array_laser.buf)
+    shared_array_distance_np = np.ndarray(shape_distance, dtype=np_data_type, buffer=shared_array_distance.buf)
+    shared_array_orientation_np = np.ndarray(shape_orientation, dtype=np_data_type, buffer=shared_array_orientation.buf)
+    shared_array_velocity_np = np.ndarray(shape_velocity, dtype=np_data_type, buffer=shared_array_velocity.buf)
+    shared_array_action_np = np.ndarray(shape_action, dtype=np_data_type, buffer=shared_array_action.buf)
+    shared_array_reward_np = np.ndarray(shape_reward, dtype=np_data_type, buffer=shared_array_reward.buf)
+    shared_array_logprob_np = np.ndarray(shape_logprob, dtype=np_data_type, buffer=shared_array_logprob.buf)
+    shared_array_terminal_np = np.ndarray(shape_terminal, dtype=np_data_type, buffer=shared_array_terminal.buf)
 
     print("#####Shared Memory#####")
     print("Num of Processes: {}".format(numOfProcesses))
@@ -104,6 +114,33 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     print("")
     print("#############################")
 
+def close_shm():
+    global shared_array_laser
+    global shared_array_distance
+    global shared_array_orientation
+    global shared_array_velocity
+    global shared_array_action
+    global shared_array_reward
+    global shared_array_logprob
+    global shared_array_terminal
+
+    shared_array_laser.close()
+    shared_array_distance.close()
+    shared_array_orientation.close()
+    shared_array_velocity.close()
+    shared_array_action.close()
+    shared_array_reward.close()
+    shared_array_logprob.close()
+    shared_array_terminal.close()
+
+    shared_array_laser.unlink()
+    shared_array_distance.unlink()
+    shared_array_orientation.unlink()
+    shared_array_velocity.unlink()
+    shared_array_action.unlink()
+    shared_array_reward.unlink()
+    shared_array_logprob.unlink()
+    shared_array_terminal.unlink()
 
 
 def getNumOfProcesses(len):
@@ -260,18 +297,37 @@ def train(env_name, render, solved_reward, input_style,
 
     print("####################")
     print("Done!")
+    print(shared_array_laser_np[0][0][0][0])
+    print(shared_array_laser_np[1][0][0][0])
+    print(shared_array_laser_np[2][0][0][0])
 
-    global b
-    global shm
-    print(b[0])
-    print(b[1])
-    print(b[2])
+
     #print("{}:{}".format(done, not_done))
     pool.shutdown()
 
-    shm.close()
-    shm.unlink()
+    close_shm()
 
+
+def init_shm_client():
+    global shared_array_laser
+    global shared_array_distance
+    global shared_array_orientation
+    global shared_array_velocity
+    global shared_array_action
+    global shared_array_reward
+    global shared_array_logprob
+    global shared_array_terminal
+
+    global shared_array_laser_np
+    global shared_array_distance_np
+    global shared_array_orientation_np
+    global shared_array_velocity_np
+    global shared_array_action_np
+    global shared_array_reward_np
+    global shared_array_logprob_np
+    global shared_array_terminal_np
+
+    shared_array_laser_np = np.ndarray(shape_laser, dtype=np.float32, buffer=shared_array_laser.buf)
 
 
 def runMultiprocessPPO(args):
@@ -279,28 +335,36 @@ def runMultiprocessPPO(args):
     action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, args_obj = args
 
 
+    #global shared_array_laser
+    shared_array_laser = shared_memory.SharedMemory(name='shared_array_laser')
+    shared_array_laser_np = np.ndarray((3, 10000, 4, 1081), dtype=np.float32, buffer=shared_array_laser.buf)
+    #init_shm_client()
+
+
+    shared_array_laser_np[processID][0][0][0] = processID * processID
+    print(shared_array_laser_np[processID][0][0][0])
+    return
 
     app = None
     env = None
     ppo = None
     memory = None
-    try:
-        if processID == 0:
-            app = QApplication(sys.argv)
-        else:
-            app = None
 
-        env = Environment(app, args_obj, args_obj.time_frames, processID)
+    if processID == 0:
+        app = QApplication(sys.argv)
+    else:
+        app = None
+
+    env = Environment(app, args_obj, args_obj.time_frames, processID)
 
 
-        ckpt = ckpt_folder + '/PPO_continuous_' + env_name + '.pth'
+    ckpt = ckpt_folder + '/PPO_continuous_' + env_name + '.pth'
 
-        ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
+    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
 
-        memory = SwarmMemory(processID, env.getNumberOfRobots())
+    memory = SwarmMemory(processID, env.getNumberOfRobots())
 
-    except Exception as e:
-        print(e)
+
 
     running_reward, avg_length, time_step = 0, 0, 0
     best_reward = 0
