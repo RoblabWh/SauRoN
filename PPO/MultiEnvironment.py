@@ -21,6 +21,8 @@ shared_array_action = None
 shared_array_reward = None
 shared_array_logprob = None
 shared_array_terminal = None
+shared_array_size = None
+
 
 shared_array_laser_np = None
 shared_array_distance_np = None
@@ -30,6 +32,7 @@ shared_array_action_np = None
 shared_array_reward_np = None
 shared_array_logprob_np = None
 shared_array_terminal_np = None
+shared_array_size_np = None
 def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, timesteps):
     global shared_array_laser_np
     global shared_array_distance_np
@@ -39,6 +42,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     global shared_array_reward_np
     global shared_array_logprob_np
     global shared_array_terminal_np
+    global shared_array_size_np
 
     global shared_array_laser
     global shared_array_distance
@@ -48,6 +52,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     global shared_array_reward
     global shared_array_logprob
     global shared_array_terminal
+    global shared_array_size
 
 
     size_of_laser = 1081
@@ -58,6 +63,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     size_of_reward = 1
     size_of_logprob = 1
     size_of_terminal = 1
+    size_of_size = 1
 
     array_size_laser = numOfProcesses * numOfRobots * size_of_laser * learning_size * timesteps * 4 #Sizeof(float)
     array_size_distance = numOfProcesses * numOfRobots * size_of_distance * learning_size * timesteps * 4 #Sizeof(float)
@@ -67,6 +73,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     array_size_reward = numOfProcesses * numOfRobots * size_of_reward * learning_size * timesteps * 4 #Sizeof(float)
     array_size_logprob = numOfProcesses * numOfRobots * size_of_logprob * learning_size * timesteps * 4 #Sizeof(float)
     array_size_terminal = numOfProcesses * numOfRobots * size_of_terminal * learning_size * timesteps * 4 #Sizeof(float)
+    array_size_size = numOfProcesses * numOfRobots * 4 * 8 #Sizeof(int) and # of numpy arrays
 
     shape_laser = (numOfProcesses, learning_size, timesteps, size_of_laser)
     shape_distance = (numOfProcesses, learning_size, timesteps, size_of_distance)
@@ -76,6 +83,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shape_reward = (numOfProcesses, learning_size, timesteps, size_of_reward)
     shape_logprob = (numOfProcesses, learning_size, timesteps, size_of_logprob)
     shape_terminal = (numOfProcesses, learning_size, timesteps, size_of_terminal)
+    shape_size = (numOfProcesses, numOfRobots, 8, size_of_size) # num of numpy arrays
 
     shared_array_laser = shared_memory.SharedMemory(create=True, size=array_size_laser, name="shared_array_laser")
     shared_array_distance = shared_memory.SharedMemory(create=True, size=array_size_distance, name="shared_array_distance")
@@ -85,6 +93,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shared_array_reward = shared_memory.SharedMemory(create=True, size=array_size_reward, name="shared_array_reward")
     shared_array_logprob = shared_memory.SharedMemory(create=True, size=array_size_logprob, name="shared_array_logprob")
     shared_array_terminal = shared_memory.SharedMemory(create=True, size=array_size_terminal, name="shared_array_terminal")
+    shared_array_size = shared_memory.SharedMemory(create=True, size=array_size_size, name="shared_array_size")
 
     np_data_type = np.float32
     shared_array_laser_np = np.ndarray(shape_laser, dtype=np_data_type, buffer=shared_array_laser.buf)
@@ -95,6 +104,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shared_array_reward_np = np.ndarray(shape_reward, dtype=np_data_type, buffer=shared_array_reward.buf)
     shared_array_logprob_np = np.ndarray(shape_logprob, dtype=np_data_type, buffer=shared_array_logprob.buf)
     shared_array_terminal_np = np.ndarray(shape_terminal, dtype=np_data_type, buffer=shared_array_terminal.buf)
+    shared_array_size_np = np.ndarray(shape_size, dtype=np.int32, buffer=shared_array_size.buf)
 
     print("#####Shared Memory#####")
     print("Num of Processes: {}".format(numOfProcesses))
@@ -110,6 +120,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     print("Reward spape: {} with size: {}".format(shape_reward, size_of_reward))
     print("Logprob spape: {} with size: {}".format(shape_logprob, size_of_logprob))
     print("Terminal spape: {} with size: {}".format(shape_terminal, size_of_terminal))
+    print("Size spape: {} with size: {}".format(shape_size, size_of_size))
     print("")
     print("")
     print("#############################")
@@ -154,7 +165,7 @@ def getNumOfProcesses(len):
         return len
 
 class SwarmMemory():
-    def __init__(self, processID, robotsCount):
+    def __init__(self, processID=-1, robotsCount=-1):
         self.processID = processID
         self.robotMemory = [Memory(self.processID, i) for i in range(robotsCount)]
         self.currentTerminalStates = [False for _ in range(robotsCount)]
@@ -247,19 +258,26 @@ class Memory:   # collected from old policy
     def __init__(self, processID, robotID):
         self.processID = processID
         self.robotID = robotID
-        self.states = [shared_array_laser_np[processID][robotID], shared_array_distance_np[processID][robotID],
-                       shared_array_orientation_np[processID][robotID], shared_array_velocity_np[processID][robotID]]
-        self.actions = [shared_array_action_np[processID][robotID]]
-        self.rewards = [shared_array_reward_np[processID][robotID]]
-        self.is_terminals = [shared_array_terminal_np[processID][robotID]]
-        self.logprobs = [shared_array_logprob_np[processID][robotID]]
+        if self.processID == -1:
+            self.states = [shared_array_laser_np[processID][robotID], shared_array_distance_np[processID][robotID],
+                           shared_array_orientation_np[processID][robotID], shared_array_velocity_np[processID][robotID]]
+            self.actions = [shared_array_action_np[processID][robotID]]
+            self.rewards = [shared_array_reward_np[processID][robotID]]
+            self.is_terminals = [shared_array_terminal_np[processID][robotID]]
+            self.logprobs = [shared_array_logprob_np[processID][robotID]]
+        else:
+            self.states = [shared_array_laser_np, shared_array_distance_np, shared_array_orientation_np, shared_array_velocity_np]
+            self.actions = shared_array_action_np
+            self.rewards = shared_array_reward_np
+            self.is_terminals = shared_array_terminal_np
+            self.logprobs = shared_array_logprob_np
 
     def clear_memory(self):
-        del self.states[:]
-        del self.actions[:]
-        del self.rewards[:]
-        del self.is_terminals[:]
-        del self.logprobs[:]
+            del self.states[:]
+            del self.actions[:]
+            del self.rewards[:]
+            del self.is_terminals[:]
+            del self.logprobs[:]
 
     def __len__(self):
         return len(self.states)
@@ -298,14 +316,15 @@ def train(env_name, render, solved_reward, input_style,
 
     print("####################")
     print("Done!")
-    print(shared_array_laser_np[0][0][0][0])
-    print(shared_array_laser_np[1][0][0][0])
-    print(shared_array_laser_np[2][0][0][0])
+
+    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
+    memory = SwarmMemory(-1, -1)
+    ppo.update(memory, batch_size)
+    memory.clear_memory()
+    time_step = 0
 
 
-    #print("{}:{}".format(done, not_done))
     pool.shutdown()
-
     close_shm()
 
 
@@ -378,7 +397,7 @@ def init_shm_client(numOfProcesses, numOfRobots, learning_size, timesteps):
 def runMultiprocessPPO(args):
     processID, max_episodes, env_name, max_timesteps, render, print_interval, solved_reward, ckpt_folder, scan_size, \
     action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, args_obj, numOfProcesses, \
-    update_experience, tSteps = args
+    batch_size, tSteps = args
     global shared_array_laser_np
     global shared_array_distance_np
     global shared_array_orientation_np
@@ -400,15 +419,13 @@ def runMultiprocessPPO(args):
 
     env = Environment(app, args_obj, args_obj.time_frames, processID)
 
-    init_shm_client(numOfProcesses, env.getNumberOfRobots(), update_experience, tSteps)
+    init_shm_client(numOfProcesses, env.getNumberOfRobots(), batch_size, tSteps)
 
     ckpt = ckpt_folder + '/PPO_continuous_' + env_name + '.pth'
 
     ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
 
     memory = SwarmMemory(processID, env.getNumberOfRobots())
-
-
 
     running_reward, avg_length, time_step = 0, 0, 0
     best_reward = 0
@@ -429,48 +446,17 @@ def runMultiprocessPPO(args):
                 memory.insertReward(rewards)
                 memory.insertIsTerminal(dones)
 
-                #print("Test0")
                 if len(memory) >= update_experience:
-                #    print("0")
-                    ppo.update(memory, batch_size)
-                #    print("1")
-                    memory.clear_memory()
-                #    print("2")
-                    time_step = 0
+                    return
 
-                #print("Test")
                 running_reward += np.mean(rewards)
-                #print("Test2")
                 if render:
                     env.render()
-                #print("Test3")
                 if env.is_done():
                     break
-                #print("Test4")
+
             avg_length += t
 
-            if running_reward > (print_interval * solved_reward):
-                print("########## Solved! ##########")
-                torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
-                print('Save a checkpoint!')
-                break
-
-            # if i_episode % save_interval == 0:
-            #     torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
-            #     print('Save a checkpoint!')
-
-            if i_episode % print_interval == 0:
-                avg_length = int(avg_length / print_interval)
-                running_reward = (running_reward / print_interval)
-
-                if running_reward > best_reward:
-                    best_reward = running_reward
-                    torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
-                    print('Save a checkpoint!')
-
-                print('Episode {} \t Avg length: {} \t Avg reward: {}'.format(i_episode, avg_length, running_reward))
-
-                running_reward, avg_length = 0, 0
     except Exception as e:
         print(e)
 
