@@ -103,7 +103,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shared_array_action_np = np.ndarray(shape_action, dtype=np_data_type, buffer=shared_array_action.buf)
     shared_array_reward_np = np.ndarray(shape_reward, dtype=np_data_type, buffer=shared_array_reward.buf)
     shared_array_logprob_np = np.ndarray(shape_logprob, dtype=np_data_type, buffer=shared_array_logprob.buf)
-    shared_array_terminal_np = np.ndarray(shape_terminal, dtype=np_data_type, buffer=shared_array_terminal.buf)
+    shared_array_terminal_np = np.ndarray(shape_terminal, dtype=np.bool, buffer=shared_array_terminal.buf)
     shared_array_size_np = np.ndarray(shape_size, dtype=np.int32, buffer=shared_array_size.buf)
 
     print("#####Shared Memory#####")
@@ -169,6 +169,7 @@ class SwarmMemory():
         self.processID = processID
         self.robotMemory = [Memory(self.processID, i) for i in range(robotsCount)]
         self.currentTerminalStates = [False for _ in range(robotsCount)]
+        self.stateCounter = 0
 
     def __getitem__(self, item):
         return self.robotMemory[item]
@@ -185,22 +186,32 @@ class SwarmMemory():
     def insertState(self, laser, orientation, distance, velocity):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
-            self.robotMemory[relativeIndices[i]].states.append([laser[i], orientation[i], distance[i], velocity[i]])
+            shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][0]][relativeIndices[i]] = laser[i]
+            shared_array_size_np[self.processID][relativeIndices[i]][0] += 1
+            shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][1]][relativeIndices[i]] = distance[i]
+            shared_array_size_np[self.processID][relativeIndices[i]][1] += 1
+            shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][2]][relativeIndices[i]] = orientation[i]
+            shared_array_size_np[self.processID][relativeIndices[i]][2] += 1
+            shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][3]][relativeIndices[i]] = velocity[i]
+            shared_array_size_np[self.processID][relativeIndices[i]][3] += 1
 
     def insertAction(self, action):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
-            self.robotMemory[relativeIndices[i]].actions.append(action[i])
+            shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][4]][relativeIndices[i]] = action[i]
+            shared_array_size_np[self.processID][relativeIndices[i]][4] += 1
 
     def insertReward(self, reward):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
-            self.robotMemory[relativeIndices[i]].rewards.append(reward[i])
+            shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][5]][relativeIndices[i]] = reward[i]
+            shared_array_size_np[self.processID][relativeIndices[i]][5] += 1
 
     def insertLogProb(self, logprob):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
-            self.robotMemory[relativeIndices[i]].logprobs.append(logprob[i])
+            shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][6]][relativeIndices[i]] = logprob[i]
+            shared_array_size_np[self.processID][relativeIndices[i]][6] += 1
 
     def insertIsTerminal(self, isTerminal):
         relativeIndices = self.getRelativeIndices()
