@@ -159,22 +159,30 @@ class Environment:
         """
 
         reward = 0
-        r_arrival = 40
-        r_collision = -1
-        w_g = 1.5
-        w_w = -0.00
+        r_arrival = 700
+        r_collision = -200
+        w_gp = 2.5
+        w_gn = 1.2
+        w_d = 2.0
+        w_w = -0.001
 
         if reachedPickup:
-            reward += r_arrival
+            reward = r_arrival
         else:
-            reward += w_g * (dist_old - dist_new)
+            if dist_old > dist_new:
+                reward += w_gp * (dist_old - dist_new)
+            else:
+                reward += w_gn * (dist_old - dist_new)
+            if dist_new < robot.initialGoalDist:
+                reward += w_d * (robot.initialGoalDist - dist_new)
+                robot.initialGoalDist = dist_new
+
+            abs_ang_vel = np.abs(robot.getAngularVelocity())
+            if abs_ang_vel > 0.7:
+                reward += w_w * abs_ang_vel
 
         if collision:
-            reward += r_collision
-
-        abs_ang_vel = np.abs(robot.getAngularVelocity())
-        if abs_ang_vel > 0.7:
-            reward += w_w * abs_ang_vel
+            reward = r_collision
 
         return reward
 

@@ -2,7 +2,7 @@ from utils import statesToTensor
 
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions import MultivariateNormal
+from torch.distributions import MultivariateNormal, Normal
 import torch
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -20,16 +20,17 @@ class Inputspace(nn.Module):
             in_f = self.get_in_features(h_in=in_f, kernel_size=4, stride=2)
             features_scan = (int(in_f) ** 2) * 32
         else:
-            self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=8, kernel_size=7, stride=3)
+            self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=12, kernel_size=7, stride=3)
             in_f = self.get_in_features(h_in=scan_size, kernel_size=7, stride=3)
-            self.lidar_conv2 = nn.Conv1d(in_channels=8, out_channels=16, kernel_size=5, stride=2)
+            self.lidar_conv2 = nn.Conv1d(in_channels=12, out_channels=24, kernel_size=5, stride=2)
             in_f = self.get_in_features(h_in=in_f, kernel_size=5, stride=2)
-            features_scan = (int(in_f)) * 16
+            features_scan = (int(in_f)) * 24
 
         self.flatten = nn.Flatten()
-        lidar_out_features = 128
+        lidar_out_features = 192
         self.lidar_flat = nn.Linear(in_features=features_scan, out_features=lidar_out_features)
-        self.concated_some = nn.Linear(in_features=lidar_out_features + 20, out_features=128)
+        self.other_flat = nn.Linear(in_features=20, out_features=64)
+        self.concated_some = nn.Linear(in_features=lidar_out_features + 64, out_features=256)
 
     def get_in_features(self, h_in, padding=0, dilation=1, kernel_size=0, stride=1):
         return (((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1)
@@ -39,13 +40,16 @@ class Inputspace(nn.Module):
         laser = F.relu(self.lidar_conv2(laser))
         laser_flat = self.flatten(laser)
 
-        laser_flat = self.lidar_flat(laser_flat)
+        laser_flat = F.relu(self.lidar_flat(laser_flat))
 
         orientation_flat = self.flatten(orientation_to_goal)
         distance_flat = self.flatten(distance_to_goal)
         velocity_flat = self.flatten(velocity)
-        concat = torch.cat([laser_flat, orientation_flat, distance_flat, velocity_flat], dim=1)
-        densed = F.relu(self.concated_some(concat))
+        concat = torch.cat((orientation_flat, distance_flat, velocity_flat), dim=1)
+        other_dense = F.relu(self.other_flat(concat))
+        densed = torch.cat((laser_flat, other_dense), dim=1)
+        #concat = torch.cat([laser_flat, orientation_flat, distance_flat, velocity_flat], dim=1)
+        #densed = F.relu(self.concated_some(concat_all))
 
         return densed
 
@@ -56,20 +60,17 @@ class Actor(nn.Module):
         self.Inputspace = Inputspace(scan_size, input_style)
 
         # Mu
-        self.mu = nn.Linear(in_features=128, out_features=2)
+        self.mu = nn.Linear(in_features=256, out_features=2)
         # Var
-        #self.dense_var = nn.Linear(in_features=128, out_features=2)
-        logstds_param = nn.Parameter(torch.full((2,), 0.1))
+        #logstds_param = nn.Parameter(torch.full((2,), -0.69))
+        logstds_param = nn.Parameter(torch.full((2,), 0.5))
         self.register_parameter("logstds", logstds_param)
-        #self.softplus = torch.nn.Softplus()
-        #self.softmax = torch.nn.Softmax()
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser.to(device), orientation_to_goal.to(device), distance_to_goal.to(device), velocity.to(device))
         mu = torch.tanh(self.mu(x))
-        #var = self.softplus(self.dense_var(x))
-        #var = self.softmax(self.dense_var(x)) # TODO: check if softmax is needed
-        stds = torch.clamp(self.logstds.exp(), 1e-3, 50)
+        stds = torch.clamp(self.logstds, 1e-3, 2)
+        #stds = torch.clamp(self.logstds.exp(), 1e-3, 50)
         return [mu.to('cpu'), stds.to('cpu')]
 
 
@@ -78,17 +79,12 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.Inputspace = Inputspace(scan_size, input_style)
         # Value
-        self.value_temp = nn.Linear(out_features=1, in_features=128)
-        self.value_temp2 = nn.Linear(out_features=128, in_features=128)
-        self.value = nn.Linear(out_features=1, in_features=256, bias=False)
+        self.value = nn.Linear(in_features=256, out_features=1)
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser, orientation_to_goal, distance_to_goal, velocity)
-        value1 = F.relu(self.value_temp(x))
-        #value2 = F.relu(self.value_temp2(x))
-        #value_cat = torch.cat([value1, value2], dim=1)
-        #value = F.relu(self.value(value_cat))
-        return value1.to('cpu')
+        value = F.relu(self.value(x))
+        return value.to('cpu')
 
 
 class ActorCritic(nn.Module):
@@ -108,14 +104,13 @@ class ActorCritic(nn.Module):
 
     def act(self, states, memory):
         laser, orientation, distance, velocity = states
-        action_mean, action_std = self.actor(laser, orientation, distance, velocity)
+        action_mean, action_var = self.actor(laser, orientation, distance, velocity)
         # TODO Werte prüfen ?!?!??!
 
-        self.logger.add_actor_output(action_mean[0][0].item(), action_mean[0][1].item(), action_std[0].item(), action_std[1].item())
+        self.logger.add_actor_output(action_mean[0][0].item(), action_mean[0][1].item(), action_var[0].item(), action_var[1].item())
 
-        action_std = action_std.repeat((action_mean.shape[0], 1))
-        #action_std = action_std[:action_mean.shape[0]]
-        cov_mat = torch.diag_embed(action_std)
+        action_var = action_var.repeat((action_mean.shape[0], 1))
+        cov_mat = torch.diag_embed(action_var)
         dist = MultivariateNormal(action_mean, cov_mat)
         action = dist.sample()
         action = torch.clip(action, -1, 1)
@@ -141,10 +136,10 @@ class ActorCritic(nn.Module):
         state_value = self.critic(laser, orientation, distance, velocity)
 
         # to calculate action score(logprobs) and distribution entropy
-        action_mean, action_std = self.actor(laser, orientation, distance, velocity)
+        action_mean, action_var = self.actor(laser, orientation, distance, velocity)
 
-        action_std = action_std.repeat((action_mean.shape[0], 1))
-        cov_mat = torch.diag_embed(action_std)
+        action_var = action_var.repeat((action_mean.shape[0], 1))
+        cov_mat = torch.diag_embed(action_var)
         dist = MultivariateNormal(action_mean, cov_mat)
         action_logprobs = dist.log_prob(action.to('cpu'))
         dist_entropy = dist.entropy()
@@ -250,21 +245,26 @@ class PPO:
                 # Actor loss using Surrogate loss
                 surr1 = ratios * advantages
                 surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
-                actor_loss = - torch.min(surr1, surr2).type(torch.float32)
+                entropy = 0.001 * dist_entropy
+                actor_loss = - torch.min(surr1, surr2).type(torch.float32) - entropy
 
                 # Critic loss: critic loss - entropy
-                critic_loss_ = self.MSE_loss(rewards_minibatch.to('cpu'), state_values)
-                critic_loss = 0.5 * critic_loss_ - 0.01 * dist_entropy
+                critic_loss_ = 0.5 * self.MSE_loss(rewards_minibatch.to('cpu'), state_values)
+                critic_loss = critic_loss_
 
                 # Total loss
                 loss = actor_loss + critic_loss
-                self.logger.add_loss(loss.mean().item(), entropy=dist_entropy.mean().item(), critic_loss=critic_loss_.mean().item())
+                self.logger.add_loss(loss.mean().item(), entropy=entropy.mean().item(), critic_loss=critic_loss.mean().item(), actor_loss=actor_loss.mean().item())
 
                 # Backward gradients
                 self.optimizer.zero_grad()
                 #with torch.cuda.amp.autocast(True):
                 loss.mean().backward()
+                # actor_loss.mean().backward()
+                # critic_loss.mean().backward()
                 self.optimizer.step()
 
         # Copy new weights to old_policy
-        self.old_policy.load_state_dict(self.policy.state_dict())
+        self.old_policy.actor.load_state_dict(self.policy.actor.state_dict())
+        self.old_policy.critic.load_state_dict(self.policy.critic.state_dict())
+        #self.old_policy.load_state_dict(self.policy.state_dict())

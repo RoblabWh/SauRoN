@@ -7,8 +7,8 @@ import torch
 import argparse
 from PyQt5.QtWidgets import QApplication
 
-levelFiles = ['SimpleObstacles.svg']
-env_name = "simpleobstacles"
+levelFiles = ['tunnel.svg']
+env_name = "tunnel"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default='./models', help='Location to save checkpoint models')
@@ -19,16 +19,15 @@ parser.add_argument('--mode', default='train', help='choose train or test')
 
 parser.add_argument('--restore', default=False, action='store_true', help='Restore and go on training?')
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net')
-parser.add_argument('--steps', type=int, default=1000, help='Steps in Environment per Episode')
+parser.add_argument('--steps', type=int, default=6000, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=int, default=1000000000, help='Maximum Number of Episodes')
-parser.add_argument('--update_experience', type=int, default=1000, help='how many experiences to update the policy')
+parser.add_argument('--update_experience', type=int, default=6000, help='how many experiences to update the policy')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)')
 parser.add_argument('--K_epochs', type=int, default=42, help='update the policy K times')
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
-parser.add_argument('--solved_reward', type=float, default=135, help='stop training if avg_reward > solved_reward')
 parser.add_argument('--input_style', default='laser', help='image or laser')
 parser.add_argument('--image_size', type=float, default=256, help='size of the image that goes into the neural net')
 
@@ -36,7 +35,7 @@ parser.add_argument('--image_size', type=float, default=256, help='size of the i
 # Simulation settings
 
 parser.add_argument('--level_files', type=list, default=levelFiles, help='List of level files as strings')
-parser.add_argument('--sim_time_step', type=float, default=0.125, help='Time between steps')
+parser.add_argument('--sim_time_step', type=float, default=0.1, help='Time between steps') #.125
 parser.add_argument('--numb_of_robots', type=int, default=1,
                     help='Number of robots acting in one environment in the manual mode')
 
@@ -51,12 +50,14 @@ parser.add_argument('--collide_other_targets', type=str2bool, default=False,
 parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=False,
                     help='Moving robot manually with wasd')
 
-# Visualization settings
+# Visualization & Managing settings
 
 parser.add_argument('--tensorboard', type=str2bool, default=True, help='Use tensorboard')
-parser.add_argument('--print_interval', type=int, default=10, help='how many episodes to print the results out')
+parser.add_argument('--print_interval', type=int, default=1, help='how many episodes to print the results out')
+parser.add_argument('--solved_percentage', type=float, default=0.95, help='stop training if objective is reached to this percentage')
+parser.add_argument('--log_interval', type=int, default=20, help='how many episodes to log into tensorboard. Also regulates how solved percentage is calculated')
 parser.add_argument('--render', default=False, action='store_true', help='Render?')
-parser.add_argument('--scale_factor', type=int, default=65, help='Scale Factor for Environment')
+parser.add_argument('--scale_factor', type=int, default=55, help='Scale Factor for Environment')
 parser.add_argument('--display_normals', type=bool, default=True,
                     help='Determines whether the normals of a wall are shown in the map.')
 args = parser.parse_args()
@@ -72,11 +73,11 @@ if args.input_style == 'laser':
     args.image_size = args.number_of_rays
 
 if args.mode == 'train':
-    train(env_name, env, input_style=args.input_style, solved_reward=args.solved_reward,
+    train(env_name, env, input_style=args.input_style, solved_percentage=args.solved_percentage,
           max_episodes=args.max_episodes, max_timesteps=args.steps, update_experience=args.update_experience,
           action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
           gamma=args.gamma, lr=args.lr, betas=[0.9, 0.990], ckpt_folder=args.ckpt_folder,
-          restore=args.restore, print_interval=args.print_interval, scan_size=args.image_size,
+          restore=args.restore, log_interval=args.log_interval, scan_size=args.image_size,
           batch_size=args.batch_size, tensorboard=args.tensorboard)
 elif args.mode == 'test':
     test(env_name, env, input_style=args.input_style,

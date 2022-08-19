@@ -3,4 +3,5 @@ __pychache__
 venv
 scans
 models
+old_models
 .idea/*

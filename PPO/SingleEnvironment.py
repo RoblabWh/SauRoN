@@ -42,6 +42,12 @@ class SwarmMemory():
         for i in range(len(relativeIndices)):
             self.robotMemory[relativeIndices[i]].logprobs.append(logprob[i])
 
+    def insertReachedGoal(self, reachedGoal, isTerminal):
+        terminalGoal = np.logical_and(reachedGoal, isTerminal)
+        relativeIndices = self.getRelativeIndices()
+        for idx in np.where(isTerminal)[0]:
+            self.robotMemory[relativeIndices[idx]].reached_goal.append(terminalGoal[idx])
+
     def insertIsTerminal(self, isTerminal):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
@@ -100,6 +106,7 @@ class Memory:   # collected from old policy
         self.actions = []
         self.rewards = []
         self.is_terminals = []
+        self.reached_goal = []
         self.logprobs = []
 
     def clear_memory(self):
@@ -107,21 +114,22 @@ class Memory:   # collected from old policy
         del self.actions[:]
         del self.rewards[:]
         del self.is_terminals[:]
+        del self.reached_goal[:]
         del self.logprobs[:]
 
     def __len__(self):
         return len(self.states)
 
-def train(env_name, env, solved_reward, input_style,
+def train(env_name, env, solved_percentage, input_style,
           max_episodes, max_timesteps, update_experience, action_std, K_epochs, eps_clip,
-          gamma, lr, betas, ckpt_folder, restore, tensorboard, scan_size=121, print_interval=10, batch_size=1):
+          gamma, lr, betas, ckpt_folder, restore, tensorboard, scan_size=121, log_interval=10, batch_size=1):
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
     if restore:
         print('Load checkpoint from {}'.format(ckpt))
 
     # Tensorboard
-    logger = Logger(log_dir=ckpt_folder, update_interval=print_interval)
+    logger = Logger(log_dir=ckpt_folder, update_interval=log_interval)
     if tensorboard:
         logger.set_logging(True)
 
@@ -138,18 +146,20 @@ def train(env_name, env, solved_reward, input_style,
     # training loop
     for i_episode in range(1, max_episodes+1):
         states = env.reset(0)
+        logger.set_episode(i_episode)
         for t in range(max_timesteps):
             time_step += 1
 
             # Run old policy
             actions = ppo.select_action(states, memory)
 
-            states, rewards, dones, _ = env.step(actions)
+            states, rewards, dones, reachedGoals = env.step(actions)
 
             memory.insertReward(rewards)
+            #memory.insertReachedGoal(reachedGoals, dones) not used just now
             memory.insertIsTerminal(dones)
 
-            logger.set_episode(i_episode)
+            logger.log_objective(reachedGoals)
 
             if len(memory) >= update_experience:
                 print('Train Network at Episode {}'.format(i_episode))
@@ -163,32 +173,30 @@ def train(env_name, env, solved_reward, input_style,
                 break
         avg_length += t
 
-        if running_reward > (print_interval * solved_reward):
-            print("########## Solved! ##########")
+        if logger.percentage_objective_reached() > solved_percentage:
+            print(f"Percentage of: {logger.percentage_objective_reached():.2f} reached!")
             torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
-            print('Save a checkpoint!')
+            print('Save as solved!')
             break
 
-        # if i_episode % save_interval == 0:
-        #     torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
-        #     print('Save a checkpoint!')
-
-        if i_episode % print_interval == 0:
-            avg_length = int(avg_length / print_interval)
-            running_reward = (running_reward / print_interval)
-
-            logger.scalar_summary('reward', running_reward)
-            logger.scalar_summary('Avg Steps', avg_length)
-            logger.summary_actor_output()
-            logger.summary_loss()
+        if i_episode % log_interval == 0:
+            avg_length = int(avg_length / log_interval)
+            running_reward = (running_reward / log_interval)
 
             if running_reward > best_reward:
                 best_reward = running_reward
                 torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
-                print(f'Best performance with avg reward of {best_reward}.2f saved at episode{i_episode}.')
+                print(f'Best performance with avg reward of {best_reward:.2f} saved at episode {i_episode}.')
+                print(f'Percentage of objective reached: {logger.percentage_objective_reached():.2f}')
+
+            logger.scalar_summary('reward', running_reward)
+            logger.scalar_summary('Avg Steps', avg_length)
+            logger.summary_objective()
+            logger.summary_actor_output()
+            logger.summary_loss()
 
             if not tensorboard:
-                print(f'Episode: {i_episode}, Avg reward: {running_reward}.2f, Avg steps: {avg_length}.2f')
+                print(f'Episode: {i_episode}, Avg reward: {running_reward:.2f}, Avg steps: {avg_length:.2f}')
 
             running_reward, avg_length = 0, 0
 

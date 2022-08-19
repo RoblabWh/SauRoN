@@ -134,12 +134,17 @@ class Logger(object):
         self.loss = []
         self.entropy = []
         self.critic_loss = []
+        self.actor_loss = []
 
         self.actor_mean_linvel = []
         self.actor_mean_angvel = []
-        self.actor_std_linvel = []
-        self.actor_std_angvel = []
+        self.actor_var_linvel = []
+        self.actor_var_angvel = []
         self.update_interval = update_interval
+
+        #objective
+        self.objective_reached = 0
+        self.length_objectives = 0
 
     def __del__(self):
         self.close()
@@ -157,36 +162,45 @@ class Logger(object):
             vel = torch.rand(4, 4, 2).to(device)
             self.writer.add_graph(model, (laser, ori, dist, vel))
 
-    def add_loss(self, loss, entropy, critic_loss):
+    def add_loss(self, loss, entropy, critic_loss, actor_loss):
         self.loss.append(loss)
         self.entropy.append(entropy)
         self.critic_loss.append(critic_loss)
+        self.actor_loss.append(actor_loss)
 
     def summary_loss(self):
         if self.logging and not len(self.loss) == 0:
             self.writer.add_scalars('loss', {'loss': np.mean(self.loss),
                                              'entropy': np.mean(self.entropy),
-                                             'critic_loss': np.mean(self.critic_loss)}, self.episode)
-            self.loss = []
-            self.entropy = []
-            self.critic_loss = []
+                                             'critic_loss': np.mean(self.critic_loss),
+                                             'actor loss': np.mean(self.actor_loss)}, self.episode)
+        self.loss = []
+        self.entropy = []
+        self.critic_loss = []
+        self.actor_loss = []
 
-    def add_actor_output(self, actor_mean_linvel, actor_mean_angvel, actor_std_linvel, actor_std_angvel):
+    def add_actor_output(self, actor_mean_linvel, actor_mean_angvel, actor_var_linvel, actor_var_angvel):
         self.actor_mean_linvel.append(actor_mean_linvel)
         self.actor_mean_angvel.append(actor_mean_angvel)
-        self.actor_std_linvel.append(actor_std_linvel)
-        self.actor_std_angvel.append(actor_std_angvel)
+        self.actor_var_linvel.append(actor_var_linvel)
+        self.actor_var_angvel.append(actor_var_angvel)
 
     def summary_actor_output(self):
         if self.logging:
             self.writer.add_scalars('actor_output', {'Mean LinVel': np.mean(self.actor_mean_linvel),
                                                      'Mean AngVel': np.mean(self.actor_mean_angvel),
-                                                     'Std LinVel': np.mean(self.actor_std_linvel),
-                                                     'Std AngVel': np.mean(self.actor_std_angvel)}, self.episode)
-            self.actor_mean_linvel = []
-            self.actor_mean_angvel = []
-            self.actor_std_linvel = []
-            self.actor_std_angvel = []
+                                                     'Std LinVel': np.mean(self.actor_var_linvel),
+                                                     'Std AngVel': np.mean(self.actor_var_angvel)}, self.episode)
+        self.actor_mean_linvel = []
+        self.actor_mean_angvel = []
+        self.actor_var_linvel = []
+        self.actor_var_angvel = []
+
+    def summary_objective(self):
+        if self.logging:
+            self.writer.add_scalar('percentage_objective_reached', self.percentage_objective_reached(), self.episode)
+        self.objective_reached = 0
+        self.length_objectives = 0
 
     def add_reward(self, reward):
         self.scalar_summary('reward', reward)
@@ -194,6 +208,13 @@ class Logger(object):
     def scalar_summary(self, tag, value):
         if self.logging:
             self.writer.add_scalar(tag, value, self.episode)
+
+    def percentage_objective_reached(self):
+        return self.objective_reached / self.length_objectives
+
+    def log_objective(self, reachedGoals):
+        self.objective_reached += np.count_nonzero(reachedGoals)
+        self.length_objectives += len(reachedGoals)
 
     def set_episode(self, episode):
         self.episode = episode

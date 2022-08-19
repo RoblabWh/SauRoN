@@ -87,6 +87,9 @@ class Robot:
         normFacPieSlice = 1 / self.radius
         self.offsetAnglePieSilce = 2/3 * np.arccos((np.sqrt(2-(self.offsetSensorDist* normFacPieSlice)**2)-(self.offsetSensorDist* normFacPieSlice)) / 2)
 
+        #reward variables
+        goalDist = math.sqrt((self.goalX - self.startposX) ** 2 + (self.goalY - self.startposY) ** 2)
+        self.initialGoalDist = goalDist
 
         self.walls = walls
         self.circleWalls = circleWalls
@@ -100,6 +103,7 @@ class Robot:
         for pickUp in allStations:
             if not station is pickUp:
                 self.collidorStationsCircles.append((pickUp.getPosX(), pickUp.getPosY(), pickUp.getRadius()))
+
 
         self.manuell = args.manually
         if self.manuell:
@@ -176,14 +180,14 @@ class Robot:
 
         self.stateLidar = []
 
-
         self.distances = []
         self.collisionDistances = []
         self.collisionDistancesRobots = []
         self.lidarHits = []
         self.netOutput = (0, 0)
 
-        self.bestDistToGoal = goalDist
+        # reward variables
+        self.initialGoalDist = goalDist
 
         if self.hasPieSlice:
             self.posSensor = [posX + self.offsetSensorDist * directionX, posY + self.offsetSensorDist * directionY]
