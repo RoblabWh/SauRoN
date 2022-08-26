@@ -187,7 +187,7 @@ def train(env_name, env, solved_percentage, input_style,
                 best_reward = running_reward
                 torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
                 print(f'Best performance with avg reward of {best_reward:.2f} saved at episode {i_episode}.')
-                print(f'Percentage of objective reached: {logger.percentage_objective_reached():.2f}')
+                print(f'Percentage of objective reached: {logger.percentage_objective_reached():.4f}')
 
             logger.scalar_summary('reward', running_reward)
             logger.scalar_summary('Avg Steps', avg_length)

@@ -141,11 +141,11 @@ class Environment:
 
         ########### REWARD CALCULATION ################
 
-        reward = self.createReward(robot, distance_new, distance_old, reachedPickup, collision)
+        reward = self.createReward(robot, distance_new, distance_old, reachedPickup, collision, runOutOfTime)
 
         return [next_state, reward, not robot.isActive(), reachedPickup]
 
-    def createReward(self, robot, dist_new, dist_old, reachedPickup, collision):
+    def createReward(self, robot, dist_new, dist_old, reachedPickup, collision, runOutOfTime):
         """
         Creates a (sparse) reward based on the euklidian distance, if the robot has reached his goal and if the robot
         collided with a wall or another robot.
@@ -159,8 +159,8 @@ class Environment:
         """
 
         reward = 0
-        r_arrival = 700
-        r_collision = -200
+        r_arrival = 70
+        r_collision = -20
         w_gp = 2.5
         w_gn = 1.2
         w_d = 2.0
@@ -168,6 +168,10 @@ class Environment:
 
         if reachedPickup:
             reward = r_arrival
+        elif runOutOfTime:
+            reward = 0
+        elif collision:
+            reward = r_collision
         else:
             if dist_old > dist_new:
                 reward += w_gp * (dist_old - dist_new)
@@ -180,9 +184,6 @@ class Environment:
             abs_ang_vel = np.abs(robot.getAngularVelocity())
             if abs_ang_vel > 0.7:
                 reward += w_w * abs_ang_vel
-
-        if collision:
-            reward = r_collision
 
         return reward
 

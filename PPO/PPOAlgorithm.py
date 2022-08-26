@@ -1,9 +1,12 @@
-from utils import statesToTensor
+from utils import statesToTensor, normalize
 
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import MultivariateNormal, Normal
 import torch
+import numpy as np
+
+from utils import initialize_hidden_weights, initialize_output_weights
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -15,22 +18,29 @@ class Inputspace(nn.Module):
 
         if input_style == 'image':
             self.lidar_conv1 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=16, stride=4)
+            initialize_hidden_weights(self.lidar_conv1)
             in_f = self.get_in_features(h_in=scan_size, kernel_size=16, stride=4)
             self.lidar_conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2)
+            initialize_hidden_weights(self.lidar_conv2)
             in_f = self.get_in_features(h_in=in_f, kernel_size=4, stride=2)
             features_scan = (int(in_f) ** 2) * 32
         else:
             self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=12, kernel_size=7, stride=3)
+            initialize_hidden_weights(self.lidar_conv1)
             in_f = self.get_in_features(h_in=scan_size, kernel_size=7, stride=3)
             self.lidar_conv2 = nn.Conv1d(in_channels=12, out_channels=24, kernel_size=5, stride=2)
+            initialize_hidden_weights(self.lidar_conv2)
             in_f = self.get_in_features(h_in=in_f, kernel_size=5, stride=2)
             features_scan = (int(in_f)) * 24
 
         self.flatten = nn.Flatten()
         lidar_out_features = 192
         self.lidar_flat = nn.Linear(in_features=features_scan, out_features=lidar_out_features)
+        initialize_hidden_weights(self.lidar_flat)
         self.other_flat = nn.Linear(in_features=20, out_features=64)
+        initialize_hidden_weights(self.other_flat)
         self.concated_some = nn.Linear(in_features=lidar_out_features + 64, out_features=256)
+        initialize_hidden_weights(self.concated_some)
 
     def get_in_features(self, h_in, padding=0, dilation=1, kernel_size=0, stride=1):
         return (((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1)
@@ -61,17 +71,20 @@ class Actor(nn.Module):
 
         # Mu
         self.mu = nn.Linear(in_features=256, out_features=2)
+        initialize_output_weights(self.mu, 'actor')
         # Var
         #logstds_param = nn.Parameter(torch.full((2,), -0.69))
-        logstds_param = nn.Parameter(torch.full((2,), 0.5))
-        self.register_parameter("logstds", logstds_param)
+        var_param = nn.Parameter(torch.full((2,), 1.0))
+        self.register_parameter("var", var_param)
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser.to(device), orientation_to_goal.to(device), distance_to_goal.to(device), velocity.to(device))
         mu = torch.tanh(self.mu(x))
-        stds = torch.clamp(self.logstds, 1e-3, 2)
-        #stds = torch.clamp(self.logstds.exp(), 1e-3, 50)
-        return [mu.to('cpu'), stds.to('cpu')]
+        var = torch.clamp(self.var.exp(), 1e-2, 1)
+        cov_mat = torch.diag(var)
+        dist = MultivariateNormal(mu, cov_mat)
+
+        return mu.to('cpu'), var.to('cpu'), dist
 
 
 class Critic(nn.Module):
@@ -80,6 +93,7 @@ class Critic(nn.Module):
         self.Inputspace = Inputspace(scan_size, input_style)
         # Value
         self.value = nn.Linear(in_features=256, out_features=1)
+        initialize_output_weights(self.value, 'critic')
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser, orientation_to_goal, distance_to_goal, velocity)
@@ -104,14 +118,13 @@ class ActorCritic(nn.Module):
 
     def act(self, states, memory):
         laser, orientation, distance, velocity = states
-        action_mean, action_var = self.actor(laser, orientation, distance, velocity)
-        # TODO Werte prüfen ?!?!??!
+        # TODO: check if normalization of states is necessary
+        # was suggested in: Implementation_Matters in Deep RL: A Case Study on PPO and TRPO
+        action_mean, action_var, dist = self.actor(laser, orientation, distance, velocity)
 
+        # logging of actions
         self.logger.add_actor_output(action_mean[0][0].item(), action_mean[0][1].item(), action_var[0].item(), action_var[1].item())
 
-        action_var = action_var.repeat((action_mean.shape[0], 1))
-        cov_mat = torch.diag_embed(action_var)
-        dist = MultivariateNormal(action_mean, cov_mat)
         action = dist.sample()
         action = torch.clip(action, -1, 1)
         action_logprob = dist.log_prob(action)
@@ -124,7 +137,7 @@ class ActorCritic(nn.Module):
 
     def act_certain(self, states, memory):
         laser, orientation, distance, velocity = states
-        action, _ = self.actor(laser, orientation, distance, velocity)
+        action, _, _ = self.actor(laser, orientation, distance, velocity)
 
         memory.insertState(laser.to(device).detach(), orientation.to(device).detach(), distance.to(device).detach(), velocity.to(device).detach())
         memory.insertAction(action)
@@ -135,13 +148,9 @@ class ActorCritic(nn.Module):
         laser, orientation, distance, velocity = state
         state_value = self.critic(laser, orientation, distance, velocity)
 
-        # to calculate action score(logprobs) and distribution entropy
-        action_mean, action_var = self.actor(laser, orientation, distance, velocity)
+        _, _, dist = self.actor(laser, orientation, distance, velocity)
 
-        action_var = action_var.repeat((action_mean.shape[0], 1))
-        cov_mat = torch.diag_embed(action_var)
-        dist = MultivariateNormal(action_mean, cov_mat)
-        action_logprobs = dist.log_prob(action.to('cpu'))
+        action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
 
         return action_logprobs, torch.squeeze(state_value), dist_entropy
@@ -161,7 +170,7 @@ class PPO:
         if restore:
             pretained_model = torch.load(ckpt, map_location=lambda storage, loc: storage)
             self.policy.load_state_dict(pretained_model)
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, betas=betas)
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, betas=betas, eps=1e-5)
 
         # old policy: initialize old policy with current policy's parameter
         self.old_policy = ActorCritic(action_std, scan_size, input_style, logger).to(device)
@@ -237,29 +246,34 @@ class PPO:
                 logprobs, state_values, dist_entropy = self.policy.evaluate(old_states_minibatch, old_actions_minibatch)
 
                 # Importance ratio: p/q
-                ratios = torch.exp(logprobs - old_logprobs_minibatch.to('cpu').detach())
+                ratios = torch.exp(logprobs - old_logprobs_minibatch.detach()).to('cpu')
 
                 # Advantages
                 advantages = rewards_minibatch.to('cpu') - state_values.detach()
+                advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
 
                 # Actor loss using Surrogate loss
                 surr1 = ratios * advantages
                 surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
                 entropy = 0.001 * dist_entropy
-                actor_loss = - torch.min(surr1, surr2).type(torch.float32) - entropy
+                actor_loss = - torch.min(surr1, surr2).type(torch.float32)
 
-                # Critic loss: critic loss - entropy
+                # TODO CLIP VALUE LOSS ? Probably not necessary as according to:
+                # https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/
                 critic_loss_ = 0.5 * self.MSE_loss(rewards_minibatch.to('cpu'), state_values)
                 critic_loss = critic_loss_
 
                 # Total loss
-                loss = actor_loss + critic_loss
+                loss = actor_loss + critic_loss - entropy.to('cpu')
                 self.logger.add_loss(loss.mean().item(), entropy=entropy.mean().item(), critic_loss=critic_loss.mean().item(), actor_loss=actor_loss.mean().item())
 
                 # Backward gradients
                 self.optimizer.zero_grad()
                 #with torch.cuda.amp.autocast(True):
                 loss.mean().backward()
+                # Global gradient norm clipping https://vitalab.github.io/article/2020/01/14/Implementation_Matters.html
+                torch.nn.utils.clip_grad_norm_(self.policy.actor.parameters(), max_norm=0.5)
+                torch.nn.utils.clip_grad_norm_(self.policy.critic.parameters(), max_norm=0.5)
                 # actor_loss.mean().backward()
                 # critic_loss.mean().backward()
                 self.optimizer.step()

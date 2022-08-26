@@ -6,6 +6,34 @@ from PIL import Image
 import os
 import time
 
+def initialize_output_weights(m, out_type):
+    if out_type == 'actor':
+        torch.nn.init.orthogonal_(m.weight.data, gain=0.01)
+        if m.bias is not None:
+            torch.nn.init.constant_(m.bias.data, 0)
+    elif out_type == 'critic':
+        torch.nn.init.orthogonal_(m.weight.data, gain=1)
+        if m.bias is not None:
+            torch.nn.init.constant_(m.bias.data, 0)
+
+def initialize_hidden_weights(m):
+    if isinstance(m, torch.nn.Conv2d):
+        torch.nn.init.orthogonal_(m.weight.data, gain=np.sqrt(2))
+        if m.bias is not None:
+            torch.nn.init.constant_(m.bias.data, 0)
+    elif isinstance(m, torch.nn.Linear):
+        torch.nn.init.orthogonal_(m.weight.data, gain=np.sqrt(2))
+        if m.bias is not None:
+            torch.nn.init.constant_(m.bias.data, 0)
+    elif isinstance(m, torch.nn.Conv1d):
+        torch.nn.init.orthogonal_(m.weight.data, gain=np.sqrt(2))
+        if m.bias is not None:
+            torch.nn.init.constant_(m.bias.data, 0)
+
+# normalizes a tensor to mean zero and standard deviation one
+def normalize(tensor):
+    return (tensor - tensor.mean()) / (tensor.std() + 1e-8)
+
 def statesToTensor(list):
     states = np.asarray(list, dtype=object)
     laser = states[:, :, 0].tolist()
@@ -189,8 +217,8 @@ class Logger(object):
         if self.logging:
             self.writer.add_scalars('actor_output', {'Mean LinVel': np.mean(self.actor_mean_linvel),
                                                      'Mean AngVel': np.mean(self.actor_mean_angvel),
-                                                     'Std LinVel': np.mean(self.actor_var_linvel),
-                                                     'Std AngVel': np.mean(self.actor_var_angvel)}, self.episode)
+                                                     'Variance LinVel': np.mean(self.actor_var_linvel),
+                                                     'Variance AngVel': np.mean(self.actor_var_angvel)}, self.episode)
         self.actor_mean_linvel = []
         self.actor_mean_angvel = []
         self.actor_var_linvel = []

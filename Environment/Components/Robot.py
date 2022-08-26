@@ -434,10 +434,10 @@ class Robot:
 
         currentTimestep = (steps - stepsLeft)/steps
 
-        distance = (distance * self.maxDistFact)
-        if distance > 1 : distance = 1
-
-        frame_lidar = [image, np.asarray(orientation), distance, np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
+        #distance = (distance * self.maxDistFact)
+        #if distance > 1 : distance = 1
+        frame_lidar = [distances, distance, np.asarray(orientation), np.array([self.getLinearVelocity(), self.getAngularVelocity()]), currentTimestep]
+        #frame_lidar = [image, np.asarray(orientation), distance, np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
         #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateLidar) >= self.time_steps:
