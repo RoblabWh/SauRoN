@@ -176,6 +176,7 @@ class PPO:
         states = statesToTensor(states)
         return self.old_policy.act(states, memory).cpu().numpy()
 
+
     def select_action_certain(self, states, memory):
         # prepare data
         states = statesToTensor(states)
@@ -219,8 +220,8 @@ class PPO:
         # convert list to tensor
         old_states = memory.getStatesOfAllRobots()
         laser, orientation, distance, velocity = old_states
-        old_actions = torch.stack(memory.getActionsOfAllRobots()).to(device).detach()
-        old_logprobs = torch.stack(memory.getLogProbsOfAllRobots()).to(device).detach()
+        old_actions = memory.getActionsOfAllRobots().to(device).detach()
+        old_logprobs = memory.getLogProbsOfAllRobots().to(device).detach()
 
         st = time.time()
         # Train policy for K epochs: sampling and updating

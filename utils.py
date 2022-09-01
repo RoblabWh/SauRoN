@@ -6,11 +6,23 @@ import os
 import time
 
 def statesToTensor(list):
-    states = np.asarray(list, dtype=object)
-    laser = states[:, :, 0].tolist()
-    ori = states[:, :, 1].tolist()
-    dist = states[:, :, 2].tolist()
-    vel = states[:, :, 3].tolist()
+    states = None
+    laser = None
+    ori = None
+    dist = None
+    vel = None
+
+    try:
+        states = np.asarray(list, dtype=object)
+
+
+        laser = states[:, :, 0].tolist()
+        ori = states[:, :, 1].tolist()
+        dist = states[:, :, 2].tolist()
+        vel = states[:, :, 3].tolist()
+    except Exception as e:
+        print("In listToTensor: {}".format(e))
+
     return [torch.tensor(laser, dtype=torch.float32), torch.tensor(ori, dtype=torch.float32),
             torch.tensor(dist, dtype=torch.float32), torch.tensor(vel, dtype=torch.float32)]
 
