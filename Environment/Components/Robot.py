@@ -427,17 +427,17 @@ class Robot:
 
         # Convert 1D scan to 2D Scan
         if self.args.input_style == "image":
-            image = scan1DTo2D(distancesNorm, img_size=self.args.image_size)
+            laser = scan1DTo2D(distancesNorm, img_size=self.args.image_size)
         else:
-            image = distancesNorm
+            laser = distancesNorm
         #image = scan1DTo2D(self.lidarHits)
 
         currentTimestep = (steps - stepsLeft)/steps
 
         #distance = (distance * self.maxDistFact)
         #if distance > 1 : distance = 1
-        frame_lidar = [distances, distance, np.asarray(orientation), np.array([self.getLinearVelocity(), self.getAngularVelocity()]), currentTimestep]
-        #frame_lidar = [image, np.asarray(orientation), distance, np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
+        #frame_lidar = [distances, distance, np.asarray(orientation), np.array([self.getLinearVelocity(), self.getAngularVelocity()]), currentTimestep]
+        frame_lidar = [laser, np.asarray(orientation), distance, np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
         #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateLidar) >= self.time_steps:
@@ -506,8 +506,8 @@ class Robot:
                 angVel = self.minAngularVelocity
 
         # maybe ändern
-        return tarLinVel, tarAngVel
-        #return linVel, angVel
+        #return tarLinVel, tarAngVel
+        return linVel, angVel
 
     def directionVectorFromAngle(self, direction):
         """

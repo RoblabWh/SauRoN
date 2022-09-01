@@ -72,19 +72,18 @@ class Actor(nn.Module):
         # Mu
         self.mu = nn.Linear(in_features=256, out_features=2)
         initialize_output_weights(self.mu, 'actor')
-        # Var
-        #logstds_param = nn.Parameter(torch.full((2,), -0.69))
-        var_param = nn.Parameter(torch.full((2,), 1.0))
-        self.register_parameter("var", var_param)
+        # Logstd
+        self.log_std = nn.Parameter(torch.zeros(2, ))
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser.to(device), orientation_to_goal.to(device), distance_to_goal.to(device), velocity.to(device))
         mu = torch.tanh(self.mu(x))
-        var = torch.clamp(self.var.exp(), 1e-2, 1)
+        std = torch.exp(self.log_std)
+        var = torch.pow(std, 2)
         cov_mat = torch.diag(var)
         dist = MultivariateNormal(mu, cov_mat)
 
-        return mu.to('cpu'), var.to('cpu'), dist
+        return mu, var, dist
 
 
 class Critic(nn.Module):
@@ -98,7 +97,7 @@ class Critic(nn.Module):
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser, orientation_to_goal, distance_to_goal, velocity)
         value = F.relu(self.value(x))
-        return value.to('cpu')
+        return value
 
 
 class ActorCritic(nn.Module):
@@ -123,7 +122,7 @@ class ActorCritic(nn.Module):
         action_mean, action_var, dist = self.actor(laser, orientation, distance, velocity)
 
         # logging of actions
-        self.logger.add_actor_output(action_mean[0][0].item(), action_mean[0][1].item(), action_var[0].item(), action_var[1].item())
+        self.logger.add_actor_output(action_mean.mean(0)[0].item(), action_mean.mean(0)[1].item(), action_var[0].item(), action_var[1].item())
 
         action = dist.sample()
         action = torch.clip(action, -1, 1)
@@ -246,10 +245,10 @@ class PPO:
                 logprobs, state_values, dist_entropy = self.policy.evaluate(old_states_minibatch, old_actions_minibatch)
 
                 # Importance ratio: p/q
-                ratios = torch.exp(logprobs - old_logprobs_minibatch.detach()).to('cpu')
+                ratios = torch.exp(logprobs - old_logprobs_minibatch.detach())
 
                 # Advantages
-                advantages = rewards_minibatch.to('cpu') - state_values.detach()
+                advantages = rewards_minibatch - state_values.detach()
                 advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
 
                 # Actor loss using Surrogate loss
@@ -260,11 +259,11 @@ class PPO:
 
                 # TODO CLIP VALUE LOSS ? Probably not necessary as according to:
                 # https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/
-                critic_loss_ = 0.5 * self.MSE_loss(rewards_minibatch.to('cpu'), state_values)
+                critic_loss_ = 0.5 * self.MSE_loss(rewards_minibatch, state_values)
                 critic_loss = critic_loss_
 
                 # Total loss
-                loss = actor_loss + critic_loss - entropy.to('cpu')
+                loss = actor_loss + critic_loss - entropy
                 self.logger.add_loss(loss.mean().item(), entropy=entropy.mean().item(), critic_loss=critic_loss.mean().item(), actor_loss=actor_loss.mean().item())
 
                 # Backward gradients

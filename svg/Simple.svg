@@ -8,9 +8,9 @@
 <circle id="start_2_1_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="278.557" cy="193.793" r="7.5"/>
 <circle id="start_3_1_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="365.986" cy="193.793" r="7.499"/>
 <circle id="start_4_1_" fill="#E52420" stroke="#000000" stroke-miterlimit="10" cx="498.649" cy="193.793" r="7.5"/>
-<circle id="goal_1_1_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="195.042" cy="99.891" r="13.668"/>
-<circle id="goal_2_1_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="288.224" cy="99.891" r="13.668"/>
-<circle id="goal_3_1_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="368.81" cy="99.891" r="13.99"/>
-<circle id="goal_4_1_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="459.816" cy="99.891" r="13.99"/>
+<circle id="goal_1_1_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="195.042" cy="99.891" r="6.5"/>
+<circle id="goal_2_1_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="288.224" cy="99.891" r="6.5"/>
+<circle id="goal_3_1_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="368.81" cy="99.891" r="6.5"/>
+<circle id="goal_4_1_" fill="#66B32E" stroke="#000000" stroke-miterlimit="10" cx="459.816" cy="99.891" r="6.5"/>
 <polygon fill="none" stroke="#000000" stroke-miterlimit="10" points="619.977,279.897 619.977,2.563 3.31,2.563 3.31,279.563 "/>
 </svg>

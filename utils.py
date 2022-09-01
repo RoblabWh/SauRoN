@@ -172,7 +172,7 @@ class Logger(object):
 
         #objective
         self.objective_reached = 0
-        self.length_objectives = 0
+        self.number_of_agents = 0
 
     def __del__(self):
         self.close()
@@ -228,7 +228,6 @@ class Logger(object):
         if self.logging:
             self.writer.add_scalar('percentage_objective_reached', self.percentage_objective_reached(), self.episode)
         self.objective_reached = 0
-        self.length_objectives = 0
 
     def add_reward(self, reward):
         self.scalar_summary('reward', reward)
@@ -238,14 +237,16 @@ class Logger(object):
             self.writer.add_scalar(tag, value, self.episode)
 
     def percentage_objective_reached(self):
-        return self.objective_reached / self.length_objectives
+        return self.objective_reached / (self.update_interval * self.number_of_agents)
 
     def log_objective(self, reachedGoals):
         self.objective_reached += np.count_nonzero(reachedGoals)
-        self.length_objectives += len(reachedGoals)
 
     def set_episode(self, episode):
         self.episode = episode
+
+    def set_number_of_agents(self, number_of_agents):
+        self.number_of_agents = number_of_agents
 
     def close(self):
         self.writer.close()

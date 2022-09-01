@@ -7,12 +7,13 @@ import torch
 import argparse
 from PyQt5.QtWidgets import QApplication
 
-levelFiles = ['Funnel.svg']
-env_name = "tunnel"
+levelFiles = 'svg3_tareq.svg'
+ckpt_folder = './models/120'
+env_name = "tunnel_best"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
-parser.add_argument('--ckpt_folder', default='./models', help='Location to save checkpoint models')
-parser.add_argument('--mode', default='train', help='choose train or test')
+parser.add_argument('--ckpt_folder', default=ckpt_folder, help='Location to save checkpoint models')
+parser.add_argument('--mode', default='test', help='choose train or test')
 
 
 # Train Parameters
@@ -21,8 +22,8 @@ parser.add_argument('--restore', default=False, action='store_true', help='Resto
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net')
 parser.add_argument('--steps', type=int, default=2000, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=int, default=1000000000, help='Maximum Number of Episodes')
-parser.add_argument('--update_experience', type=int, default=30000, help='how many experiences to update the policy')
-parser.add_argument('--batch_size', type=int, default=30, help='batch size')
+parser.add_argument('--update_experience', type=int, default=100000, help='how many experiences to update the policy')
+parser.add_argument('--batch_size', type=int, default=10, help='batch size')
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)')
 parser.add_argument('--K_epochs', type=int, default=42, help='update the policy K times')
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
@@ -34,7 +35,7 @@ parser.add_argument('--image_size', type=float, default=256, help='size of the i
 
 # Simulation settings
 
-parser.add_argument('--level_files', type=list, default=levelFiles, help='List of level files as strings')
+parser.add_argument('--level_files', type=str, default=levelFiles, help='List of level files as strings')
 parser.add_argument('--sim_time_step', type=float, default=0.1, help='Time between steps') #.125
 parser.add_argument('--numb_of_robots', type=int, default=1,
                     help='Number of robots acting in one environment in the manual mode')
@@ -54,14 +55,17 @@ parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=
 
 parser.add_argument('--tensorboard', type=str2bool, default=True, help='Use tensorboard')
 parser.add_argument('--print_interval', type=int, default=1, help='how many episodes to print the results out')
-parser.add_argument('--solved_percentage', type=float, default=0.95, help='stop training if objective is reached to this percentage')
+parser.add_argument('--solved_percentage', type=float, default=0.99, help='stop training if objective is reached to this percentage')
 parser.add_argument('--log_interval', type=int, default=5, help='how many episodes to log into tensorboard. Also regulates how solved percentage is calculated')
 parser.add_argument('--render', default=False, action='store_true', help='Render?')
 parser.add_argument('--scale_factor', type=int, default=55, help='Scale Factor for Environment')
 parser.add_argument('--display_normals', type=bool, default=True,
                     help='Determines whether the normals of a wall are shown in the map.')
 args = parser.parse_args()
+args.level_files = [args.level_files]
 check_args(args)
+
+print(args.level_files)
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

@@ -147,6 +147,7 @@ def train(env_name, env, solved_percentage, input_style,
     for i_episode in range(1, max_episodes+1):
         states = env.reset(0)
         logger.set_episode(i_episode)
+        logger.set_number_of_agents(env.getNumberOfRobots())
         for t in range(max_timesteps):
             time_step += 1
 
@@ -173,7 +174,7 @@ def train(env_name, env, solved_percentage, input_style,
                 break
         avg_length += t
 
-        if logger.percentage_objective_reached() > solved_percentage:
+        if logger.percentage_objective_reached() >= solved_percentage:
             print(f"Percentage of: {logger.percentage_objective_reached():.2f} reached!")
             torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
             print('Save as solved!')
