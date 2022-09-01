@@ -94,7 +94,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shared_array_reward = shared_memory.SharedMemory(create=True, size=array_size_reward, name="shared_array_reward")
     shared_array_logprob = shared_memory.SharedMemory(create=True, size=array_size_logprob, name="shared_array_logprob")
     shared_array_terminal = shared_memory.SharedMemory(create=True, size=array_size_terminal, name="shared_array_terminal")
-    shared_array_counter = shared_memory.SharedMemory(create=True, size=12, name="shared_array_counter")
+    shared_array_counter = shared_memory.SharedMemory(create=True, size=numOfProcesses * 4, name="shared_array_counter")
 
     np_data_type = np.float32
     shared_array_laser_np = np.ndarray(shape_laser, dtype=np_data_type, buffer=shared_array_laser.buf)
@@ -105,7 +105,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shared_array_reward_np = np.ndarray(shape_reward, dtype=np_data_type, buffer=shared_array_reward.buf)
     shared_array_logprob_np = np.ndarray(shape_logprob, dtype=np_data_type, buffer=shared_array_logprob.buf)
     shared_array_terminal_np = np.ndarray(shape_terminal, dtype=np.bool, buffer=shared_array_terminal.buf)
-    shared_array_counter_np = np.ndarray((1, 3), dtype=np.int, buffer=shared_array_counter.buf)
+    shared_array_counter_np = np.ndarray((numOfProcesses,), dtype=np.int, buffer=shared_array_counter.buf)
 
     print("#####Shared Memory#####")
     print("Num of Processes: {}".format(numOfProcesses))
@@ -294,6 +294,7 @@ def train(env_name, render, solved_reward, input_style,
           numOfRobots=4, args=None):
     args_ = args
 
+
     numOfProcesses = getNumOfProcesses(len(args_.level_files))
     print("Starting {} processes!\n".format(numOfProcesses))
 
@@ -313,24 +314,32 @@ def train(env_name, render, solved_reward, input_style,
     futures = []
     episodes_counter = 0
     timesteps_counter = 0
+    queue = [multiprocessing.Queue() for i in range(numOfProcesses)]
     pool = ProcessPoolExecutor(max_workers=numOfProcesses)
     for i in range(0, numOfProcesses):
         futures.append(pool.submit(runMultiprocessPPO, args=(i, max_episodes, env_name, max_timesteps, render,
                                                              print_interval, solved_reward, ckpt_folder, scan_size,
                                                              action_std, input_style, lr, betas, gamma, K_epochs,
-                                                             eps_clip, restore, ckpt, args_, numOfProcesses, update_experience, tSteps, lock[i])))
+                                                             eps_clip, restore, ckpt, args_, numOfProcesses, update_experience, tSteps, queue[i])))
     while True:
         for i in range(numOfProcesses):
             while shared_array_counter_np[i] == 0:
                 pass
-            shared_array_counter_np[i] = 0
-        train_all(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, batch_size)
         timesteps_counter += 1000
         if timesteps_counter == max_timesteps:
             timesteps_counter = 0
             if episodes_counter == max_episodes:
-                
+                break
             episodes_counter += 1
+
+        # Train
+        pth = train_all(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, batch_size)
+
+        # Save .pth
+        for i in range(numOfProcesses):
+            queue[i].put(pth)
+            shared_array_counter_np[i] == 0
+
 
     done, not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
     print("####################")
@@ -346,6 +355,7 @@ def train_all(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, ep
     ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=restore, ckpt=ckpt)
     memory = SwarmMemory(-1, -1)
     ppo.update(memory, batch_size)
+    return ppo.old_policy.get_parameter()
 
 
 
@@ -418,14 +428,13 @@ def init_shm_client(numOfProcesses, numOfRobots, learning_size, timesteps):
     shared_array_reward_np = np.ndarray(shape_reward, dtype=np_data_type, buffer=shared_array_reward.buf)
     shared_array_logprob_np = np.ndarray(shape_logprob, dtype=np_data_type, buffer=shared_array_logprob.buf)
     shared_array_terminal_np = np.ndarray(shape_terminal, dtype=np_data_type, buffer=shared_array_terminal.buf)
-    shared_array_counter_np = np.ndarray((1, 3), dtype=np.int, buffer=shared_array_counter.buf)
+    shared_array_counter_np = np.ndarray((numOfProcesses,), dtype=np.int, buffer=shared_array_counter.buf)
 
 
 def runMultiprocessPPO(args):
     processID, max_episodes, env_name, max_timesteps, render, print_interval, solved_reward, ckpt_folder, scan_size, \
     action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, args_obj, numOfProcesses, \
-    batch_size, tSteps = args
-
+    batch_size, tSteps, queue = args
 
     app = None
     env = None
@@ -473,6 +482,8 @@ def runMultiprocessPPO(args):
                     pass
                 memory.clear_memory()
 
+                #Load .pth
+                ppo.old_policy.load_state_dict(queue.get())
 
 
             running_reward += np.mean(rewards)
