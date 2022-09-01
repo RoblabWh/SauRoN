@@ -74,7 +74,8 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     array_size_action = numOfProcesses * numOfRobots * size_of_action * learning_size * timesteps * 4 #Sizeof(float)
     array_size_reward = numOfProcesses * numOfRobots * size_of_reward * learning_size * timesteps * 4 #Sizeof(float)
     array_size_logprob = numOfProcesses * numOfRobots * size_of_logprob * learning_size * timesteps * 4 #Sizeof(float)
-    array_size_terminal = numOfProcesses * numOfRobots * size_of_terminal * learning_size * timesteps * 4 #Sizeof(float)
+    array_size_terminal = numOfProcesses * numOfRobots * size_of_terminal * learning_size * timesteps * 4#Sizeof(float)
+    array_size_signal = numOfProcesses * 4 #SizeOf(int)
 
     shape_laser = (numOfProcesses, learning_size, timesteps, size_of_laser)
     shape_distance = (numOfProcesses, learning_size, timesteps, size_of_distance)
@@ -84,6 +85,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shape_reward = (numOfProcesses, learning_size, timesteps, size_of_reward)
     shape_logprob = (numOfProcesses, learning_size, timesteps, size_of_logprob)
     shape_terminal = (numOfProcesses, learning_size, timesteps, size_of_terminal)
+    shape_signal = (numOfProcesses, 1)
 
 
     shared_array_laser = shared_memory.SharedMemory(create=True, size=array_size_laser, name="shared_array_laser")
@@ -94,7 +96,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shared_array_reward = shared_memory.SharedMemory(create=True, size=array_size_reward, name="shared_array_reward")
     shared_array_logprob = shared_memory.SharedMemory(create=True, size=array_size_logprob, name="shared_array_logprob")
     shared_array_terminal = shared_memory.SharedMemory(create=True, size=array_size_terminal, name="shared_array_terminal")
-    shared_array_counter = shared_memory.SharedMemory(create=True, size=numOfProcesses * 4, name="shared_array_counter")
+    shared_array_signal = shared_memory.SharedMemory(create=True, size=array_size_signal, name="shared_array_signal")
 
     np_data_type = np.float32
     shared_array_laser_np = np.ndarray(shape_laser, dtype=np_data_type, buffer=shared_array_laser.buf)
@@ -105,7 +107,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shared_array_reward_np = np.ndarray(shape_reward, dtype=np_data_type, buffer=shared_array_reward.buf)
     shared_array_logprob_np = np.ndarray(shape_logprob, dtype=np_data_type, buffer=shared_array_logprob.buf)
     shared_array_terminal_np = np.ndarray(shape_terminal, dtype=np.bool, buffer=shared_array_terminal.buf)
-    shared_array_counter_np = np.ndarray((numOfProcesses,), dtype=np.int, buffer=shared_array_counter.buf)
+    shared_array_signal_np = np.ndarray(shape_counter, dtype=np.int, buffer=shared_array_signal.buf)
 
     print("#####Shared Memory#####")
     print("Num of Processes: {}".format(numOfProcesses))
@@ -200,31 +202,24 @@ class SwarmMemory():
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
             shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][0]][relativeIndices[i]] = laser[i]
-            shared_array_size_np[self.processID][relativeIndices[i]][0] += 1
             shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][1]][relativeIndices[i]] = distance[i]
-            shared_array_size_np[self.processID][relativeIndices[i]][1] += 1
             shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][2]][relativeIndices[i]] = orientation[i]
-            shared_array_size_np[self.processID][relativeIndices[i]][2] += 1
             shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][3]][relativeIndices[i]] = velocity[i]
-            shared_array_size_np[self.processID][relativeIndices[i]][3] += 1
 
     def insertAction(self, action):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
             shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][4]][relativeIndices[i]] = action[i]
-            shared_array_size_np[self.processID][relativeIndices[i]][4] += 1
 
     def insertReward(self, reward):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
             shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][5]][relativeIndices[i]] = reward[i]
-            shared_array_size_np[self.processID][relativeIndices[i]][5] += 1
 
     def insertLogProb(self, logprob):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
             shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][6]][relativeIndices[i]] = logprob[i]
-            shared_array_size_np[self.processID][relativeIndices[i]][6] += 1
 
     def insertIsTerminal(self, isTerminal):
         relativeIndices = self.getRelativeIndices()
@@ -399,6 +394,7 @@ def init_shm_client(numOfProcesses, numOfRobots, learning_size, timesteps):
     array_size_reward = numOfProcesses * numOfRobots * size_of_reward * learning_size * timesteps * 4  # Sizeof(float)
     array_size_logprob = numOfProcesses * numOfRobots * size_of_logprob * learning_size * timesteps * 4  # Sizeof(float)
     array_size_terminal = numOfProcesses * numOfRobots * size_of_terminal * learning_size * timesteps * 4  # Sizeof(float)
+    array_size_signal = numOfProcesses * 4 #Sizeof(int)
 
     shape_laser = (numOfProcesses, learning_size, timesteps, size_of_laser)
     shape_distance = (numOfProcesses, learning_size, timesteps, size_of_distance)
@@ -408,6 +404,7 @@ def init_shm_client(numOfProcesses, numOfRobots, learning_size, timesteps):
     shape_reward = (numOfProcesses, learning_size, timesteps, size_of_reward)
     shape_logprob = (numOfProcesses, learning_size, timesteps, size_of_logprob)
     shape_terminal = (numOfProcesses, learning_size, timesteps, size_of_terminal)
+    shape_signal = (numOfProcesses,)
 
     shared_array_laser = shared_memory.SharedMemory(name="shared_array_laser")
     shared_array_distance = shared_memory.SharedMemory(name="shared_array_distance")
@@ -417,7 +414,7 @@ def init_shm_client(numOfProcesses, numOfRobots, learning_size, timesteps):
     shared_array_reward = shared_memory.SharedMemory(name="shared_array_reward")
     shared_array_logprob = shared_memory.SharedMemory(name="shared_array_logprob")
     shared_array_terminal = shared_memory.SharedMemory(name="shared_array_terminal")
-    shared_array_counter = shared_memory.SharedMemory(name="shared_array_counter")
+    shared_array_signal = shared_memory.SharedMemory(name="shared_array_signal")
 
     np_data_type = np.float32
     shared_array_laser_np = np.ndarray(shape_laser, dtype=np_data_type, buffer=shared_array_laser.buf)
@@ -428,7 +425,7 @@ def init_shm_client(numOfProcesses, numOfRobots, learning_size, timesteps):
     shared_array_reward_np = np.ndarray(shape_reward, dtype=np_data_type, buffer=shared_array_reward.buf)
     shared_array_logprob_np = np.ndarray(shape_logprob, dtype=np_data_type, buffer=shared_array_logprob.buf)
     shared_array_terminal_np = np.ndarray(shape_terminal, dtype=np_data_type, buffer=shared_array_terminal.buf)
-    shared_array_counter_np = np.ndarray((numOfProcesses,), dtype=np.int, buffer=shared_array_counter.buf)
+    shared_array_signal_np = np.ndarray(shape_signal, dtype=np.int, buffer=shared_array_signal.buf)
 
 
 def runMultiprocessPPO(args):
