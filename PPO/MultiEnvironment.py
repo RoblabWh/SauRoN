@@ -184,6 +184,10 @@ class SwarmMemory():
         self.robotMemory = [Memory(self.processID, i) for i in range(robotsCount)]
         self.currentTerminalStates = [False for _ in range(robotsCount)]
         self.stateCounter = 0
+        self.actionCounter = 0
+        self.rewardCounter = 0
+        self.logprobCounter = 0
+        self.terminalCounter = 0
 
     def __getitem__(self, item):
         return self.robotMemory[item]
@@ -200,30 +204,33 @@ class SwarmMemory():
     def insertState(self, laser, orientation, distance, velocity):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
-            shared_array_laser_np[self.processID][relativeIndices[i][0][relativeIndices[i]] = laser[i]
-            shared_array_laser_np[self.processID][relativeIndices[i][1][relativeIndices[i]] = distance[i]
-            shared_array_laser_np[self.processID][relativeIndices[i][2][relativeIndices[i]] = orientation[i]
-            shared_array_laser_np[self.processID][relativeIndices[i][3][relativeIndices[i]] = velocity[i]
+            shared_array_laser_np[self.processID][self.stateCounter] = laser[i]
+            shared_array_distance_np[self.processID][self.stateCounter] = distance[i]
+            shared_array_orientation_np[self.processID][self.stateCounter] = orientation[i]
+            shared_array_velocity_np[self.processID][self.stateCounter] = velocity[i]
+            self.stateCounter += 1
 
     def insertAction(self, action):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
-            shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][4]][relativeIndices[i]] = action[i]
+            shared_array_laser_np[self.processID][self.actionCounter] = action[i]
+            self.actionCounter += 1
 
     def insertReward(self, reward):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
-            shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][5]][relativeIndices[i]] = reward[i]
+            shared_array_laser_np[self.processID][self.rewardCounter] = reward[i]
+            self.rewardCounter += 1
 
     def insertLogProb(self, logprob):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
-            shared_array_laser_np[self.processID][shared_array_size_np[self.processID][relativeIndices[i]][6]][relativeIndices[i]] = logprob[i]
+            shared_array_laser_np[self.processID][self.logprobCounter] = logprob[i]
 
     def insertIsTerminal(self, isTerminal):
         relativeIndices = self.getRelativeIndices()
         for i in range(len(relativeIndices)):
-            self.robotMemory[relativeIndices[i]].is_terminals.append(isTerminal[i])
+            shared_array_terminal_np[self.processID][self.terminalCounter] = isTerminal[i]
             if isTerminal[i]:
                 self.currentTerminalStates[relativeIndices[i]] = True
 
