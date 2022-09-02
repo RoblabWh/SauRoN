@@ -174,7 +174,7 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
 def handler(signum, frame):
     print('Signal handler called with signal', signum)
     close_shm()
-
+    exit()
 
 def setupSignalHandler():
     signal.signal(signal.SIGALRM, handler)
@@ -501,7 +501,7 @@ def train(env_name, render, solved_reward, input_style,
           gamma, lr, betas, ckpt_folder, restore, scan_size=121, print_interval=10, save_interval=100, batch_size=1,
           numOfRobots=4, args=None):
     args_ = args
-
+    setupSignalHandler()
     #os.system("sudo mkdir && /mnt/ramdisk sudo mount -t tmpfs -o size=2G ramdisk /mnt/ramdisk")
     #os.system("sudo mkdir /mnt/ramdisk/weights")
     uid = str(os.getuid())
@@ -539,7 +539,7 @@ def train(env_name, render, solved_reward, input_style,
         while True:
             for i in range(numOfProcesses):
                 while shared_array_signal_np[i] != 1:
-                    time.sleep(0.1)
+                    time.sleep(1)
             print("Back to reality")
             timesteps_counter += 1000
             if timesteps_counter == max_timesteps:
@@ -557,6 +557,7 @@ def train(env_name, render, solved_reward, input_style,
 
             for i in range(numOfProcesses):
                 shared_array_signal_np[i] == 0
+            time.sleep(0.1)
 
     except Exception as e:
         print(e)
@@ -712,7 +713,9 @@ def runMultiprocessPPO(args):
                     memory.copyToShm()
                     shared_array_signal_np[processID] = 1
                     while shared_array_signal_np[processID] != 0:
-                        time.sleep(0.1)
+                        time.sleep(1)
+
+                    print("Process #{} goes to work!".format(processID))
 
                     memory.clear_memory()
 
