@@ -502,12 +502,12 @@ def train(env_name, render, solved_reward, input_style,
           gamma, lr, betas, ckpt_folder, restore, scan_size=121, print_interval=10, save_interval=100, batch_size=1,
           numOfRobots=4, args=None):
     args_ = args
+
     setupSignalHandler()
-    #os.system("sudo mkdir && /mnt/ramdisk sudo mount -t tmpfs -o size=2G ramdisk /mnt/ramdisk")
-    #os.system("sudo mkdir /mnt/ramdisk/weights")
     uid = str(os.getuid())
     path = "/run/user/" + uid + "/weights"
-    os.system("mkfifo " + path)
+    command = "touch " + path
+    os.system(command)
 
     numOfProcesses = getNumOfProcesses(len(args_.level_files))
     print("Starting {} processes!\n".format(numOfProcesses))
@@ -554,7 +554,9 @@ def train(env_name, render, solved_reward, input_style,
             pth = train_all(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, batch_size, memory)
 
             # Save .pth
+            print("Sending weights to processes")
             torch.save(pth, path)
+            print("Model weights send to processes")
 
             for i in range(numOfProcesses):
                 shared_array_signal_np[i] = 0
@@ -715,13 +717,14 @@ def runMultiprocessPPO(args):
                     while shared_array_signal_np[processID] != 0:
                         time.sleep(1)
 
-                    print("Process #{} goes to work!".format(processID))
+
 
                     memory.clear_memory()
 
                     #Load .pth
                     ppo.old_policy.load_state_dict(torch.load(path))
-
+                    print("Process #{} has loaded new model weights!".format(processID))
+                    print("Process #{} goes to work!".format(processID))
 
                 running_reward += np.mean(rewards)
                 if render:
