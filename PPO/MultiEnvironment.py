@@ -76,10 +76,10 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     array_size_distance = numOfProcesses * numOfRobots * size_of_distance * learning_size * timesteps * 4 #Sizeof(float)
     array_size_orientation = numOfProcesses * numOfRobots * size_of_orientation * learning_size * timesteps * 4 #Sizeof(float)
     array_size_velocity = numOfProcesses * numOfRobots * size_of_velocity * learning_size * timesteps * 4 #Sizeof(float)
-    array_size_action = numOfProcesses * numOfRobots * size_of_action * learning_size * timesteps * 4 #Sizeof(float)
-    array_size_reward = numOfProcesses * numOfRobots * size_of_reward * learning_size * timesteps * 4 #Sizeof(float)
-    array_size_logprob = numOfProcesses * numOfRobots * size_of_logprob * learning_size * timesteps * 4 #Sizeof(float)
-    array_size_terminal = numOfProcesses * numOfRobots * size_of_terminal * learning_size * timesteps * 4#Sizeof(float)
+    array_size_action = numOfProcesses * numOfRobots * size_of_action * learning_size * 4 #Sizeof(float)
+    array_size_reward = numOfProcesses * numOfRobots * size_of_reward * learning_size * 4 #Sizeof(float)
+    array_size_logprob = numOfProcesses * numOfRobots * size_of_logprob * learning_size * 4 #Sizeof(float)
+    array_size_terminal = numOfProcesses * numOfRobots * size_of_terminal * learning_size * 4#Sizeof(float)
     array_size_signal = numOfProcesses * 4 #SizeOf(int)
     num_of_numpy = 5 #Number of different numpy arrays
     array_size_counter = numOfProcesses * numOfRobots * num_of_numpy * 4 #4 because of np.int32
@@ -88,10 +88,10 @@ def create_shared_memory_nparray(numOfProcesses, numOfRobots, learning_size, tim
     shape_distance = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_distance)
     shape_orientation = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_orientation)
     shape_velocity = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_velocity)
-    shape_action = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_action)
-    shape_reward = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_reward)
-    shape_logprob = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_logprob)
-    shape_terminal = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_terminal)
+    shape_action = (numOfProcesses, numOfRobots, learning_size, size_of_action)
+    shape_reward = (numOfProcesses, numOfRobots, learning_size, size_of_reward)
+    shape_logprob = (numOfProcesses, numOfRobots, learning_size, size_of_logprob)
+    shape_terminal = (numOfProcesses, numOfRobots, learning_size, size_of_terminal)
     shape_signal = (numOfProcesses,)
     shape_counter = (numOfProcesses, numOfRobots, num_of_numpy)
 
@@ -365,18 +365,16 @@ class Memory:   # collected from old policy
         self.logprobs = shared_array_logprob_np[self.processID][self.robotID][0:amount_of_logprobs]
     def copyToShm(self):
         for i in range(len(self.states)):
-            for j in range(len(self.states[0])):
-                self.states[i][j] = self.states[i][j].detach().numpy()
-                self.states[i] = np.ndarray(self.states[i], shape=(4, 4, 1081), dtype=np.float32)
+            shared_array_laser_np[self.processID][self.robotID][i] = np.copy(self.states[i][0].detach().numpy())
+            shared_array_orientation_np[self.processID][self.robotID][i] = np.copy(self.states[i][1].detach().numpy())
+            shared_array_distance_np[self.processID][self.robotID][i] = np.copy(np.expand_dims(self.states[i][2].detach().numpy(), axis=-1))
+            shared_array_velocity_np[self.processID][self.robotID][i] = np.copy(self.states[i][3].detach().numpy())
 
-        shared_array_laser_np[self.processID][self.robotID] = np.ndarray(self.states[0])
-        shared_array_orientation_np[self.processID][self.robotID] = self.states[1]
-        shared_array_distance_np[self.processID][self.robotID] = self.states[2]
-        shared_array_velocity_np[self.processID][self.robotID] = self.states[3]
-        shared_array_action_np[self.processID][self.robotID] = self.actions
-        shared_array_reward_np[self.processID][self.robotID] = self.rewards
-        shared_array_terminal_np[self.processID][self.robotID] = self.is_terminals
-        shared_array_logprob_np[self.processID][self.robotID] = self.logprobs
+
+            shared_array_action_np[self.processID][self.robotID][i] = np.copy(np.ndarray(self.actions[i]))
+            shared_array_reward_np[self.processID][self.robotID][i] = np.copy(np.ndarray(self.rewards[i]))
+            shared_array_terminal_np[self.processID][self.robotID][i] = np.copy(np.ndarray(self.is_terminals[i]))
+            shared_array_logprob_np[self.processID][self.robotID][i] = np.copy(np.ndarray(self.logprobs[i]))
 
     def clear_memory(self):
         del self.states[:]
@@ -613,22 +611,22 @@ def init_shm_client(numOfProcesses, numOfRobots, learning_size, timesteps):
     array_size_distance = numOfProcesses * numOfRobots * size_of_distance * learning_size * timesteps * 4  # Sizeof(float)
     array_size_orientation = numOfProcesses * numOfRobots * size_of_orientation * learning_size * timesteps * 4  # Sizeof(float)
     array_size_velocity = numOfProcesses * numOfRobots * size_of_velocity * learning_size * timesteps * 4  # Sizeof(float)
-    array_size_action = numOfProcesses * numOfRobots * size_of_action * learning_size * timesteps * 4  # Sizeof(float)
-    array_size_reward = numOfProcesses * numOfRobots * size_of_reward * learning_size * timesteps * 4  # Sizeof(float)
-    array_size_logprob = numOfProcesses * numOfRobots * size_of_logprob * learning_size * timesteps * 4  # Sizeof(float)
-    array_size_terminal = numOfProcesses * numOfRobots * size_of_terminal * learning_size * timesteps * 4  # Sizeof(float)
+    array_size_action = numOfProcesses * numOfRobots * size_of_action * learning_size * 4  # Sizeof(float)
+    array_size_reward = numOfProcesses * numOfRobots * size_of_reward * learning_size * 4  # Sizeof(float)
+    array_size_logprob = numOfProcesses * numOfRobots * size_of_logprob * learning_size * 4  # Sizeof(float)
+    array_size_terminal = numOfProcesses * numOfRobots * size_of_terminal * learning_size * 4  # Sizeof(float)
     array_size_signal = numOfProcesses * 4 #Sizeof(int)
     num_of_numpy = 5  # Number of different numpy arrays
     array_size_counter = numOfProcesses * numOfRobots * num_of_numpy * 4  # 4 because of np.int32
 
-    shape_laser = (numOfProcesses, learning_size, timesteps, size_of_laser)
-    shape_distance = (numOfProcesses, learning_size, timesteps, size_of_distance)
-    shape_orientation = (numOfProcesses, learning_size, timesteps, size_of_orientation)
-    shape_velocity = (numOfProcesses, learning_size, timesteps, size_of_velocity)
-    shape_action = (numOfProcesses, learning_size, timesteps, size_of_action)
-    shape_reward = (numOfProcesses, learning_size, timesteps, size_of_reward)
-    shape_logprob = (numOfProcesses, learning_size, timesteps, size_of_logprob)
-    shape_terminal = (numOfProcesses, learning_size, timesteps, size_of_terminal)
+    shape_laser = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_laser)
+    shape_distance = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_distance)
+    shape_orientation = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_orientation)
+    shape_velocity = (numOfProcesses, numOfRobots, learning_size, timesteps, size_of_velocity)
+    shape_action = (numOfProcesses, numOfRobots, learning_size, size_of_action)
+    shape_reward = (numOfProcesses, numOfRobots, learning_size, size_of_reward)
+    shape_logprob = (numOfProcesses, numOfRobots, learning_size, size_of_logprob)
+    shape_terminal = (numOfProcesses, numOfRobots, learning_size, size_of_terminal)
     shape_signal = (numOfProcesses,)
     shape_counter = (numOfProcesses, numOfRobots, num_of_numpy)
 
