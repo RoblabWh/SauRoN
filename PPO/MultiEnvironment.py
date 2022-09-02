@@ -377,16 +377,17 @@ class Memory:   # collected from old policy
             shared_array_logprob_np[self.processID][self.robotID][i] = np.copy(self.logprobs[i].detach().numpy())
 
     def clear_memory(self):
+        global shared_array_counter_np
         del self.states[:]
         del self.actions[:]
         del self.rewards[:]
         del self.is_terminals[:]
         del self.logprobs[:]
-        shared_array_counter[self.processID][self.robotID][0] = 0
-        shared_array_counter[self.processID][self.robotID][1] = 0
-        shared_array_counter[self.processID][self.robotID][2] = 0
-        shared_array_counter[self.processID][self.robotID][3] = 0
-        shared_array_counter[self.processID][self.robotID][4] = 0
+        shared_array_counter_np[self.processID][self.robotID][0] = 0
+        shared_array_counter_np[self.processID][self.robotID][1] = 0
+        shared_array_counter_np[self.processID][self.robotID][2] = 0
+        shared_array_counter_np[self.processID][self.robotID][3] = 0
+        shared_array_counter_np[self.processID][self.robotID][4] = 0
 
     def __len__(self):
         return len(self.states)
@@ -553,11 +554,10 @@ def train(env_name, render, solved_reward, input_style,
             pth = train_all(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, batch_size, memory)
 
             # Save .pth
-            #torch.save(pth, path)
+            torch.save(pth, path)
 
             for i in range(numOfProcesses):
-                shared_array_signal_np[i] == 0
-            time.sleep(0.1)
+                shared_array_signal_np[i] = 0
 
     except Exception as e:
         print(e)
@@ -720,7 +720,7 @@ def runMultiprocessPPO(args):
                     memory.clear_memory()
 
                     #Load .pth
-                    #ppo.old_policy.load_state_dict(torch.load(path))
+                    ppo.old_policy.load_state_dict(torch.load(path))
 
 
                 running_reward += np.mean(rewards)
