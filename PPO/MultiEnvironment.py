@@ -14,6 +14,8 @@ from Environment.Environment import Environment
 from PyQt5.QtWidgets import QApplication
 import signal, os
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 shared_array_laser = None
 shared_array_distance = None
 shared_array_orientation = None
@@ -353,16 +355,21 @@ class Memory:   # collected from old policy
         amount_of_terminals = shared_array_counter[self.processID][self.robotID][3]
         amount_of_logprobs = shared_array_counter[self.processID][self.robotID][4]
 
-        self.states[0] = shared_array_laser_np[self.processID][self.robotID][0:amount_of_state]
-        self.states[1] = shared_array_orientation_np[self.processID][self.robotID][0:amount_of_state]
-        self.states[2] = shared_array_distance_np[self.processID][self.robotID][0:amount_of_state]
-        self.states[3] = shared_array_velocity_np[self.processID][self.robotID][0:amount_of_state]
+        self.states[0] = torch.from_numpy([self.processID][self.robotID][0:amount_of_state]).to(device)
+        self.states[1] = torch.from_numpy(shared_array_orientation_np[self.processID][self.robotID][0:amount_of_state]).to(device)
+        self.states[2] = torch.from_numpy(shared_array_distance_np[self.processID][self.robotID][0:amount_of_state]).to(device)
+        self.states[3] = torch.from_numpy(shared_array_velocity_np[self.processID][self.robotID][0:amount_of_state]).to(device)
         self.actions = shared_array_action_np[self.processID][self.robotID][0:amount_of_action]
         self.rewards = shared_array_reward_np[self.processID][self.robotID][0:amount_of_rewards]
         self.is_terminals = shared_array_terminal_np[self.processID][self.robotID][0:amount_of_terminals]
         self.logprobs = shared_array_logprob_np[self.processID][self.robotID][0:amount_of_logprobs]
     def copyToShm(self):
-        shared_array_laser_np[self.processID][self.robotID] = self.states[0]
+        for i in range(len(self.states)):
+            for j in range(len(self.states[0])):
+                self.states[i][j] = self.states[i][j].detach().numpy()
+                self.states[i] = np.ndarray(self.states[i], shape=(4, 4, 1081), dtype=np.float32)
+
+        shared_array_laser_np[self.processID][self.robotID] = np.ndarray(self.states[0])
         shared_array_orientation_np[self.processID][self.robotID] = self.states[1]
         shared_array_distance_np[self.processID][self.robotID] = self.states[2]
         shared_array_velocity_np[self.processID][self.robotID] = self.states[3]
@@ -663,8 +670,8 @@ def runMultiprocessPPO(args):
         ppo = None
         memory = None
 
-        if processID == 0:
-            app = QApplication(sys.argv)
+        #if processID == 0:
+        app = QApplication(sys.argv)
 
 
         env = Environment(app, args_obj, args_obj.time_frames, processID)

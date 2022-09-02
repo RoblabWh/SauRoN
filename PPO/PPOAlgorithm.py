@@ -116,7 +116,7 @@ class ActorCritic(nn.Module):
         action_logprob = dist.log_prob(action)
 
 
-        memory.insertState(laser.to(device).detach(), orientation.to(device).detach(), distance.to(device).detach(), velocity.to(device).detach())
+        memory.insertState(laser, orientation, distance, velocity) #ACHTUNG .to(device).detach() entfernt
         memory.insertAction(action)
         memory.insertLogProb(action_logprob)
 
