@@ -115,6 +115,7 @@ class ActorCritic(nn.Module):
         action = torch.clip(action, -1, 1)
         action_logprob = dist.log_prob(action)
 
+
         memory.insertState(laser.to(device).detach(), orientation.to(device).detach(), distance.to(device).detach(), velocity.to(device).detach())
         memory.insertAction(action)
         memory.insertLogProb(action_logprob)
