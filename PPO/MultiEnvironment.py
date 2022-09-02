@@ -1,7 +1,6 @@
 import os
 
 from PPO.PPOAlgorithm import PPO
-from torch.utils.data import Dataset, DataLoader
 import multiprocessing
 from multiprocessing import shared_memory
 from concurrent.futures.process import ProcessPoolExecutor
@@ -13,6 +12,8 @@ import sys
 from Environment.Environment import Environment
 from PyQt5.QtWidgets import QApplication
 import signal, os
+import time
+from subprocess import Popen, PIPE
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -230,12 +231,11 @@ class SwarmMemory():
     def __init__(self, processID=-1, robotsCount=0):
         self.processID = processID
         self.train = 1
+        self.robotMemory = [Memory(processID=self.processID, robotID=num) for num in range(robotsCount)]
+        self.currentTerminalStates = [False for _ in range(robotsCount)]
         if processID == -1:
             self.train = 0
             self.loadFromShm()
-        self.robotMemory = [Memory(processID=self.processID, robotID=num) for num in range(robotsCount)]
-        self.currentTerminalStates = [False for _ in range(robotsCount)]
-
     def __getitem__(self, item):
         return self.robotMemory[item]
 
@@ -303,13 +303,12 @@ class SwarmMemory():
         distance = []
         velocity = []
         for robotmemory in self.robotMemory:
-            for state in robotmemory.states:
-                laser.append(state[0])
-                orientation.append(state[1])
-                distance.append(state[2])
-                velocity.append(state[3])
+            laser.append(robotmemory.states[0])
+            orientation.append(robotmemory.states[1])
+            distance.append(robotmemory.states[2])
+            velocity.append(robotmemory.states[3])
 
-        return [torch.stack(laser), torch.stack(orientation), torch.stack(distance), torch.stack(velocity)]
+        return [torch.cat(laser), torch.cat(orientation), torch.cat(distance), torch.cat(velocity)]
 
 
     def getActionsOfAllRobots(self):
@@ -317,7 +316,7 @@ class SwarmMemory():
         for robotmemory in self.robotMemory:
             for action in robotmemory.actions:
                 actions.append(action)
-        return actions
+        return torch.from_numpy(np.array(np.array(actions)))
 
     def getLogProbsOfAllRobots(self):
         logprobs = []
@@ -325,7 +324,7 @@ class SwarmMemory():
             for logprob in robotmemory.logprobs:
                 logprobs.append(logprob)
 
-        return logprobs
+        return torch.from_numpy(np.array(np.array(logprobs)))
 
     def clear_memory(self):
         for memory in self.robotMemory:
@@ -349,16 +348,17 @@ class Memory:   # collected from old policy
         self.logprobs = []
 
     def loadFromShm(self):
-        amount_of_state = shared_array_counter[self.processID][self.robotID][0]
-        amount_of_action = shared_array_counter[self.processID][self.robotID][1]
-        amount_of_rewards = shared_array_counter[self.processID][self.robotID][2]
-        amount_of_terminals = shared_array_counter[self.processID][self.robotID][3]
-        amount_of_logprobs = shared_array_counter[self.processID][self.robotID][4]
+        global shared_array_counter_np
+        amount_of_state = shared_array_counter_np[self.processID][self.robotID][0]
+        amount_of_action = shared_array_counter_np[self.processID][self.robotID][1]
+        amount_of_rewards = shared_array_counter_np[self.processID][self.robotID][2]
+        amount_of_terminals = shared_array_counter_np[self.processID][self.robotID][3]
+        amount_of_logprobs = shared_array_counter_np[self.processID][self.robotID][4]
 
-        self.states[0] = torch.from_numpy([self.processID][self.robotID][0:amount_of_state]).to(device)
-        self.states[1] = torch.from_numpy(shared_array_orientation_np[self.processID][self.robotID][0:amount_of_state]).to(device)
-        self.states[2] = torch.from_numpy(shared_array_distance_np[self.processID][self.robotID][0:amount_of_state]).to(device)
-        self.states[3] = torch.from_numpy(shared_array_velocity_np[self.processID][self.robotID][0:amount_of_state]).to(device)
+        self.states.append(torch.from_numpy(shared_array_laser_np[self.processID][self.robotID][0:amount_of_state]).to(device))
+        self.states.append(torch.from_numpy(shared_array_orientation_np[self.processID][self.robotID][0:amount_of_state]).to(device))
+        self.states.append(torch.from_numpy(shared_array_distance_np[self.processID][self.robotID][0:amount_of_state]).to(device))
+        self.states.append(torch.from_numpy(shared_array_velocity_np[self.processID][self.robotID][0:amount_of_state]).to(device))
         self.actions = shared_array_action_np[self.processID][self.robotID][0:amount_of_action]
         self.rewards = shared_array_reward_np[self.processID][self.robotID][0:amount_of_rewards]
         self.is_terminals = shared_array_terminal_np[self.processID][self.robotID][0:amount_of_terminals]
@@ -371,10 +371,10 @@ class Memory:   # collected from old policy
             shared_array_velocity_np[self.processID][self.robotID][i] = np.copy(self.states[i][3].detach().numpy())
 
 
-            shared_array_action_np[self.processID][self.robotID][i] = np.copy(np.ndarray(self.actions[i]))
-            shared_array_reward_np[self.processID][self.robotID][i] = np.copy(np.ndarray(self.rewards[i]))
-            shared_array_terminal_np[self.processID][self.robotID][i] = np.copy(np.ndarray(self.is_terminals[i]))
-            shared_array_logprob_np[self.processID][self.robotID][i] = np.copy(np.ndarray(self.logprobs[i]))
+            shared_array_action_np[self.processID][self.robotID][i] = np.copy(self.actions[i].detach().numpy())
+            shared_array_reward_np[self.processID][self.robotID][i] = self.rewards[i]
+            shared_array_terminal_np[self.processID][self.robotID][i] = self.is_terminals[i]
+            shared_array_logprob_np[self.processID][self.robotID][i] = np.copy(self.logprobs[i].detach().numpy())
 
     def clear_memory(self):
         del self.states[:]
@@ -502,9 +502,11 @@ def train(env_name, render, solved_reward, input_style,
           numOfRobots=4, args=None):
     args_ = args
 
-    os.system("sudo mkdir && /mnt/ramdisk sudo mount -t tmpfs -o size=2G ramdisk /mnt/ramdisk")
+    #os.system("sudo mkdir && /mnt/ramdisk sudo mount -t tmpfs -o size=2G ramdisk /mnt/ramdisk")
     #os.system("sudo mkdir /mnt/ramdisk/weights")
-
+    uid = str(os.getuid())
+    path = "/run/user/" + uid + "/weights"
+    os.system("mkfifo " + path)
 
     numOfProcesses = getNumOfProcesses(len(args_.level_files))
     print("Starting {} processes!\n".format(numOfProcesses))
@@ -524,17 +526,21 @@ def train(env_name, render, solved_reward, input_style,
         futures = []
         episodes_counter = 0
         timesteps_counter = 0
-        #queue = [multiprocessing.Queue() for i in range(numOfProcesses)]
+
+        for i in range(numOfProcesses):
+            shared_array_signal_np[i] = 0
+
         pool = ProcessPoolExecutor(max_workers=numOfProcesses)
         for i in range(0, numOfProcesses):
             futures.append(pool.submit(runMultiprocessPPO, args=(i, max_episodes, env_name, max_timesteps, render,
                                                                  print_interval, solved_reward, ckpt_folder, scan_size,
                                                                  action_std, input_style, lr, betas, gamma, K_epochs,
-                                                                 eps_clip, restore, ckpt, args_, numOfProcesses, update_experience, tSteps)))
+                                                                 eps_clip, restore, ckpt, args_, numOfProcesses, update_experience, tSteps, path)))
         while True:
             for i in range(numOfProcesses):
-                while shared_array_signal_np[i] == 0:
-                    pass
+                while shared_array_signal_np[i] != 1:
+                    time.sleep(0.1)
+            print("Back to reality")
             timesteps_counter += 1000
             if timesteps_counter == max_timesteps:
                 timesteps_counter = 0
@@ -547,7 +553,7 @@ def train(env_name, render, solved_reward, input_style,
             pth = train_all(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, batch_size, memory)
 
             # Save .pth
-            torch.save(pth, "/mnt/ramdisk/weights")
+            #torch.save(pth, path)
 
             for i in range(numOfProcesses):
                 shared_array_signal_np[i] == 0
@@ -657,7 +663,7 @@ def init_shm_client(numOfProcesses, numOfRobots, learning_size, timesteps):
 def runMultiprocessPPO(args):
     processID, max_episodes, env_name, max_timesteps, render, print_interval, solved_reward, ckpt_folder, scan_size, \
     action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, args_obj, numOfProcesses, \
-    batch_size, tSteps = args
+    batch_size, tSteps, path = args
 
     global shared_array_signal_np
     try:
@@ -705,12 +711,13 @@ def runMultiprocessPPO(args):
                 if len(memory) >= update_experience:
                     memory.copyToShm()
                     shared_array_signal_np[processID] = 1
-                    while shared_array_signal_np[processID] == 1:
-                        pass
+                    while shared_array_signal_np[processID] != 0:
+                        time.sleep(0.1)
+
                     memory.clear_memory()
 
                     #Load .pth
-                    ppo.old_policy.load_state_dict(torch.load("/mnt/ramdisk/weights"))
+                    #ppo.old_policy.load_state_dict(torch.load(path))
 
 
                 running_reward += np.mean(rewards)
