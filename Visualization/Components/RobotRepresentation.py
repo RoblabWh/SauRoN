@@ -86,7 +86,6 @@ class RobotRepresentation:
                          self.posY + 1.25 * self.radius * (
                                      self.dirV[0] * math.sin(self.direction) + self.dirV[1] * math.cos(self.direction)))
 
-
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
         painter.setBrush(QBrush(self.fillColor, self.brushStyle))
         painter.drawEllipse(self.posX - self.radius , self.posY - self.radius, self.width * self.scale, self.height * self.scale)

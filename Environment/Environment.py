@@ -161,10 +161,12 @@ class Environment:
         reward = 0
         r_arrival = 70
         r_collision = -20
+        r_stop = -0.5
         w_gp = 2.5
         w_gn = 1.2
         w_d = 2.0
         w_w = -0.001
+        a_p = 0.3
 
         if reachedPickup:
             reward = r_arrival
@@ -173,17 +175,28 @@ class Environment:
         elif collision:
             reward = r_collision
         else:
-            if dist_old > dist_new:
-                reward += w_gp * (dist_old - dist_new)
-            else:
-                reward += w_gn * (dist_old - dist_new)
+            # if dist_old > dist_new:
+            #     reward += w_gp * (dist_old - dist_new)
+            # else:
+            #     reward += w_gn * (dist_old - dist_new)
+            if dist_old == dist_new:
+                reward += r_stop
             if dist_new < robot.initialGoalDist:
                 reward += w_d * (robot.initialGoalDist - dist_new)
                 robot.initialGoalDist = dist_new
 
-            abs_ang_vel = np.abs(robot.getAngularVelocity())
-            if abs_ang_vel > 0.7:
-                reward += w_w * abs_ang_vel
+            a1 = np.arctan2(robot.getGoalY() - robot.getPosY(), robot.getGoalX() - robot.getPosX())
+            a2 = np.arctan2(robot.getDirectionY(), robot.getDirectionX())
+            goalangle = np.abs(a1 - a2)
+            alpha_norm = 1 - (goalangle / np.pi)
+            if alpha_norm > 0:
+                reward += a_p * alpha_norm
+                print(a_p * alpha_norm)
+
+
+            # abs_ang_vel = np.abs(robot.getAngularVelocity())
+            # if abs_ang_vel > 0.7:
+            #     reward += w_w * abs_ang_vel
 
         return reward
 

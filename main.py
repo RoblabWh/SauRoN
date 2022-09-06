@@ -7,7 +7,7 @@ import torch
 import argparse
 from PyQt5.QtWidgets import QApplication
 
-levelFiles = 'svg3_tareq.svg'
+levelFiles = 'onerobot.svg'
 ckpt_folder = './models/120'
 env_name = "tunnel_best"
 

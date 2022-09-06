@@ -436,6 +436,8 @@ class Robot:
 
         #distance = (distance * self.maxDistFact)
         #if distance > 1 : distance = 1
+        # TODO: ?!?!?! why was debugAngle used???
+        orientation = [self.getDirectionX(), self.getDirectionY()]
         #frame_lidar = [distances, distance, np.asarray(orientation), np.array([self.getLinearVelocity(), self.getAngularVelocity()]), currentTimestep]
         frame_lidar = [laser, np.asarray(orientation), distance, np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
         #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
