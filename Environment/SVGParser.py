@@ -103,15 +103,19 @@ class SVGLevelParser:
             points = points[1:-1].split()
             pointsLen = len(points)
             points = [points[i].split(',') for i in range(0, pointsLen)]
-            start = [float(points[0][0]), float(points[0][1])]
-            points[0][0] = float(points[0][0]) - start[0]
-            points[0][1] = float(points[0][1]) - start[1]
+            offset = [float(points[0][0]), float(points[0][1])]
+            points += [points[0]]
+            points[0][0] = 0
+            points[0][1] = 0
 
-            for i in reversed(range(0, pointsLen)):
-                x1 = (float(points[i][0]) + float(start[0])) * dpiFactor
-                y1 = (float(points[i][1]) + float(start[1])) * dpiFactor
-                x2 = (float(points[(i-1) % pointsLen][0]) + float(start[0])) * dpiFactor
-                y2 = (float(points[(i-1) % pointsLen][1]) + float(start[1])) * dpiFactor
+            for i in reversed(range(0, pointsLen-1)):
+                x1 = (float(points[i][0]) + float(offset[0])) * dpiFactor
+                y1 = (float(points[i][1]) + float(offset[0])) * dpiFactor
+                offset = [x1, y1]
+                if(i == pointsLen):
+                 offset = [0, 0]
+                x2 = (float(points[(i + 1) % pointsLen][0]) + float(offset[0])) * dpiFactor
+                y2 = (float(points[(i + 1) % pointsLen][1]) + float(offset[1])) * dpiFactor
 
                 self.lines += [Borders.ColliderLine(x1, y1, x2, y2)]
 
