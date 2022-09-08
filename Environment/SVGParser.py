@@ -110,7 +110,7 @@ class SVGLevelParser:
 
             for i in reversed(range(0, pointsLen-1)):
                 x1 = (float(points[i][0]) + float(offset[0])) * dpiFactor
-                y1 = (float(points[i][1]) + float(offset[0])) * dpiFactor
+                y1 = (float(points[i][1]) + float(offset[1])) * dpiFactor
                 offset = [x1, y1]
                 if(i == pointsLen):
                  offset = [0, 0]
