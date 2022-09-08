@@ -1,4 +1,6 @@
+from concurrent.futures import process
 import os
+from turtle import update
 
 from PPO.PPOAlgorithm import PPO
 import multiprocessing
@@ -346,10 +348,13 @@ class Memory:   # collected from old policy
         self.rewards = []
         self.is_terminals = []
         self.logprobs = []
+        self.len = None
 
     def loadFromShm(self):
         global shared_array_counter_np
-        amount_of_state = shared_array_counter_np[self.processID][self.robotID][0]
+        amount_of_state = shared_array_counter_np[self.processID][self.robotID][0] #'TODO lade nur von einem robot'!!!!!
+
+        self.len = amount_of_state
         amount_of_action = shared_array_counter_np[self.processID][self.robotID][1]
         amount_of_rewards = shared_array_counter_np[self.processID][self.robotID][2]
         amount_of_terminals = shared_array_counter_np[self.processID][self.robotID][3]
@@ -383,6 +388,7 @@ class Memory:   # collected from old policy
         del self.rewards[:]
         del self.is_terminals[:]
         del self.logprobs[:]
+        self.states = []
         shared_array_counter_np[self.processID][self.robotID][0] = 0
         shared_array_counter_np[self.processID][self.robotID][1] = 0
         shared_array_counter_np[self.processID][self.robotID][2] = 0
@@ -390,111 +396,9 @@ class Memory:   # collected from old policy
         shared_array_counter_np[self.processID][self.robotID][4] = 0
 
     def __len__(self):
+        if self.processID == -1:
+            return self.len
         return len(self.states)
-#class SwarmMemory():
- #   def __init__(self, processID=-1, robotsCount=-1):
- #       self.processID = processID
- #       self.robotMemory = [Memory(self.processID, i) for i in range(robotsCount)]
- #       self.currentTerminalStates = [False for _ in range(robotsCount)]
- #       self.stateCounter = 0
- #       self.actionCounter = 0
- #       self.rewardCounter = 0
- #       self.logprobCounter = 0
- #       self.terminalCounter = 0
-
- #   def __getitem__(self, item):
- #       return self.robotMemory[item]
-
-    # Gets relative Index according to currentTerminalStates
- #   def getRelativeIndices(self):
- #       relativeIndices = []
- #       for i in range(len(self.currentTerminalStates)):
- #           if not self.currentTerminalStates[i]:
- #               relativeIndices.append(i)
-
- #       return relativeIndices
-
- #   def insertState(self, laser, orientation, distance, velocity):
- #       relativeIndices = self.getRelativeIndices()
- #       for i in range(len(relativeIndices)):
- #           shared_array_laser_np[self.processID][self.stateCounter] = laser[i]
- #           shared_array_distance_np[self.processID][self.stateCounter] = distance[i]
- #           shared_array_orientation_np[self.processID][self.stateCounter] = orientation[i]
- #           shared_array_velocity_np[self.processID][self.stateCounter] = velocity[i]
- #           self.stateCounter += 1
-
- #   def insertAction(self, action):
- #       relativeIndices = self.getRelativeIndices()
- #       for i in range(len(relativeIndices)):
- #           shared_array_laser_np[self.processID][self.actionCounter] = action[i]
- #           self.actionCounter += 1
-
- #   def insertReward(self, reward):
- #       relativeIndices = self.getRelativeIndices()
- #       for i in range(len(relativeIndices)):
- #           shared_array_laser_np[self.processID][self.rewardCounter] = reward[i]
- #           self.rewardCounter += 1
-
- #   def insertLogProb(self, logprob):
- #       relativeIndices = self.getRelativeIndices()
- #       for i in range(len(relativeIndices)):
- #           shared_array_laser_np[self.processID][self.logprobCounter] = logprob[i]
-
- #   def insertIsTerminal(self, isTerminal):
- #       relativeIndices = self.getRelativeIndices()
- #       for i in range(len(relativeIndices)):
- #           shared_array_terminal_np[self.processID][self.terminalCounter] = isTerminal[i]
- #           if isTerminal[i]:
- #               self.currentTerminalStates[relativeIndices[i]] = True
-
-        # check if currentTerminalStates is all True
- #       if all(self.currentTerminalStates):
- #           self.currentTerminalStates = [False for _ in range(len(self.currentTerminalStates))]
-
- #   def getStatesOfAllRobots(self):
- #       return [torch.from_numpy(shared_array_laser_np[:, :, :, :]), torch.from_numpy(shared_array_orientation_np[:, :, :, :]),
- #               torch.from_numpy(shared_array_distance_np[:, :, :, :]), torch.from_numpy(shared_array_velocity_np)[:, :, :, :]]
-
- #   def getActionsOfAllRobots(self):
- #       temp = torch.from_numpy(shared_array_action_np)
- #       return temp
-
- #   def getLogProbsOfAllRobots(self):
- #       return shared_array_logprob_np
-
- #   def clear_memory(self):
- #       for memory in self.robotMemory:
- #           memory.clear_memory()
-
- #   def __len__(self):
- #       length = 0
- #       for memory in self.robotMemory:
- #           length += len(memory)
- #       return length
-
-
-#class Memory:   # collected from old policy
-  #  def __init__(self, processID, robotID):
-  #      self.processID = processID
-  #      self.robotID = robotID
-  #      if self.processID == -1:
-  #          self.states = [shared_array_laser_np[processID][robotID], shared_array_distance_np[processID][robotID],
-  #                         shared_array_orientation_np[processID][robotID], shared_array_velocity_np[processID][robotID]]
-  #          self.actions = [shared_array_action_np[processID][robotID]]
-  #          self.rewards = [shared_array_reward_np[processID][robotID]]
-  #          self.is_terminals = [shared_array_terminal_np[processID][robotID]]
-  #          self.logprobs = [shared_array_logprob_np[processID][robotID]]
-  #      else:
-  #          self.states = [shared_array_laser_np, shared_array_distance_np, shared_array_orientation_np, shared_array_velocity_np]
-  #          self.actions = shared_array_action_np
-  #          self.rewards = shared_array_reward_np
-  #          self.is_terminals = shared_array_terminal_np
-  #          self.logprobs = shared_array_logprob_np
-
-
-
- #   def __len__(self):
- #       return len(self.states)
 
 
 def train(env_name, render, solved_reward, input_style,
@@ -502,7 +406,7 @@ def train(env_name, render, solved_reward, input_style,
           gamma, lr, betas, ckpt_folder, restore, scan_size=121, print_interval=10, save_interval=100, batch_size=1,
           numOfRobots=4, args=None):
     args_ = args
-
+    startGlobal = time.time()
     setupSignalHandler()
     uid = str(os.getuid())
     path = "/run/user/" + uid + "/weights"
@@ -525,11 +429,12 @@ def train(env_name, render, solved_reward, input_style,
     try:
         multiprocessing.set_start_method('spawn', force=True)
         futures = []
-        episodes_counter = 0
-        timesteps_counter = 0
 
         for i in range(numOfProcesses):
             shared_array_signal_np[i] = 0
+        update_experience_tmp = update_experience
+        update_experience = int(update_experience / numOfProcesses)
+        print("everyone collecs: {}/{}".format(update_experience, update_experience_tmp))
 
         pool = ProcessPoolExecutor(max_workers=numOfProcesses)
         for i in range(0, numOfProcesses):
@@ -537,18 +442,28 @@ def train(env_name, render, solved_reward, input_style,
                                                                  print_interval, solved_reward, ckpt_folder, scan_size,
                                                                  action_std, input_style, lr, betas, gamma, K_epochs,
                                                                  eps_clip, restore, ckpt, args_, numOfProcesses, update_experience, tSteps, path)))
+        allDone = []
+        for i in range(numOfProcesses):
+            allDone.append(False)
         while True:
             for i in range(numOfProcesses):
-                while shared_array_signal_np[i] != 1:
-                    time.sleep(1)
+                if allDone[i] == False:
+                    while shared_array_signal_np[i] == 0:
+                        time.sleep(0.1)
+                    if shared_array_signal_np[i] == max_episodes:
+                        allDone[i] == True
             print("Back to reality")
-            timesteps_counter += 1000
-            if timesteps_counter == max_timesteps:
-                timesteps_counter = 0
-                if episodes_counter == max_episodes:
-                    break
-                episodes_counter += 1
+            
+            endTraining = True
+            for i in range(0, numOfProcesses):
+                print("Episode: {}/{}".format(shared_array_signal_np[i], max_episodes))
+                if allDone[i] == False:
+                    endTraining = False
+                        
 
+            if endTraining == True:
+                break
+            
             # Train
             memory = SwarmMemory(processID=-1, robotsCount=numOfRobots) #-1 load from shm
             pth = train_all(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, batch_size, memory)
@@ -563,15 +478,16 @@ def train(env_name, render, solved_reward, input_style,
 
     except Exception as e:
         print(e)
-    done, not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
+#    done, not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
     print("####################")
     print("Done!")
 
-
+    endGlobal = time.time()
+    print("Training took {} seconds".format((endGlobal - startGlobal)))
 
     pool.shutdown()
     close_shm()
-    exit()
+    exit(0)
 
 def train_all(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore, ckpt, batch_size, memory):
     print("Start training!")
@@ -677,8 +593,8 @@ def runMultiprocessPPO(args):
         ppo = None
         memory = None
 
-        #if processID == 0:
-        app = QApplication(sys.argv)
+        if processID == 0:
+            app = QApplication(sys.argv)
 
 
         env = Environment(app, args_obj, args_obj.time_frames, processID)
@@ -695,7 +611,6 @@ def runMultiprocessPPO(args):
         best_reward = 0
         print("Starting training loop of Process #{}".format(processID))
         # training loop
-        update_experience = 1000 #Shoudl be in args
 
         for i_episode in range(1, max_episodes + 1):
             states = env.reset(0)
@@ -711,13 +626,14 @@ def runMultiprocessPPO(args):
                 memory.insertReward(rewards)
                 memory.insertIsTerminal(dones)
 
-                if len(memory) >= update_experience:
+                if len(memory) >= batch_size:
                     memory.copyToShm()
-                    shared_array_signal_np[processID] = 1
+                    print("Process #{} sends {} experiences".format(processID, len(memory)))
+                    shared_array_signal_np[processID] = i_episode
                     while shared_array_signal_np[processID] != 0:
-                        time.sleep(1)
+                        time.sleep(0.1)
 
-
+                    
 
                     memory.clear_memory()
 
@@ -737,6 +653,9 @@ def runMultiprocessPPO(args):
         print("Exception from process #{}: {}".format(processID, e))
 
     print("End of process #{}".format(processID))
+    if app is not None:
+        app.closeAllWindows()
+    shared_array_signal_np[processID] = max_episodes
 
 
 def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes, scan_size=121):

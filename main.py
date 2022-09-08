@@ -7,7 +7,7 @@ import torch
 import argparse
 
 def start():
-    levelFiles = ['tunnel.svg', 'tunnel.svg', 'tunnel.svg']
+    levelFiles = ['Simple.svg', 'Simple.svg', 'Simple.svg', 'Simple.svg', 'Simple.svg']#, 'Simple.svg', 'Simple.svg']#, 'Simple.svg', 'Simple.svg', 'Simple.svg']
     env_name = "smallgoals_dt"
 
     parser = argparse.ArgumentParser(description='PyTorch PPO for continuous controlling')
@@ -20,12 +20,12 @@ def start():
 
     parser.add_argument('--restore', default=False, action='store_true', help='Restore and go on training?')
     parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net')
-    parser.add_argument('--steps', type=int, default=1000, help='Steps in Environment per Episode')
-    parser.add_argument('--max_episodes', type=int, default=10000000)
-    parser.add_argument('--update_experience', type=int, default=10000, help='how many experiences to update the policy')
+    parser.add_argument('--steps', type=int, default=750, help='Steps in Environment per Episode')
+    parser.add_argument('--max_episodes', type=int, default=2)
+    parser.add_argument('--update_experience', type=int, default=1500, help='how many experiences to update the policy')
     parser.add_argument('--batch_size', type=int, default=1, help='batch size')
     parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)')
-    parser.add_argument('--K_epochs', type=int, default=168, help='update the policy K times')
+    parser.add_argument('--K_epochs', type=int, default=1, help='update the policy K times')
     parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
     parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
     parser.add_argument('--lr', type=float, default=0.0003)
