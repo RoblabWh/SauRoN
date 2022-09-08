@@ -3,7 +3,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
-from algorithms.PPO_parallel.PPO_Multi import PPO_Multi
+from PPO.PPO_Multi import PPO_Multi
 
 
 class ControlWindow(QtWidgets.QMainWindow):
@@ -229,9 +229,9 @@ class Progressbar(QWidget):
 
     def updateProgressbar(self, currentEpisode):
 
-        value = (currentEpisode / self.args.nb_episodes) * 100
+        value = (currentEpisode / self.args.max_episodes) * 100
         self.progressbar.setValue(value)
-        self.progressbar.setFormat(str(currentEpisode) + " / " + str(self.args.nb_episodes) + " Episoden")
+        self.progressbar.setFormat(str(currentEpisode) + " / " + str(self.args.max_episodes) + " Episoden")
         self.progressbar.setAlignment(Qt.AlignCenter)
 
 

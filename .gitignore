@@ -3,4 +3,7 @@ __pychache__
 venv
 scans
 models
+old_models
+start_training.sh
+start_tensorboard.sh
 .idea/*

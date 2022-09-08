@@ -1,7 +1,10 @@
+from Environment.Components.Border import ColliderLine
+
 import math
-from simulation.Borders import ColliderLine
 from pynput.keyboard import Listener
 import copy
+import numpy as np
+from utils import scan1DTo2D
 
 import os
 import time
@@ -50,6 +53,7 @@ class Robot:
         self.collisionDistances = []
         self.collisionDistancesRobots = []
         self.angularDeviation = 0
+        self.fieldOfView = args.field_of_view / 180 * np.pi
 
         # Robot Hardware Params
         self.width = 0.35  # m
@@ -65,14 +69,11 @@ class Robot:
         self.maxAngularAcceleration = 1.5 * math.pi   #rad/s^2
         self.minAngularAcceleration = -1.5 * math.pi  #rad/s^2
 
-
         #Factors for normalization
         self.maxLinearVelocityFact = 1/self.maxLinearVelocity
         self.maxAngularVelocityFact = 1/self.maxAngularVelocity
         # Maximum distance in laserscan is 20 meters
         self.maxDistFact = 1/20
-
-
 
         #Pie Slice (chassy for better lidar detection as used with real robots)
         self.hasPieSlice = args.has_pie_slice
@@ -86,6 +87,9 @@ class Robot:
         normFacPieSlice = 1 / self.radius
         self.offsetAnglePieSilce = 2/3 * np.arccos((np.sqrt(2-(self.offsetSensorDist* normFacPieSlice)**2)-(self.offsetSensorDist* normFacPieSlice)) / 2)
 
+        #reward variables
+        goalDist = math.sqrt((self.goalX - self.startposX) ** 2 + (self.goalY - self.startposY) ** 2)
+        self.initialGoalDist = goalDist
 
         self.walls = walls
         self.circleWalls = circleWalls
@@ -95,6 +99,7 @@ class Robot:
         #     if not station is pickUp:
         #         self.collidorStationsWalls = self.collidorStationsWalls + pickUp.borders
         self.collidorStationsCircles = []
+
         for pickUp in allStations:
             if not station is pickUp:
                 self.collidorStationsCircles.append((pickUp.getPosX(), pickUp.getPosY(), pickUp.getRadius()))
@@ -107,11 +112,7 @@ class Robot:
             self.linTast = 0
             self.angTast = 0
 
-
-
-
-
-    def reset(self, allStations, pos = None, orientation = None, walls = None):
+    def reset(self, allStations, pos = None, orientation = None, walls = None, goalStation = None):
         """
         resets the robots position (to his starting position), his orientation (to his starting orientation)
         and sets all velocities back to zero.
@@ -148,6 +149,10 @@ class Robot:
         directionX = self.startDirectionX
         directionY = self.startDirectionY
 
+        if (goalStation != None):
+            self.station = goalStation
+        self.goalX = self.station.getPosX()
+        self.goalY = self.station.getPosY()
 
         if walls != None:
             self.walls = walls
@@ -163,8 +168,6 @@ class Robot:
         angVel = 0
         tarLinVel = 0
         tarAngVel = 0
-        self.goalX = self.station.getPosX()
-        self.goalY = self.station.getPosY()
         goalDist = math.sqrt((posX - self.goalX) ** 2 + (posY - self.goalY) ** 2)
 
         # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
@@ -177,14 +180,14 @@ class Robot:
 
         self.stateLidar = []
 
-
         self.distances = []
         self.collisionDistances = []
         self.collisionDistancesRobots = []
         self.lidarHits = []
         self.netOutput = (0, 0)
 
-        self.bestDistToGoal = goalDist
+        # reward variables
+        self.initialGoalDist = goalDist
 
         if self.hasPieSlice:
             self.posSensor = [posX + self.offsetSensorDist * directionX, posY + self.offsetSensorDist * directionY]
@@ -193,15 +196,14 @@ class Robot:
             self.posSensor = [posX, posY]
 
     def resetLidar(self, robots):
-        if self.args.mode == 'sonar':
-            if self.hasPieSlice:
-                self.robotsPieSliceWalls = []
-                for robot in robots:
-                    if robot is not self:
-                        self.robotsPieSliceWalls += robot.getPieSliceWalls()
+        if self.hasPieSlice:
+            self.robotsPieSliceWalls = []
+            for robot in robots:
+                if robot is not self:
+                    self.robotsPieSliceWalls += robot.getPieSliceWalls()
 
-            for _ in range(self.time_steps):
-                self.lidarReading(robots, self.args.steps, self.args.steps)
+        for _ in range(self.time_steps):
+            self.lidarReading(robots, self.args.steps, self.args.steps)
 
     def denormdata(self, data, limits):
         """
@@ -319,7 +321,6 @@ class Robot:
         self.posSensor = points[0]
         self.pieSlicePoints = points
 
-
     def lidarReading(self, robots, stepsLeft, steps):
         """
         Creates a state with a virtual 2D laser scan
@@ -336,7 +337,7 @@ class Robot:
         :param steps: number of steps in one epoch
         """
 
-        dir = (self.getDirectionAngle() - (self.args.field_of_view / 2)) % (2 * math.pi)
+        dir = (self.getDirectionAngle() - (self.fieldOfView / 2)) % (2 * math.pi)
 
         colliderLines = self.walls + self.collidorStationsWalls + self.robotsPieSliceWalls
         collidorCirclePosWithoutRobots = [(wall.getPosX(), wall.getPosY(), wall.getRadius()) for wall in self.circleWalls]
@@ -372,7 +373,7 @@ class Robot:
 
         circlesPositions = np.array([circleX, circleY])
 
-        rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.args.field_of_view)
+        rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.fieldOfView)
         distances, lidarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
 
         circleX = [r[0] for r in collidorCircleAllForTerminations]
@@ -422,47 +423,22 @@ class Robot:
 
         distancesNorm = distances * self.maxDistFact
         distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)
-        distancesNorm = distancesNorm.tolist()
+        #distancesNorm = distancesNorm.tolist()
 
-        ## WRAP THIS
-        scanplot = []
-        for i, point in enumerate(distancesNorm):
-                #angle_min = self.getDirectionAngle() - np.radians(135)
-                angle_min = 0
-                angle_increment = np.radians(0.25)
-                angle = angle_min + (i * angle_increment)
-                x = point * np.cos(angle)
-                y = point * np.sin(angle)
-                scanplot.append([x, y])
-        scanplot = np.asarray(scanplot)
-        theta = np.radians(-135)
-        rotMatrix = np.array([[np.cos(theta), -np.sin(theta)],
-                    [np.sin(theta),  np.cos(theta)]])
-        data = np.dot(scanplot, rotMatrix.T)
-
-        data = ((data * 20) + 20) * 3
-        data = data.astype(int)
-        image = np.zeros((121, 121))
-
-        # comment in to print scans in folder
-        # image[data[:,0], data[:,1]] = 255
-        #
-        # im = Image.fromarray(image).convert('RGB')
-        # frmt = "{0:06d}"
-        # idx_ = len(os.listdir("./scans")) - 1
-        # idx = frmt.format(idx_)
-        # name = "./scans/" + idx + "_scan.png"
-        # im.save(name)
-        #######################################
-
-        image[data[:,0], data[:,1]] = 1
+        # Convert 1D scan to 2D Scan
+        if self.args.input_style == "image":
+            laser = scan1DTo2D(distancesNorm, img_size=self.args.image_size)
+        else:
+            laser = distancesNorm
+        #image = scan1DTo2D(self.lidarHits)
 
         currentTimestep = (steps - stepsLeft)/steps
 
-        distance = (distance * self.maxDistFact)
-        if distance > 1 : distance = 1
-
-        frame_lidar = [image, orientation, [distance], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
+        #distance = (distance * self.maxDistFact)
+        #if distance > 1 : distance = 1
+        # TODO: ?!?!?! why was debugAngle used??? answer: it was the correct idea, but it may be done with fewer code
+        #frame_lidar = [distances, distance, np.asarray(orientation), np.array([self.getLinearVelocity(), self.getAngularVelocity()]), currentTimestep]
+        frame_lidar = [laser, np.asarray(orientation), distance, np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
         #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateLidar) >= self.time_steps:
@@ -531,8 +507,8 @@ class Robot:
                 angVel = self.minAngularVelocity
 
         # maybe ändern
-        return tarLinVel, tarAngVel
-        #return linVel, angVel
+        #return tarLinVel, tarAngVel
+        return linVel, angVel
 
     def directionVectorFromAngle(self, direction):
         """
@@ -645,6 +621,10 @@ class Robot:
             return self.state_raw[self.time_steps - 1][9]
         return self.state_raw[self.time_steps - 2][9]
 
+    def setGoal(self, goal):
+        goalX, goalY = goal
+        self.goalX = goalX
+        self.goalY = goalY
 
     def on_press(self, key):
         if key.char == 'w':
@@ -666,10 +646,6 @@ class Robot:
 
 
 
-
-
-
-import numpy as np
 class FastCollisionRay:
     """
     A class for simulating light rays around the robot by using numpy calculations to find possible intersections
@@ -733,10 +709,8 @@ class FastCollisionRay:
         x4 = np.tile(points2[0], (len(self.rayDirX), 1))
         y4 = np.tile(points2[1], (len(self.rayDirX), 1))
 
-
         #t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
         #t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-
 
         # Ersten den denominator berechnen, da er für t1 und t2 gleich ist.
         # 1 / ... um später für beiden die Multiplikation zu verwenden. Division ist die teuerste mathematische Operation ;)
@@ -756,10 +730,8 @@ class FastCollisionRay:
 
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
 
-
         # prüfen, für jedes Segement zwischen Robot-Origin und Collision Point prüfen, ob ein anderer Roboter dazwischen ist.
         # Dafür benötigt: Mittelpunkte aller Roboter und Linie (also Start und Ziel)
-
 
         if len(pointsRobots[0]) > 0:
             #qX = np.array([pointsRobots[0] for _ in range(len(collisionPoints[0]))])
@@ -818,9 +790,8 @@ class FastCollisionRay:
         collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
 
         # if sensorOffset<0: t1NearestHit = t1NearestHit - (self.ownRadius-sensorOffset) #CHRISTIANS FRAGEN
+        collisionPoints = np.swapaxes(collisionPoints, 0, 1) # für Rückgabe in x,y-Paaren
 
-
-        collisionPoints = np.swapaxes(collisionPoints, 0, 1)#für Rückgabe in x,y-Paaren
         return [t1NearestHit, collisionPoints]
 
     def shortestDistanceToCollidors(self, pos, lineSegments, circles, radii):

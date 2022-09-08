@@ -1,7 +1,6 @@
 from PyQt5.QtGui import QBrush, QPen, QColor
 from PyQt5.QtCore import Qt
-from simulation.Borders import ColliderLine
-
+from Environment.Components.Border import ColliderLine
 
 class Station:
     def __init__(self, posX, posY, radius, color, scaleFactor):
@@ -55,3 +54,9 @@ class Station:
 
     def updateScale(self, scaleFactor):
         self.scaleFactor = scaleFactor
+
+    def setColor(self, i):
+        brightness = 235 - (int((i * 39) / 255) * 80)
+        self.color = QColor.fromHsv((i * 39) % 255, 255, brightness)
+        self.lineColor = self.color  # Qt.red Qt.blue
+        self.fillColor = self.color  # Qt.red Qt.blue

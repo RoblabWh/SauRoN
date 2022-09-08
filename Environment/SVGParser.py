@@ -2,10 +2,9 @@ import math
 import xml.etree.ElementTree as ET
 import random
 
-import simulation.Borders as Borders
-import simulation.Robot as Robot
-import simulation.Station as Station
-
+import Environment.Components.Border as Borders
+import Environment.Components.Station as Station
+import Environment.Components.Robot as Robot
 
 class SVGLevelParser:
 
@@ -81,9 +80,9 @@ class SVGLevelParser:
         for polygon in polygons:
             attributes = polygon.attrib
             show = True
-            if 'display' in attributes:
-                if polygon.attrib['display'] == 'none':
-                    show = False
+            # if 'display' in attributes:
+            #     if polygon.attrib['display'] == 'none':
+            #         show = False
 
             if show:
 
@@ -98,7 +97,23 @@ class SVGLevelParser:
                     y2 = float(points[(i-1) % pointsLen][1]) * dpiFactor
 
                     self.lines += [Borders.ColliderLine(x1, y1, x2, y2)]
+        for path in paths:
 
+            points = path.attrib['d']
+            points = points[1:-1].split()
+            pointsLen = len(points)
+            points = [points[i].split(',') for i in range(0, pointsLen)]
+            start = [float(points[0][0]), float(points[0][1])]
+            points[0][0] = float(points[0][0]) - start[0]
+            points[0][1] = float(points[0][1]) - start[1]
+
+            for i in reversed(range(0, pointsLen)):
+                x1 = (float(points[i][0]) + float(start[0])) * dpiFactor
+                y1 = (float(points[i][1]) + float(start[1])) * dpiFactor
+                x2 = (float(points[(i-1) % pointsLen][0]) + float(start[0])) * dpiFactor
+                y2 = (float(points[(i-1) % pointsLen][1]) + float(start[1])) * dpiFactor
+
+                self.lines += [Borders.ColliderLine(x1, y1, x2, y2)]
 
         for line in lines:
             attributes = line.attrib

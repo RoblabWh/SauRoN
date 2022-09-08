@@ -36,10 +36,9 @@ class RobotRepresentation:
         self.lineColorNegAct = QColor.fromHsv((colorIndex * 39) % 255, 255, brightness-100)
 
 
-
     def paint(self, painter, sonarShowing):
 
-        if self.mode == 'sonar' and self.isActive:
+        if self.isActive:
             if sonarShowing:
 
                 if self.hasPieSlice and self.sensorPos != None:
@@ -86,7 +85,6 @@ class RobotRepresentation:
                                      self.dirV[0] * math.cos(self.direction) - self.dirV[1] * math.sin(self.direction)),
                          self.posY + 1.25 * self.radius * (
                                      self.dirV[0] * math.sin(self.direction) + self.dirV[1] * math.cos(self.direction)))
-
 
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
         painter.setBrush(QBrush(self.fillColor, self.brushStyle))

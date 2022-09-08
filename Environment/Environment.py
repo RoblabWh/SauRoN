@@ -1,5 +1,6 @@
+from Environment.Simulation import Simulation
+
 import math
-from simulation.Simulation import Simulation
 import numpy as np
 
 
@@ -20,6 +21,7 @@ class Environment:
         self.steps = args.steps
         self.steps_left = args.steps
         self.simulation = Simulation(app, args, timeframes, level)
+        self.episode = -1
         self.timeframs = timeframes
         self.total_reward = 0.0
         self.done = False
@@ -40,12 +42,11 @@ class Environment:
         """
         if self.args.mode == 'global':
             return np.asarray(self.simulation.robots[i].state)  # Pos, Geschwindigkeit, Zielposition
-        elif self.args.mode == 'sonar':
+        #elif self.args.mode == 'sonar':
+        else:
             reversed = True #determines the order of the state (reversed = false : current state in last place and the oldest at Index 0)
             #return np.asarray(self.simulation.robots[i].get_state_lidar(reversed))  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
             return self.simulation.robots[i].get_state_lidar(reversed)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
-
-
 
     @staticmethod
     def get_actions():
@@ -89,14 +90,24 @@ class Environment:
         ######## Update der Simulation #######
 
         robotsTermination = self.simulation.update(actions, self.steps_left, activations, proximity)
-        robotsDataCurrentFrame = []
+
+        states = []
+        rewards = []
+        dones = []
+        reachedPickups = []
+
         for i, termination in enumerate(robotsTermination):
             if termination != (None, None, None):
-                robotsDataCurrentFrame.append(self.extractRobotData(i, robotsTermination[i]))
+                state, reward, done, reachedPickup = self.extractRobotData(i, robotsTermination[i])
+                states.append(state)
+                rewards.append(reward)
+                dones.append(done)
+                reachedPickups.append(reachedPickup)
             else:
-                robotsDataCurrentFrame.append((None, None, None))
+                # set robot to inactive if it has crashed with a wall or another robot
+                pass
 
-        return robotsDataCurrentFrame
+        return states, rewards, dones, reachedPickups
 
     def extractRobotData(self, i, terminations):
         """
@@ -111,8 +122,6 @@ class Environment:
 
         ############ State Robot i ############
         next_state = self.get_observation(i)
-        next_state = np.expand_dims(np.asarray(next_state, dtype=object), axis=0)
-
 
         ############ Euklidsche Distanz und Orientierung ##############
 
@@ -132,11 +141,11 @@ class Environment:
 
         ########### REWARD CALCULATION ################
 
-        reward = self.createReward(robot, distance_new, distance_old, reachedPickup, collision)
+        reward = self.createReward(robot, distance_new, distance_old, reachedPickup, collision, runOutOfTime)
 
         return [next_state, reward, not robot.isActive(), reachedPickup]
 
-    def createReward(self, robot, dist_new, dist_old, reachedPickup, collision):
+    def createReward(self, robot, dist_new, dist_old, reachedPickup, collision, runOutOfTime):
         """
         Creates a (sparse) reward based on the euklidian distance, if the robot has reached his goal and if the robot
         collided with a wall or another robot.
@@ -150,76 +159,46 @@ class Environment:
         """
 
         reward = 0
-        r_arrival = 15
-        r_collision = -15
-        w_g = 2.5
-        w_w = -0.01
+        r_arrival = 70
+        r_collision = -20
+        r_stop = -0.5
+        w_gp = 2.5
+        w_gn = 1.2
+        w_d = 2.0
+        w_w = -0.001
+        a_p = 0.3
 
         if reachedPickup:
-            reward += r_arrival
+            reward = r_arrival
+        elif runOutOfTime:
+            reward = 0
+        elif collision:
+            reward = r_collision
         else:
-            reward += w_g * (dist_old - dist_new)
+            # if dist_old > dist_new:
+            #     reward += w_gp * (dist_old - dist_new)
+            # else:
+            #     reward += w_gn * (dist_old - dist_new)
+            if dist_old == dist_new:
+                reward += r_stop
+            if dist_new < robot.initialGoalDist:
+                reward += w_d * (robot.initialGoalDist - dist_new)
+                robot.initialGoalDist = dist_new
 
-        if collision:
-            reward += r_collision
+            #a1 = np.arctan2(robot.getGoalY() - robot.getPosY(), robot.getGoalX() - robot.getPosX())
+            #a2 = np.arctan2(robot.getDirectionY(), robot.getDirectionX())
+            #goalangle = np.abs(a1 - a2)
 
-        abs_ang_vel = np.abs(robot.getAngularVelocity()) 
-        if abs_ang_vel > 0.7:
-            reward += w_w * abs_ang_vel
+            # goalangle = np.arctan2(robot.debugAngle[1], robot.debugAngle[0])
+            # alpha_norm = 1 - (goalangle / np.pi)
+            # if alpha_norm > 0:
+            #     reward += a_p * alpha_norm
 
-        return reward
 
-    def createReward2(self, robot, dist_new, dist_old, reachedPickup, collision):
-        """
-        Creates a (sparse) reward based on the euklidian distance, if the robot has reached his goal and if the robot
-        collided with a wall or another robot.
+            # abs_ang_vel = np.abs(robot.getAngularVelocity())
+            # if abs_ang_vel > 0.7:
+            #     reward += w_w * abs_ang_vel
 
-        :param robot: robot
-        :param dist_new: the new distance (after the action has been taken)
-        :param dist_old: the old distance (before the action has been taken)
-        :param reachedPickup: True if the robot reached his goal in this step
-        :param collision: True if the robot collided with a wall or another robot
-        :return: returns the result of the fitness function
-        """
-
-        distPos = 0.02#0.009#0.015
-        distNeg = -0.002#0.002  # in Masterarbeit alles = 0 außer distPos (mit 0.1)
-        oriPos = 0.0001#0.0001#.0003
-        oriNeg = -0.0002#-0.00002#0.00002
-        lastDistPos = 0.000005
-        unblViewPos = 0.003
-
-        deltaDist = dist_old - dist_new
-
-        if deltaDist > 0:
-            rewardDist = deltaDist * distPos
-        else:
-            rewardDist = deltaDist * distNeg #Ein Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
-
-        angularDeviation = (abs(robot.angularDeviation * self.piFact) *-2) +1
-
-        if angularDeviation > 0:
-            rewardOrient = angularDeviation * oriPos
-        else:
-            rewardOrient = angularDeviation * oriNeg #Dieses Minus führt zu geringer Belohnung (ohne Minus zu einer geringen Strafe)
-
-        unblockedViewDistance = (-0.1 / (robot.distances[int(len(robot.distances)/2)] * robot.maxDistFact)) * unblViewPos
-
-        lastBestDistance = robot.bestDistToGoal
-        distGoal = dist_new
-        rewardLastDist = 0
-
-        if distGoal < lastBestDistance:
-            rewardLastDist = (lastBestDistance - distGoal) * lastDistPos
-            robot.bestDistToGoal = distGoal
-
-        if collision:
-            reward = -1
-        elif reachedPickup:
-            reward = 1 #+ rewardDist + rewardOrient + unblockedViewDistance # + rewardLastDist
-        else:
-            reward = rewardDist + rewardOrient + unblockedViewDistance #+ rewardLastDist #+  unblockedViewDistance
-            #reward = rewardDist
         return reward
 
     def reset(self, level):
@@ -229,70 +208,24 @@ class Environment:
         """
         self.simulation.reset(level)
         self.steps_left = self.steps
+        self.episode += 1
+        self.simulation.episode = self.episode
         self.total_reward = 0.0
         self.done = False
 
-    def setUISaveListener(self, observer):
+        states = [self.get_observation(i) for i in range(self.simulation.getCurrentNumberOfRobots())]
+        return states
+
+    def setUISaveListener(self, observer, checkpoint_folder, env_name):
         """
         Sets a Listener for the save net button to detect if it's been pressed
         :param observer: observing learning algorithm
         """
         if self.simulation.hasUI:
-            self.simulation.simulationWindow.setSaveListener(observer)
+            self.simulation.simulationWindow.setSaveListener(observer, checkpoint_folder, env_name)
 
-    def getRobotsProximityCategoryAllObstacles(self, i):
-        distances = self.simulation.robots[i].collisionDistances
-        if len(distances) > 0:
-            min = np.min(distances)
-            if min > 2: return 0 #[1,0,0]
-            elif min > 0.75: return 1 #[0,1,0]
-            else: return 2 #[0,0,1]
-        return 0
-
-    def getRobotsProximityCategoryOnlyRobots(self, i):
-        distances = self.simulation.robots[i].collisionDistancesRobots
-        if len(distances) > 0:
-            min = np.min(distances)
-            if min > 3: return 0 #[1,0,0]
-            elif min > 1.25: return 1 #[0,1,0]
-            else: return 2 #[0,0,1]
-        return 0
-
-    def getAngle(self, i, laserRange=-45):
-        angle_min = np.radians(laserRange)
-        angle_increment = np.radians(0.25)
-        return angle_min + (i * angle_increment)
-
-    def pol2cart(self, rho, phi): #forward axis looking up (positive y)
-        x = rho * np.cos(phi)
-        y = rho * np.sin(phi)
-        return [x, y]
-
-
-    def getMinDistOnVirtualRoadway(self, i):
-        scan = self.simulation.robots[i].distances
-        return self.getMinDistOnVirtualRoadwayWithScan(i, scan)
-
-    def getMinDistOnVirtualRoadwayWithScan(self, i, scan):
-        # scan = self.simulation.robots[i].distances
-        scanTransformed = []
-        for j, point in enumerate(scan):
-            angle = self.getAngle(j)
-            scanTransformed.append(self.pol2cart(point, angle))
-        scanTransformed = np.asarray(scanTransformed)
-        x = np.logical_and(scanTransformed[:, 0] > -0.35, scanTransformed[:, 0] < 0.35)
-        roadwayIndexSelection = np.argwhere(np.logical_and(x, scanTransformed[:, 1] > 0))
-
-        min = np.min(scan[roadwayIndexSelection])
-        if min > 3:
-            # if i == 0: print(0, self.steps- self.steps_left, min)
-            return 0 #[1,0,0]
-        elif min > 1.25:
-            # if i == 0: print(1, self.steps- self.steps_left, min)
-            return 1 #[0,1,0]
-        else:
-            # if i == 0: print(2, self.steps- self.steps_left, min)
-            return 2 #[0,0,1]
-
+    # returns number of robots in the simulation
+    def getNumberOfRobots(self):
+        return self.simulation.getCurrentNumberOfRobots()
 
 
