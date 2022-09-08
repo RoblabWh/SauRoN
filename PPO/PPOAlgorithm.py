@@ -189,7 +189,7 @@ class PPO:
 
     def saveCurrentWeights(self, ckpt_folder, env_name):
         print('Saving current weights to ' + ckpt_folder + '/' + env_name + '_current.pth')
-        torch.save(self.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
+        torch.save(self.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_current.pth'.format(env_name))
 
     def update(self, memory, batch_size):
         # Monte Carlo estimation of rewards

@@ -176,7 +176,7 @@ def train(env_name, env, solved_percentage, input_style,
 
         if logger.percentage_objective_reached() >= solved_percentage:
             print(f"Percentage of: {logger.percentage_objective_reached():.2f} reached!")
-            torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
+            torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_solved.pth'.format(env_name))
             print('Save as solved!')
             break
 
@@ -186,7 +186,7 @@ def train(env_name, env, solved_percentage, input_style,
 
             if running_reward > best_reward:
                 best_reward = running_reward
-                torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}.pth'.format(env_name))
+                torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_best.pth'.format(env_name))
                 print(f'Best performance with avg reward of {best_reward:.2f} saved at episode {i_episode}.')
                 print(f'Percentage of objective reached: {logger.percentage_objective_reached():.4f}')
 

@@ -436,8 +436,7 @@ class Robot:
 
         #distance = (distance * self.maxDistFact)
         #if distance > 1 : distance = 1
-        # TODO: ?!?!?! why was debugAngle used???
-        orientation = [self.getDirectionX(), self.getDirectionY()]
+        # TODO: ?!?!?! why was debugAngle used??? answer: it was the correct idea, but it may be done with fewer code
         #frame_lidar = [distances, distance, np.asarray(orientation), np.array([self.getLinearVelocity(), self.getAngularVelocity()]), currentTimestep]
         frame_lidar = [laser, np.asarray(orientation), distance, np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
         #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
