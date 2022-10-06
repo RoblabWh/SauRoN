@@ -475,7 +475,8 @@ def train(env_name, render, solved_reward, input_style,
         allDone = []
         for i in range(numOfProcesses):
             allDone.append(False)
-        while True:
+        endTraining = False
+        while not endTraining:
             for i in range(numOfProcesses):
                 if allDone[i] == False:
                         while shared_array_signal_np[i] == 0:
@@ -650,7 +651,7 @@ def runMultiprocessPPO(args):
         print("Starting training loop of Process #{}".format(processID))
         # training loop
         end = False
-        for i_episode in range(0, max_episodes):
+        for i_episode in range(1, max_episodes + 1):
             states = env.reset(0)
             for t in range(max_timesteps):
                 time_step += 1
@@ -668,16 +669,19 @@ def runMultiprocessPPO(args):
                     memory.copyToShm()
                     print("Process #{} sends {} experiences".format(processID, len(memory)))
                     shared_array_signal_np[processID] = i_episode
+
                     if i_episode == max_episodes:
                         end = True
+                        exit(0)
+
                     while shared_array_signal_np[processID] != 0:
                         time.sleep(0.1)
-                    
 
                     memory.clear_memory()
 
                     #Load .pth
                     ppo.old_policy.load_state_dict(torch.load(path))
+
                     print("Process #{} has loaded new model weights!".format(processID))
                     print("Process #{} goes to work!".format(processID))
 

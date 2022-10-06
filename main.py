@@ -7,7 +7,7 @@ import torch
 import argparse
 
 def start():
-    levelFiles = ['Simple.svg', 'Simple.svg', 'Simple.svg']#, 'Simple.svg', 'Simple.svg']#, 'Simple.svg', 'Simple.svg']#, 'Simple.svg', 'Simple.svg', 'Simple.svg']
+    levelFiles = ['Simple.svg', 'Simple.svg', 'Simple.svg', 'Simple.svg', 'Simple.svg']#, 'Simple.svg', 'Simple.svg']#, 'Simple.svg', 'Simple.svg', 'Simple.svg']
     env_name = "smallgoals_dt"
 
     parser = argparse.ArgumentParser(description='PyTorch PPO for continuous controlling')
