@@ -20,6 +20,7 @@ class Environment:
         self.args = args
         self.steps = args.steps
         self.steps_left = args.steps
+        self.level = level
         self.simulation = Simulation(app, args, timeframes, level)
         self.episode = -1
         self.timeframs = timeframes
@@ -201,11 +202,13 @@ class Environment:
 
         return reward
 
-    def reset(self, level):
+    def reset(self, level=None):
         """
         Resets the simulation after each epoch
         :param level: int - defines the reset level
         """
+        if level is None:
+            level = self.level
         self.simulation.reset(level)
         self.steps_left = self.steps
         self.episode += 1

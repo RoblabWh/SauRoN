@@ -36,10 +36,10 @@ def normalize(tensor):
 
 def statesToTensor(list):
     states = np.asarray(list, dtype=object)
-    laser = states[:, :, 0].tolist()
-    ori = states[:, :, 1].tolist()
-    dist = states[:, :, 2].tolist()
-    vel = states[:, :, 3].tolist()
+    laser = np.array(states[:, :, 0].tolist())
+    ori = np.array(states[:, :, 1].tolist())
+    dist = np.array(states[:, :, 2].tolist())
+    vel = np.array(states[:, :, 3].tolist())
     return [torch.tensor(laser, dtype=torch.float32), torch.tensor(ori, dtype=torch.float32),
             torch.tensor(dist, dtype=torch.float32), torch.tensor(vel, dtype=torch.float32)]
 
@@ -175,12 +175,15 @@ class Logger(object):
         self.number_of_agents = 0
 
     def __del__(self):
-        self.close()
+        if self.logging:
+            self.close()
 
     def set_logging(self, logging):
-        self.logging = logging
         if logging:
             self.writer = SummaryWriter(self.log_dir)
+        elif self.logging:
+            self.close()
+        self.logging = logging
 
     def build_graph(self, model, device):
         if self.logging:

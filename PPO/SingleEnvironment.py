@@ -1,12 +1,14 @@
 from PPO.PPOAlgorithm import PPO
-from torch.utils.data import Dataset, DataLoader
 from utils import Logger
 import numpy as np
 import torch
+from mpi4py import MPI as mpi
 
+mpi_comm = mpi.COMM_WORLD
+mpi_rank = mpi_comm.Get_rank()
 
 class SwarmMemory():
-    def __init__(self, robotsCount):
+    def __init__(self, robotsCount = 0):
         self.robotMemory = [Memory() for _ in range(robotsCount)]
         self.currentTerminalStates = [False for _ in range(robotsCount)]
 
@@ -93,6 +95,21 @@ class SwarmMemory():
         for memory in self.robotMemory:
             memory.clear_memory()
 
+    def __add__(self, other):
+        new_memory = SwarmMemory()
+        new_memory.robotMemory += self.robotMemory
+        new_memory.currentTerminalStates += self.currentTerminalStates
+        if other is not None:
+            new_memory.robotMemory += other.robotMemory
+            new_memory.currentTerminalStates += other.currentTerminalStates
+        return new_memory
+
+    def __iadd__(self, other):
+        if other is not None:
+            self.robotMemory += other.robotMemory
+            self.currentTerminalStates += other.currentTerminalStates
+        return self
+
     def __len__(self):
         length = 0
         for memory in self.robotMemory:
@@ -134,6 +151,7 @@ def train(env_name, env, solved_percentage, input_style,
         logger.set_logging(True)
 
     memory = SwarmMemory(env.getNumberOfRobots())
+    memorybundle = SwarmMemory()
 
     ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, logger=logger, restore=restore, ckpt=ckpt)
     env.setUISaveListener(ppo, ckpt_folder, env_name)
@@ -141,42 +159,50 @@ def train(env_name, env, solved_percentage, input_style,
     #logger.build_graph(ppo.policy.actor, ppo.policy.device)
     #logger.build_graph(ppo.policy.critic, ppo.policy.device)
 
-    running_reward, avg_length, time_step = 0, 0, 0
+    running_reward, avg_length = 0, 0
     best_reward = 0
     # training loop
     for i_episode in range(1, max_episodes+1):
-        states = env.reset(0)
+        states = env.reset()
         logger.set_episode(i_episode)
         logger.set_number_of_agents(env.getNumberOfRobots())
+
+        env_not_done = True
         for t in range(max_timesteps):
-            time_step += 1
 
-            # Run old policy
-            actions = ppo.select_action(states, memory)
+            if env_not_done:
+                # Run old policy
+                actions = ppo.select_action(states, memory)
 
-            states, rewards, dones, reachedGoals = env.step(actions)
+                states, rewards, dones, reachedGoals = env.step(actions)
 
-            memory.insertReward(rewards)
-            #memory.insertReachedGoal(reachedGoals, dones) not used just now
-            memory.insertIsTerminal(dones)
+                running_reward += np.mean(rewards)
 
-            logger.log_objective(reachedGoals)
+                memory.insertReward(rewards)
+                #memory.insertReachedGoal(reachedGoals, dones) not used just now
+                memory.insertIsTerminal(dones)
 
-            if len(memory) >= update_experience:
-                print('Train Network at Episode {}'.format(i_episode))
-                ppo.update(memory, batch_size)
+                logger.log_objective(reachedGoals)
+
+            experience = mpi_comm.allreduce(len(memory))
+            if experience >= update_experience:
+                memorybundle += mpi_comm.reduce(memory)
                 memory.clear_memory()
-                time_step = 0
+                if mpi_rank == 0:
+                    print('Train Network at Episode {} with {} Experiences'.format(i_episode, len(memorybundle)), flush=True)
+                    ppo.update(memorybundle, batch_size)
+                    memorybundle.clear_memory()
+                pth = mpi_comm.bcast(ppo.policy.state_dict())
+                if mpi_rank != 0:
+                    ppo.policy.load_state_dict(pth)
 
-            running_reward += np.mean(rewards)
-
-            if env.is_done():
-                break
-        avg_length += t
+            if env_not_done and env.is_done():
+                env_not_done = False
+                avg_length += t
 
         if logger.percentage_objective_reached() >= solved_percentage:
             print(f"Percentage of: {logger.percentage_objective_reached():.2f} reached!")
-            torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_solved.pth'.format(env_name))
+            torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_{}_solved.pth'.format(env_name, mpi_rank))
             print('Save as solved!')
             break
 
@@ -186,7 +212,7 @@ def train(env_name, env, solved_percentage, input_style,
 
             if running_reward > best_reward:
                 best_reward = running_reward
-                torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_best.pth'.format(env_name))
+                torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_{}_best.pth'.format(env_name, mpi_rank))
                 print(f'Best performance with avg reward of {best_reward:.2f} saved at episode {i_episode}.')
                 print(f'Percentage of objective reached: {logger.percentage_objective_reached():.4f}')
 
@@ -219,7 +245,7 @@ def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gam
 
     # test
     for i_episode in range(1, test_episodes+1):
-        states = env.reset(0)
+        states = env.reset()
         while True:
             time_step += 1
 
