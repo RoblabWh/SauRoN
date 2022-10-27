@@ -55,20 +55,20 @@ def _scan1DTo2D(lidarHits):
     image = np.zeros((121, 121))
 
     # comment in to print scans in folder
-    image[data[:,0], data[:,1]] = 255
-
-    im = Image.fromarray(image).convert('RGB')
-    frmt = "{0:06d}"
-    idx_ = len(os.listdir("./scans")) - 1
-    idx = frmt.format(idx_)
-    name = "./scans/" + idx + "_scan.png"
-    im.save(name)
+    # image[data[:,0], data[:,1]] = 255
+    #
+    # im = Image.fromarray(image).convert('RGB')
+    # frmt = "{0:06d}"
+    # idx_ = len(os.listdir("./scans")) - 1
+    # idx = frmt.format(idx_)
+    # name = "./scans/" + idx + "_scan.png"
+    # im.save(name)
     ######################################
 
     image[data[:, 0], data[:, 1]] = 1
     return image
 
-def scan1DTo2D(distancesNorm, img_size, print=True):
+def scan1DTo2D(distancesNorm, img_size, print=False):
     scanplot = []
     angle_min = 0
     angle_increment = np.radians(0.25)

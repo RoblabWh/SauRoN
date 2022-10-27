@@ -190,10 +190,10 @@ class Environment:
             #a2 = np.arctan2(robot.getDirectionY(), robot.getDirectionX())
             #goalangle = np.abs(a1 - a2)
 
-            # goalangle = np.arctan2(robot.debugAngle[1], robot.debugAngle[0])
-            # alpha_norm = 1 - (goalangle / np.pi)
-            # if alpha_norm > 0:
-            #     reward += a_p * alpha_norm
+            goalangle = np.arctan2(robot.debugAngle[1], robot.debugAngle[0])
+            alpha_norm = 1 - (goalangle / np.pi)
+            if alpha_norm > 0:
+                reward += a_p * alpha_norm
 
 
             # abs_ang_vel = np.abs(robot.getAngularVelocity())
