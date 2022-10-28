@@ -150,7 +150,8 @@ def check_args(args):
     assert args.number_of_rays > 0, "Number of scans must be positive"
     assert args.update_experience > 0, "Update experience must be positive"
     assert args.update_experience > args.batch_size, "Update experience must be greater than batch size"
-
+    assert args.visualization == "none" or args.visualization == "single" or args.visualization == "all", "Visualization must be none, single or all"
+    assert args.sync_experience < 25000, "Sync experience must be less than 25000"
 
 class Logger(object):
     def __init__(self, log_dir, update_interval):

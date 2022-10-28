@@ -3,6 +3,7 @@ from utils import Logger
 import numpy as np
 import torch
 from mpi4py import MPI as mpi
+import time
 
 mpi_comm = mpi.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
@@ -139,7 +140,7 @@ class Memory:   # collected from old policy
 
 def train(env_name, env, solved_percentage, input_style,
           max_episodes, max_timesteps, update_experience, action_std, K_epochs, eps_clip,
-          gamma, lr, betas, ckpt_folder, restore, tensorboard, scan_size=121, log_interval=10, batch_size=1):
+          gamma, lr, betas, ckpt_folder, restore, tensorboard, sync_experience, scan_size=121, log_interval=10, batch_size=1):
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
     if restore:
@@ -162,11 +163,11 @@ def train(env_name, env, solved_percentage, input_style,
     running_reward, avg_length = 0, 0
     best_reward = 0
     # training loop
+    starttime = time.time()
     for i_episode in range(1, max_episodes+1):
         states = env.reset()
         logger.set_episode(i_episode)
         logger.set_number_of_agents(env.getNumberOfRobots())
-
         env_not_done = True
         for t in range(max_timesteps):
 
@@ -185,16 +186,22 @@ def train(env_name, env, solved_percentage, input_style,
                 logger.log_objective(reachedGoals)
 
             experience = mpi_comm.allreduce(len(memory))
-            if experience >= update_experience:
+            if experience >= sync_experience:
                 memorybundle += mpi_comm.reduce(memory)
                 memory.clear_memory()
-                if mpi_rank == 0:
-                    print('Train Network at Episode {} with {} Experiences'.format(i_episode, len(memorybundle)), flush=True)
-                    ppo.update(memorybundle, batch_size)
-                    memorybundle.clear_memory()
-                pth = mpi_comm.bcast(ppo.policy.state_dict())
-                if mpi_rank != 0:
-                    ppo.policy.load_state_dict(pth)
+                experience = mpi_comm.bcast(len(memorybundle))
+                if experience >= update_experience:
+                    if mpi_rank == 0:
+                        print('Train Network at Episode {} with {} Experiences'.format(i_episode, len(memorybundle)), flush=True)
+                        print('Time: {}'.format(time.time() - starttime), flush=True)
+                        starttime = time.time()
+                        ppo.update(memorybundle, batch_size)
+                        print("done training", flush=True)
+                        memorybundle.clear_memory()
+                    pth = mpi_comm.bcast(ppo.policy.state_dict())
+                    if mpi_rank != 0:
+                        ppo.policy.load_state_dict(pth)
+                    print("done", flush=True)
 
             if env_not_done and env.is_done():
                 env_not_done = False
