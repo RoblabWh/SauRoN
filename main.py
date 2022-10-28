@@ -68,7 +68,7 @@ parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=
 # Visualization & Managing settings
 
 parser.add_argument('--visualization', type=str, default="single", help="Visualization mode. none: Don't use any visualization; single: Show only the visualization of one process; all: Show all visualizations")
-parser.add_argument('--tensorboard', type=str2bool, default=False, help='Use tensorboard')
+parser.add_argument('--tensorboard', type=str2bool, default=True, help='Use tensorboard')
 parser.add_argument('--print_interval', type=int, default=1, help='how many episodes to print the results out')
 parser.add_argument('--solved_percentage', type=float, default=0.99, help='stop training if objective is reached to this percentage')
 parser.add_argument('--log_interval', type=int, default=5, help='how many episodes to log into tensorboard. Also regulates how solved percentage is calculated')

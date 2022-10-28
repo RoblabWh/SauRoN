@@ -121,8 +121,8 @@ class ActorCritic(nn.Module):
         # was suggested in: Implementation_Matters in Deep RL: A Case Study on PPO and TRPO
         action_mean, action_var, dist = self.actor(laser, orientation, distance, velocity)
 
-        # logging of actions
-        self.logger.add_actor_output(action_mean.mean(0)[0].item(), action_mean.mean(0)[1].item(), action_var[0].item(), action_var[1].item())
+        ## logging of actions TODO: log in SingleEnvironment
+        #self.logger.add_actor_output(action_mean.mean(0)[0].item(), action_mean.mean(0)[1].item(), action_var[0].item(), action_var[1].item())
 
         action = dist.sample()
         action = torch.clip(action, -1, 1)
