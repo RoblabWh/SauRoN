@@ -19,7 +19,7 @@ for filename in os.listdir(svg_path):
         level_files.append(filename)
 level_files.sort()
 
-level_files = ['engstelle.svg']
+level_files = ['tunnel.svg', 'SimpleObstacles.svg', 'engstelle.svg', 'svg3_tareq.svg', 'Simple.svg', 'Funnel.svg']
 ckpt_folder = './models'
 model_name = "model"
 
@@ -31,11 +31,11 @@ parser.add_argument('--mode', default='train', help='choose train or test')
 
 # Train Parameters
 
-parser.add_argument('--restore', default=False, action='store_true', help='Restore and go on training?')
+parser.add_argument('--restore', default=True, action='store_true', help='Restore and go on training?')
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net')
 parser.add_argument('--steps', type=int, default=2000, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=int, default=10000000, help='Maximum Number of Episodes')
-parser.add_argument('--update_experience', type=int, default=50000, help='how many experiences to update the policy')
+parser.add_argument('--update_experience', type=int, default=100000, help='how many experiences to update the policy')
 parser.add_argument('--batch_size', type=int, default=5, help='batch size')
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)') # TODO currently not used
 parser.add_argument('--K_epochs', type=int, default=20, help='update the policy K times')
@@ -44,7 +44,7 @@ parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
 parser.add_argument('--input_style', default='laser', help='image or laser')
 parser.add_argument('--image_size', type=float, default=256, help='size of the image that goes into the neural net')
-parser.add_argument('--sync_experience', type=int, default=10000, help='how often to sync the experience')
+parser.add_argument('--sync_experience', type=int, default=5000, help='how often to sync the experience')
 
 
 # Simulation settings
@@ -79,7 +79,8 @@ parser.add_argument('--display_normals', type=bool, default=True,
 args = parser.parse_args()
 check_args(args)
 
-print(args.level_files)
+if mpi_rank == 0:
+    print("Level files: ", args.level_files, flush=True)
 
 level_index = mpi_rank % len(args.level_files)
 

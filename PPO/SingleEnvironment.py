@@ -156,10 +156,12 @@ def train(env_name, env, solved_percentage, input_style,
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
     if restore:
+        restored = None
         if mpi_rank == 0:
             print('Load checkpoint from {}'.format(ckpt), flush=True)
-            pretrained_model = torch.load(ckpt, map_location=lambda storage, loc: storage)
-        pretrained_model = mpi_comm.bcast(pretrained_model)
+            restored = torch.load(ckpt, map_location=lambda storage, loc: storage)
+        pretrained_model = mpi_comm.bcast(restored)
+        #print(f'Rank {mpi_rank} len model {len(pretrained_model)}', flush=True)
         ppo.policy.load_state_dict(pretrained_model)
 
     #logger.build_graph(ppo.policy.actor, ppo.policy.device)
@@ -208,12 +210,10 @@ def train(env_name, env, solved_percentage, input_style,
                         print('Time: {}'.format(time.time() - starttime), flush=True)
                         starttime = time.time()
                         ppo.update(memorybundle, batch_size)
-                        print("done training", flush=True)
                         memorybundle.clear_memory()
                     pth = mpi_comm.bcast(ppo.policy.state_dict())
                     if mpi_rank != 0:
                         ppo.policy.load_state_dict(pth)
-                    print("done", flush=True)
 
             if env_not_done and env.is_done():
                 env_not_done = False
@@ -249,7 +249,7 @@ def train(env_name, env, solved_percentage, input_style,
                 logger.summary_loss()
 
                 if not tensorboard:
-                    print(f'Episode: {i_episode}, Avg reward: {running_reward:.2f}, Avg steps: {avg_length:.2f}')
+                    print(f'Episode: {i_episode}, Avg reward: {running_reward:.2f}, Avg steps: {avg_length:.2f}', flush=True)
 
             running_reward, avg_length = 0, 0
 
