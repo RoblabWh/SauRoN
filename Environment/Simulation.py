@@ -3,6 +3,7 @@ import Visualization.EnvironmentWindow as SimulationWindow
 
 import math, random
 import numpy as np
+import time
 
 closedFirst = False
 
@@ -130,7 +131,7 @@ class Simulation:
         # self.plotterWindow.plot(self.robot.getLinearVelocity(), self.simTime)
         # self.plotterWindow.plot(self.robot.getAngularVelocity(), self.simTime)
         self.simTime += self.simTimestep
-
+        #time.sleep(self.simTimestep)
         # schöner ??!
         relativeIndices = []
         missing = 0
@@ -206,7 +207,7 @@ class Simulation:
         selectedLevel = SVGParser.SVGLevelParser(self.levelFiles[levelID], self.args)
         self.robots = selectedLevel.getRobots()
         if self.args.manually:
-            self.robots = self.robots[0:self.args.numb_of_robots]
+            self.robots = self.robots[0]
 
         self.stations = selectedLevel.getStations()
         self.walls = selectedLevel.getWalls()

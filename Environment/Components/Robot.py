@@ -70,8 +70,8 @@ class Robot:
         self.minAngularAcceleration = -1.5 * math.pi  #rad/s^2
 
         #Factors for normalization
-        self.maxLinearVelocityFact = 1/self.maxLinearVelocity
-        self.maxAngularVelocityFact = 1/self.maxAngularVelocity
+        #self.maxLinearVelocityFact = 1/self.maxLinearVelocity
+        #self.maxAngularVelocityFact = 1/self.maxAngularVelocity
         # Maximum distance in laserscan is 20 meters
         self.maxDistFact = 1/20
 
@@ -255,6 +255,7 @@ class Robot:
             linVel = self.linTast
             angVel = self.angTast
 
+        #print("linVel: ", linVel, "angVel: ", angVel)
         oldDir = self.getDirectionAngle()
         directionVector = self.directionVectorFromAngle(oldDir)
 
@@ -270,6 +271,8 @@ class Robot:
         goalDist = math.sqrt((posX-goalX)**2+(posY-goalY)**2)
 
         frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist, direction]
+        #print("linVel: ", linVel, "angVel: ", angVel)
+        #print("linVelNorm: ", self.getLinearVelocityNorm(), "angVelNorm: ", self.getAngularVelocityNorm())
         self.push_frame(frame)
         if self.hasPieSlice:
             self.updatePieSlice(deltaDir, (deltaPosX, deltaPosY))
@@ -470,45 +473,60 @@ class Robot:
         :return: tuple
             (float - linear velocity, float - angular velocity)
         """
-        self.netOutput = (tarAngVel, tarLinVel)
+        self.netOutput = (tarLinVel, tarAngVel)
 
-        if(tarLinVel > 1 or tarAngVel > 1 or tarLinVel < -1 or tarLinVel <- 1):
-            print("velocitiy recieved from neural net is out of  bounds. Fix your Code!  ", tarLinVel, tarAngVel)
-        tarLinVel = max(-1, min(tarLinVel, 1))
-        tarAngVel = max(-1, min(tarAngVel, 1))
+        assert(tarLinVel <= 1 or tarAngVel <= 1 or tarLinVel >= -1 or tarAngVel >= -1), f"velocitiy recieved from neural net is out of  bounds. Fix your Code! {tarLinVel}, {tarAngVel}"
+        # tarLinVel = max(-1, min(tarLinVel, 1))
+        # tarAngVel = max(-1, min(tarAngVel, 1))
 
+        #print("linVel: ", linVel, "angVel: ", angVel)
+        #print("tarLinVelNorm: ", tarLinVel, "tarAngVelNorm: ", tarAngVel)
         # mapping the net output range of -1 to 1 onto the velocitiy ranges of the robot
         # tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + (self.maxAngularVelocity + self.minAngularVelocity) * 0.5
-        tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)
+        tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity) * 0.5) + ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)
         tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity) * 0.5) + ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)
+        # # beschleunigen
+        # if linVel < tarLinVel:
+        #     linVel += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
+        #     if linVel > self.maxLinearVelocity:
+        #         linVel = self.maxLinearVelocity
+        #
+        # # bremsen
+        # elif linVel > tarLinVel:
+        #     linVel += self.minLinearAcceleration * dt
+        #     if linVel < self.minLinearVelocity:
+        #         linVel = self.minLinearVelocity
+        #
+        # # nach links drehen
+        # if angVel < tarAngVel:
+        #     angVel += self.maxAngularAcceleration * dt
+        #     if angVel > self.maxAngularVelocity:
+        #         angVel = self.maxAngularVelocity
+        #
+        # # nach rechts drehen
+        # elif angVel > tarAngVel:
+        #     angVel += self.minAngularAcceleration * dt
+        #     if angVel < self.minAngularVelocity:
+        #         angVel = self.minAngularVelocity
 
-        # beschleunigen
-        if linVel < tarLinVel:
-            linVel += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
-            if linVel > self.maxLinearVelocity:
-                linVel = self.maxLinearVelocity
-
-        # bremsen
-        elif linVel > tarLinVel:
-            linVel += self.minLinearAcceleration * dt
-            if linVel < self.minLinearVelocity:
-                linVel = self.minLinearVelocity
-
-        # nach links drehen
-        if angVel < tarAngVel:
-            angVel += self.maxAngularAcceleration * dt
-            if angVel > self.maxAngularVelocity:
-                angVel = self.maxAngularVelocity
-
-        # nach rechts drehen
-        elif angVel > tarAngVel:
-            angVel += self.minAngularAcceleration * dt
-            if angVel < self.minAngularVelocity:
-                angVel = self.minAngularVelocity
-
+        # return linVel, angVel
         # maybe ändern
-        #return tarLinVel, tarAngVel
-        return linVel, angVel
+
+        # check boundaries
+        if tarLinVel > self.maxLinearVelocity:
+            tarLinVel = self.maxLinearVelocity
+
+        if tarLinVel < self.minLinearVelocity:
+            tarLinVel = self.minLinearVelocity
+
+        if tarAngVel > self.maxAngularVelocity:
+            tarAngVel = self.maxAngularVelocity
+
+        if tarAngVel < self.minAngularVelocity:
+            tarAngVel = self.minAngularVelocity
+
+        return np.around(tarLinVel, decimals=5), np.around(tarAngVel, decimals=5)
+
 
     def directionVectorFromAngle(self, direction):
         """
@@ -527,7 +545,7 @@ class Robot:
         station = self.station
         distance2StationCenter = math.sqrt((station.getPosX() - self.getPosX())**2 +
                                            (station.getPosY() - self.getPosY())**2) + self.radius
-        return (distance2StationCenter < station.radius)
+        return (distance2StationCenter < (station.radius * 1.2))
 
     def collideWithTargetStationRectengular(self):
         """
@@ -578,18 +596,18 @@ class Robot:
         return self.state_raw[self.time_steps - 2][3]
 
     def getLinearVelocity(self):
-        return self.state_raw[self.time_steps - 1][4]
+        return np.around(self.state_raw[self.time_steps - 1][4], decimals=5)
 
     def getAngularVelocity(self):
-        return self.state_raw[self.time_steps - 1][5]
+        return np.around(self.state_raw[self.time_steps - 1][5], decimals=5)
 
     def getLinearVelocityNorm(self):
-        return (self.getLinearVelocity() - ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)) / (
-                    (self.maxLinearVelocity - self.minLinearVelocity) * 0.5)
+        return np.around((self.getLinearVelocity() - ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)) / (
+                    (self.maxLinearVelocity - self.minLinearVelocity) * 0.5), decimals=5)
 
     def getAngularVelocityNorm(self):
-        return (self.getAngularVelocity() - ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)) / (
-                (self.maxAngularVelocity - self.minAngularVelocity) * 0.5)
+        return np.around((self.getAngularVelocity() - ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)) / (
+                (self.maxAngularVelocity - self.minAngularVelocity) * 0.5), decimals=5)
 
     def getGoalX(self):
         return self.state_raw[self.time_steps - 1][6]
@@ -628,13 +646,13 @@ class Robot:
 
     def on_press(self, key):
         if key.char == 'w':
-            self.linTast = 1.5
+            self.linTast = 1.49999
         if key.char == 'a':
-            self.angTast = -1.6
+            self.angTast = -0.5999
         if key.char == 's':
-            self.linTast = -1.5
+            self.linTast = 0
         if key.char == 'd':
-            self.angTast = 1.6
+            self.angTast = 0.5 #0.5999
         if key.char == 'c':
             self.angTast = 0
 

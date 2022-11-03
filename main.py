@@ -10,6 +10,8 @@ from PyQt5.QtWidgets import QApplication
 from mpi4py import MPI as mpi
 
 mpi_rank = mpi.COMM_WORLD.Get_rank()
+mpi_size = mpi.COMM_WORLD.Get_size()
+print("mpi_size: ", mpi_size)
 
 # use all svg files in the svg folder as default level_files
 level_files = []
@@ -19,8 +21,9 @@ for filename in os.listdir(svg_path):
         level_files.append(filename)
 level_files.sort()
 
-level_files = ['tunnel.svg', 'SimpleObstacles.svg', 'engstelle.svg', 'svg3_tareq.svg', 'Simple.svg', 'Funnel.svg']
-ckpt_folder = './models'
+level_files = ['SimpleObstacles.svg', 'tunnel.svg', 'svg3_tareq.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg']
+level_files = ['onerobot.svg']
+ckpt_folder = './models/test'
 model_name = "model"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
@@ -31,7 +34,7 @@ parser.add_argument('--mode', default='train', help='choose train or test')
 
 # Train Parameters
 
-parser.add_argument('--restore', default=True, action='store_true', help='Restore and go on training?')
+parser.add_argument('--restore', default=False, action='store_true', help='Restore and go on training?')
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net')
 parser.add_argument('--steps', type=int, default=2000, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=int, default=10000000, help='Maximum Number of Episodes')
@@ -44,15 +47,13 @@ parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
 parser.add_argument('--input_style', default='laser', help='image or laser')
 parser.add_argument('--image_size', type=float, default=256, help='size of the image that goes into the neural net')
-parser.add_argument('--sync_experience', type=int, default=5000, help='how often to sync the experience')
+parser.add_argument('--sync_experience', type=int, default=10000, help='how often to sync the experience')
 
 
 # Simulation settings
 
 parser.add_argument('--level_files', type=str, nargs='+', default=level_files, help='List of level files as strings')
-parser.add_argument('--sim_time_step', type=float, default=0.1, help='Time between steps') #.125
-parser.add_argument('--numb_of_robots', type=int, default=1,
-                    help='Number of robots acting in one environment in the manual mode')
+parser.add_argument('--sim_time_step', type=float, default=0.125, help='Time between steps') #.125
 
 # Robot settings
 

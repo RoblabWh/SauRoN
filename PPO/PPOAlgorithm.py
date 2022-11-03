@@ -80,10 +80,8 @@ class Actor(nn.Module):
         mu = torch.tanh(self.mu(x))
         std = torch.exp(self.log_std)
         var = torch.pow(std, 2)
-        cov_mat = torch.diag(var)
-        dist = MultivariateNormal(mu, cov_mat)
 
-        return mu, var, dist
+        return mu.to('cpu'), var.to('cpu')
 
 
 class Critic(nn.Module):
@@ -119,10 +117,12 @@ class ActorCritic(nn.Module):
         laser, orientation, distance, velocity = states
         # TODO: check if normalization of states is necessary
         # was suggested in: Implementation_Matters in Deep RL: A Case Study on PPO and TRPO
-        action_mean, action_var, dist = self.actor(laser, orientation, distance, velocity)
+        action_mean, action_var = self.actor(laser, orientation, distance, velocity)
 
-        ## logging of actions TODO: log in SingleEnvironment
-        #self.logger.add_actor_output(action_mean.mean(0)[0].item(), action_mean.mean(0)[1].item(), action_var[0].item(), action_var[1].item())
+        cov_mat = torch.diag(action_var)
+        dist = MultivariateNormal(action_mean, cov_mat)
+        ## logging of actions
+        self.logger.add_actor_output(action_mean.mean(0)[0].item(), action_mean.mean(0)[1].item(), action_var[0].item(), action_var[1].item())
 
         action = dist.sample()
         action = torch.clip(action, -1, 1)
@@ -136,7 +136,7 @@ class ActorCritic(nn.Module):
 
     def act_certain(self, states, memory):
         laser, orientation, distance, velocity = states
-        action, _, _ = self.actor(laser, orientation, distance, velocity)
+        action, _ = self.actor(laser, orientation, distance, velocity)
 
         memory.insertState(laser.to(device).detach(), orientation.to(device).detach(), distance.to(device).detach(), velocity.to(device).detach())
         memory.insertAction(action)
@@ -147,8 +147,10 @@ class ActorCritic(nn.Module):
         laser, orientation, distance, velocity = state
         state_value = self.critic(laser, orientation, distance, velocity)
 
-        _, _, dist = self.actor(laser, orientation, distance, velocity)
+        action_mean, action_var = self.actor(laser, orientation, distance, velocity)
 
+        cov_mat = torch.diag(action_var.to(device))
+        dist = MultivariateNormal(action_mean.to(device), cov_mat)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
 

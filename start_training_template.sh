@@ -98,4 +98,4 @@ esac
 cd ~/Dokumente/SauRoN/
 echo "$args" > ./models/$number/args.txt
 
-~/anaconda3/envs/sauron/bin/python main.py $args
+mpirun -n 6 ~/anaconda3/envs/sauron/bin/python main.py $args

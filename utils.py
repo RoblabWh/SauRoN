@@ -217,21 +217,16 @@ class Logger(object):
         self.actor_var_linvel.append(actor_var_linvel)
         self.actor_var_angvel.append(actor_var_angvel)
 
-    def summary_actor_output(self):
+    def summary_actor_output(self, actor_mean_linvel, actor_mean_angvel, actor_var_linvel, actor_var_angvel):
         if self.logging:
-            self.writer.add_scalars('actor_output', {'Mean LinVel': np.mean(self.actor_mean_linvel),
-                                                     'Mean AngVel': np.mean(self.actor_mean_angvel),
-                                                     'Variance LinVel': np.mean(self.actor_var_linvel),
-                                                     'Variance AngVel': np.mean(self.actor_var_angvel)}, self.episode)
-        self.actor_mean_linvel = []
-        self.actor_mean_angvel = []
-        self.actor_var_linvel = []
-        self.actor_var_angvel = []
+            self.writer.add_scalars('actor_output', {'Mean LinVel': actor_mean_linvel,
+                                                     'Mean AngVel': actor_mean_angvel,
+                                                     'Variance LinVel': actor_var_linvel,
+                                                     'Variance AngVel': actor_var_angvel}, self.episode)
 
-    def summary_objective(self):
+    def summary_objective(self, objective_reached):
         if self.logging:
-            self.writer.add_scalar('percentage_objective_reached', self.percentage_objective_reached(), self.episode)
-        self.objective_reached = 0
+            self.writer.add_scalar('percentage_objective_reached', objective_reached, self.episode)
 
     def add_reward(self, reward):
         self.scalar_summary('reward', reward)
@@ -251,6 +246,13 @@ class Logger(object):
 
     def set_number_of_agents(self, number_of_agents):
         self.number_of_agents = number_of_agents
+
+    def clear_summary(self):
+        self.actor_mean_linvel = []
+        self.actor_mean_angvel = []
+        self.actor_var_linvel = []
+        self.actor_var_angvel = []
+        self.objective_reached = 0
 
     def close(self):
         self.writer.close()

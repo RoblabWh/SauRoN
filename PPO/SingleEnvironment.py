@@ -7,6 +7,7 @@ import time
 
 mpi_comm = mpi.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
+nprocs = mpi_comm.Get_size()
 
 class SwarmMemory():
     def __init__(self, robotsCount = 0):
@@ -143,9 +144,8 @@ def train(env_name, env, solved_percentage, input_style,
           gamma, lr, betas, ckpt_folder, restore, tensorboard, sync_experience, scan_size=121, log_interval=10, batch_size=1):
 
     # Tensorboard
-    logger = None
+    logger = Logger(log_dir=ckpt_folder, update_interval=log_interval)
     if mpi_rank == 0:
-        logger = Logger(log_dir=ckpt_folder, update_interval=log_interval)
         logger.set_logging(tensorboard)
 
     memory = SwarmMemory(env.getNumberOfRobots())
@@ -173,10 +173,8 @@ def train(env_name, env, solved_percentage, input_style,
     starttime = time.time()
     for i_episode in range(1, max_episodes+1):
         states = env.reset()
-        robot_count = mpi_comm.reduce(env.getNumberOfRobots())
-        if mpi_rank == 0:
-            logger.set_episode(i_episode)
-            logger.set_number_of_agents(robot_count)
+        logger.set_episode(i_episode)
+        logger.set_number_of_agents(env.getNumberOfRobots())
 
         env_not_done = True
         for t in range(max_timesteps):
@@ -184,6 +182,7 @@ def train(env_name, env, solved_percentage, input_style,
             if env_not_done:
                 # Run old policy
                 actions = ppo.select_action(states, memory)
+                #print(f'actions {actions}', flush=True)
 
                 states, rewards, dones, reachedGoals = env.step(actions)
 
@@ -195,9 +194,7 @@ def train(env_name, env, solved_percentage, input_style,
             else:
                 states, rewards, dones, reachedGoals = [], [], [], []
 
-            reachedGoals = mpi_comm.reduce(reachedGoals)
-            if mpi_rank == 0:
-                logger.log_objective(reachedGoals)
+            logger.log_objective(reachedGoals)
 
             experience = mpi_comm.allreduce(len(memory))
             if experience >= sync_experience:
@@ -220,7 +217,7 @@ def train(env_name, env, solved_percentage, input_style,
                 avg_length += t
 
         done = False
-        if mpi_rank == 0 and logger.percentage_objective_reached() >= solved_percentage:
+        if logger.percentage_objective_reached() >= solved_percentage:
             print(f"Percentage of: {logger.percentage_objective_reached():.2f} reached!", flush=True)
             torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_solved.pth'.format(env_name))
             print('Save as solved!', flush=True)
@@ -230,11 +227,17 @@ def train(env_name, env, solved_percentage, input_style,
             break
 
         if i_episode % log_interval == 0:
+            #total_agents = mpi_comm.reduce(logger.number_of_agents)
             avg_length = mpi_comm.reduce(avg_length)
             running_reward = mpi_comm.reduce(running_reward)
+            actor_mean_linvel = mpi_comm.reduce(np.mean(logger.actor_mean_linvel))
+            actor_mean_angvel = mpi_comm.reduce(np.mean(logger.actor_mean_angvel))
+            actor_var_linvel = mpi_comm.reduce(np.mean(logger.actor_var_linvel))
+            actor_var_angvel = mpi_comm.reduce(np.mean(logger.actor_var_angvel))
+            objective_reached = mpi_comm.reduce(logger.percentage_objective_reached())
             if mpi_rank == 0:
-                avg_length = int(avg_length / log_interval)
-                running_reward = (running_reward / log_interval)
+                avg_length = int(avg_length / (log_interval * nprocs))
+                running_reward = (running_reward / (log_interval * nprocs))
 
                 if running_reward > best_reward:
                     best_reward = running_reward
@@ -244,13 +247,13 @@ def train(env_name, env, solved_percentage, input_style,
 
                 logger.scalar_summary('reward', running_reward)
                 logger.scalar_summary('Avg Steps', avg_length)
-                logger.summary_objective()
-                #logger.summary_actor_output()
+                logger.summary_objective(objective_reached / nprocs)
+                logger.summary_actor_output(actor_mean_linvel / nprocs, actor_mean_angvel / nprocs, actor_var_linvel / nprocs, actor_var_angvel / nprocs)
                 logger.summary_loss()
 
                 if not tensorboard:
                     print(f'Episode: {i_episode}, Avg reward: {running_reward:.2f}, Avg steps: {avg_length:.2f}', flush=True)
-
+            logger.clear_summary()
             running_reward, avg_length = 0, 0
 
     if mpi_rank == 0 and tensorboard:
