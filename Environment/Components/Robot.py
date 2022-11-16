@@ -19,6 +19,7 @@ class Robot:
     def __init__(self, position, startOrientation, station, args, walls, allStations, circleWalls):
         """
         :param position: tuple (float,float) -
+        :param position: tuple (float,float) -
             defines the robots starting position
         :param startOrientation: float -
             defines the robots starting orientation

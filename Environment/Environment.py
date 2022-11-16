@@ -163,12 +163,13 @@ class Environment:
         r_arrival = 20 # reward for reaching the goal
         r_collision = -5 # Robot crashed with a wall or another robot
         r_runOutOfTime = 0 # Robot has run out of time
+        living_penalty = -0.01 # Penalty for every step the robot is alive
         r_stop = -0.2 # Robot stood still
-        w_gp = 0.01
-        w_gn = 0.005
+        w_gp = 0.1
+        w_gn = 0.05
         w_d = 0.2 # weight for the distance
         w_w = -0.001
-        a_p = 0.002 # weight for the angle, always positive
+        a_p = 0.05 # weight for the angle, always positive
 
         if reachedPickup:
             reward = r_arrival
@@ -204,6 +205,7 @@ class Environment:
                 alpha_norm = 1 - goalangle
                 reward += a_p * alpha_norm
 
+            reward += living_penalty
             #print(np.around(reward, decimals=5))
 
             # PUBG Reward (only gets rewarded if it gets closer to the goal than previously)

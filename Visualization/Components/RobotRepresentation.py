@@ -34,6 +34,7 @@ class RobotRepresentation:
         brightness = 235 - (int((colorIndex * 39) / 255) * 80)
         self.lineColor = QColor.fromHsv((colorIndex * 39) % 255, 255, brightness)
         self.lineColorNegAct = QColor.fromHsv((colorIndex * 39) % 255, 255, brightness-100)
+        self.colorIndex = colorIndex
 
 
     def paint(self, painter, sonarShowing):
@@ -119,6 +120,14 @@ class RobotRepresentation:
             self.dirV = dirV
             self.pieSliceBorders = pieSliceBorders
             self.sensorPos = sensorPos
+
+            if self.isActive:
+                brightness = 235 - (int((self.colorIndex * 39) / 255) * 80)
+                self.lineColor = QColor.fromHsv((self.colorIndex * 39) % 255, 255, brightness)
+                self.lineColorNegAct = QColor.fromHsv((self.colorIndex * 39) % 255, 255, brightness - 100)
+            else:
+                self.lineColor = QColor.fromHsv(0, 0, 74)
+                self.lineColorNegAct = QColor.fromHsv(0, 0, 74)
 
             if activations is not None:
                 max = np.max(activations)
