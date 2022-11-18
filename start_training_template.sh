@@ -96,6 +96,10 @@ esac
 
 
 cd ~/Dokumente/SauRoN/
+mkdir ./models/$number
+source "/home/nex/anaconda3/etc/profile.d/conda.sh"
+export PATH="/home/nex/anaconda3/bin:$PATH"
+conda activate sauron
 echo "$args" > ./models/$number/args.txt
 
-mpirun -n 6 ~/anaconda3/envs/sauron/bin/python main.py $args
+python main.py $args

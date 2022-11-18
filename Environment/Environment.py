@@ -179,10 +179,11 @@ class Environment:
             reward = r_collision
         else:
 
-            if dist_old > dist_new:
-                reward += w_gp * (dist_old - dist_new)
-            else:
-                reward += w_gn * (dist_old - dist_new)
+            # reward for moving towards the goal PRIMITIVE
+            # if dist_old > dist_new:
+            #     reward += w_gp * (dist_old - dist_new)
+            # else:
+            #     reward += w_gn * (dist_old - dist_new)
 
             #TODO compute velocity discount factor (reward robot for moving slower linear)
             # linvel = robot.getLinearVelocity()
@@ -205,15 +206,15 @@ class Environment:
                 alpha_norm = 1 - goalangle
                 reward += a_p * alpha_norm
 
-            reward += living_penalty
+            #reward += living_penalty
             #print(np.around(reward, decimals=5))
 
             # PUBG Reward (only gets rewarded if it gets closer to the goal than previously)
-            # if dist_old == dist_new:
-            #     reward += r_stop
-            # if dist_new < robot.initialGoalDist:
-            #     reward += w_d * (robot.initialGoalDist - dist_new)
-            #     robot.initialGoalDist = dist_new
+            if dist_old == dist_new:
+                reward += r_stop
+            if dist_new < robot.initialGoalDist:
+                reward += w_d * (robot.initialGoalDist - dist_new)
+                robot.initialGoalDist = dist_new
 
             # abs_ang_vel = np.abs(robot.getAngularVelocity())
             # if abs_ang_vel > 0.7:

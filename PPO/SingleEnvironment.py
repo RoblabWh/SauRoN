@@ -241,7 +241,7 @@ def train(env_name, env, solved_percentage, input_style,
 
                 if running_reward > best_reward:
                     best_reward = running_reward
-                    torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_best_e{}.pth'.format(env_name, i_episode))
+                    torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_best.pth'.format(env_name, i_episode))
                     print(f'Best performance with avg reward of {best_reward:.2f} saved at episode {i_episode}.', flush=True)
                     print(f'Percentage of objective reached: {logger.percentage_objective_reached():.4f}', flush=True)
 

@@ -22,20 +22,20 @@ for filename in os.listdir(svg_path):
 level_files.sort()
 
 level_files = ['SimpleObstacles.svg', 'tunnel.svg', 'svg3_tareq.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg']
-level_files = ['Simple.svg']
-ckpt_folder = './models/119'
-model_name = "last_current"
+level_files = ['SimpleObstacles.svg']
+ckpt_folder = './models/banal'
+model_name = "model"
 #model_name = "model_best"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default=ckpt_folder, help='Location to save checkpoint models')
 parser.add_argument('--model_name', default=model_name, help='Name of the modelfile')
-parser.add_argument('--mode', default='train', help='choose train or test')
+parser.add_argument('--mode', default='test', help='choose train or test')
 
 
 # Train Parameters
 
-parser.add_argument('--restore', default=True, action='store_true', help='Restore and go on training?')
+parser.add_argument('--restore', default=False, action='store_true', help='Restore and go on training?')
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net')
 parser.add_argument('--steps', type=int, default=1000, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=int, default=10000000, help='Maximum Number of Episodes')
@@ -73,13 +73,14 @@ parser.add_argument('--visualization', type=str, default="single", help="Visuali
 parser.add_argument('--tensorboard', type=str2bool, default=True, help='Use tensorboard')
 parser.add_argument('--print_interval', type=int, default=1, help='how many episodes to print the results out')
 parser.add_argument('--solved_percentage', type=float, default=0.99, help='stop training if objective is reached to this percentage')
-parser.add_argument('--log_interval', type=int, default=3, help='how many episodes to log into tensorboard. Also regulates how solved percentage is calculated')
+parser.add_argument('--log_interval', type=int, default=10, help='how many episodes to log into tensorboard. Also regulates how solved percentage is calculated')
 parser.add_argument('--render', default=False, action='store_true', help='Render?')
 parser.add_argument('--scale_factor', type=int, default=55, help='Scale Factor for Environment')
 parser.add_argument('--display_normals', type=bool, default=True,
                     help='Determines whether the normals of a wall are shown in the map.')
 args = parser.parse_args()
 check_args(args)
+print(args)
 
 if mpi_rank == 0:
     print("Level files: ", args.level_files, flush=True)
