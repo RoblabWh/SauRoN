@@ -1,4 +1,4 @@
-from PPO.PPOAlgorithm import PPO
+from PPO.Algorithm import PPO
 from utils import Logger
 import numpy as np
 import torch

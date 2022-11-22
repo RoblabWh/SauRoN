@@ -1,4 +1,4 @@
-from PPO.SingleEnvironment import train, test
+from PPO.Environment import train, test
 from Environment.Environment import Environment
 from utils import str2bool, check_args
 
@@ -30,7 +30,7 @@ model_name = "model"
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default=ckpt_folder, help='Location to save checkpoint models')
 parser.add_argument('--model_name', default=model_name, help='Name of the modelfile')
-parser.add_argument('--mode', default='test', help='choose train or test')
+parser.add_argument('--mode', default='train', help='choose train or test')
 
 
 # Train Parameters
