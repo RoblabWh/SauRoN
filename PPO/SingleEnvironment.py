@@ -250,6 +250,7 @@ def train(env_name, env, solved_percentage, input_style,
                 logger.summary_objective(objective_reached / nprocs)
                 logger.summary_actor_output(actor_mean_linvel / nprocs, actor_mean_angvel / nprocs, actor_var_linvel / nprocs, actor_var_angvel / nprocs)
                 logger.summary_loss()
+                logger.summary_state_value()
 
                 if not tensorboard:
                     print(f'Episode: {i_episode}, Avg reward: {running_reward:.2f}, Avg steps: {avg_length:.2f}', flush=True)

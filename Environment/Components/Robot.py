@@ -91,6 +91,8 @@ class Robot:
         #reward variables
         goalDist = math.sqrt((self.goalX - self.startposX) ** 2 + (self.goalY - self.startposY) ** 2)
         self.initialGoalDist = goalDist
+        self.stepsAlive = 0
+        self.maxSteps = args.steps
 
         self.walls = walls
         self.circleWalls = circleWalls
@@ -181,6 +183,7 @@ class Robot:
 
         self.stateLidar = []
 
+        self.stepsAlive = 0
         self.distances = []
         self.collisionDistances = []
         self.collisionDistancesRobots = []
@@ -270,6 +273,8 @@ class Robot:
         deltaDir = direction - oldDir
 
         goalDist = math.sqrt((posX-goalX)**2+(posY-goalY)**2)
+
+        self.stepsAlive += 1
 
         frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist, direction]
         #print("linVel: ", linVel, "angVel: ", angVel)

@@ -22,10 +22,10 @@ for filename in os.listdir(svg_path):
 level_files.sort()
 
 level_files = ['SimpleObstacles.svg', 'tunnel.svg', 'svg3_tareq.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg']
-level_files = ['SimpleObstacles.svg']
-ckpt_folder = './models/banal'
+level_files = ['svg3_tareq.svg']
+ckpt_folder = './models/weekend'
 model_name = "model"
-#model_name = "model_best"
+#model_name = "model_best_current"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default=ckpt_folder, help='Location to save checkpoint models')
@@ -37,18 +37,18 @@ parser.add_argument('--mode', default='test', help='choose train or test')
 
 parser.add_argument('--restore', default=False, action='store_true', help='Restore and go on training?')
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net')
-parser.add_argument('--steps', type=int, default=1000, help='Steps in Environment per Episode')
+parser.add_argument('--steps', type=int, default=2000, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=int, default=10000000, help='Maximum Number of Episodes')
-parser.add_argument('--update_experience', type=int, default=128, help='how many experiences to update the policy')
-parser.add_argument('--batch_size', type=int, default=1, help='batch size')
+parser.add_argument('--update_experience', type=int, default=100000, help='how many experiences to update the policy')
+parser.add_argument('--batch_size', type=int, default=100, help='batch size')
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)') # TODO currently not used
-parser.add_argument('--K_epochs', type=int, default=4, help='update the policy K times')
+parser.add_argument('--K_epochs', type=int, default=20, help='update the policy K times')
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
 parser.add_argument('--input_style', default='laser', help='image or laser')
 parser.add_argument('--image_size', type=float, default=256, help='size of the image that goes into the neural net')
-parser.add_argument('--sync_experience', type=int, default=128, help='how often to sync the experience')
+parser.add_argument('--sync_experience', type=int, default=10000, help='how often to sync the experience')
 
 
 # Simulation settings

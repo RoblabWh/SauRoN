@@ -170,6 +170,7 @@ class Logger(object):
         self.actor_var_linvel = []
         self.actor_var_angvel = []
         self.update_interval = update_interval
+        self.state_value = []
 
         #objective
         self.objective_reached = 0
@@ -193,6 +194,14 @@ class Logger(object):
             dist = torch.rand(4, 4).to(device)
             vel = torch.rand(4, 4, 2).to(device)
             self.writer.add_graph(model, (laser, ori, dist, vel))
+
+    def add_state_value(self, state_value):
+        self.state_value.append(state_value)
+
+    def summary_state_value(self):
+        if self.logging:
+            self.writer.add_scalar('state_value', np.mean(self.state_value), self.episode)
+            self.state_value = []
 
     def add_loss(self, loss, entropy, critic_loss, actor_loss):
         self.loss.append(loss)
