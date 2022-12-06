@@ -34,7 +34,7 @@ class Inputspace(nn.Module):
             features_scan = (int(in_f)) * 24
 
         self.flatten = nn.Flatten()
-        lidar_out_features = 192
+        lidar_out_features = 32
         self.lidar_flat = nn.Linear(in_features=features_scan, out_features=lidar_out_features)
         initialize_hidden_weights(self.lidar_flat)
         self.other_flat = nn.Linear(in_features=20, out_features=64)
@@ -57,9 +57,9 @@ class Inputspace(nn.Module):
         velocity_flat = self.flatten(velocity)
         concat = torch.cat((orientation_flat, distance_flat, velocity_flat), dim=1)
         other_dense = F.relu(self.other_flat(concat))
-        densed = torch.cat((laser_flat, other_dense), dim=1)
+        concat_all = torch.cat((laser_flat, other_dense), dim=1)
         #concat = torch.cat([laser_flat, orientation_flat, distance_flat, velocity_flat], dim=1)
-        #densed = F.relu(self.concated_some(concat_all))
+        densed = F.relu(self.concated_some(concat_all))
 
         return densed
 
@@ -193,6 +193,21 @@ class PPO:
         print('Saving current weights to ' + ckpt_folder + '/' + env_name + '_current.pth')
         torch.save(self.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_current.pth'.format(env_name))
 
+    def get_advantages(self, values, masks, rewards):
+        returns = []
+        gae = 0
+        a = [ai.unsqueeze(0) for ai in values]
+        a.append(torch.tensor([0.], requires_grad=True).to(device))
+        values = torch.cat(a).squeeze(0)
+        for i in reversed(range(len(rewards))):
+            delta = rewards[i] + self.gamma * values[i + 1] * masks[i] - values[i]
+            gae = delta + self.gamma * 0.95 * masks[i] * gae
+            returns.insert(0, gae + values[i])
+
+        returns = torch.FloatTensor(returns).to(device)
+        adv = returns - values[:-1]
+        return returns, (adv - adv.mean()) / (adv.std() + 1e-10)
+
     def update(self, memory, batch_size):
         # Monte Carlo estimation of rewards
 
@@ -208,25 +223,38 @@ class PPO:
 
         # computes the discounted reward for every robots in memory
         rewards = []
+        masks = []
         for robotmemory in memory.robotMemory:
-            discounted_reward = 0
             _rewards = []
+            _masks = []
             for reward, is_terminal in zip(reversed(robotmemory.rewards), reversed(robotmemory.is_terminals)):
-                if is_terminal:
-                    discounted_reward = 0
-                discounted_reward = reward + self.gamma * discounted_reward
-                _rewards.insert(0, discounted_reward)
-                if is_terminal:
-                    discounted_reward = 0
+                _masks.insert(0, 1 - is_terminal)
+                _rewards.insert(0, reward)
             rewards.append(_rewards)
+            masks.append(_masks)
+
+        # for robotmemory in memory.robotMemory:
+        #     discounted_reward = 0
+        #     _rewards = []
+        #     for reward, is_terminal in zip(reversed(robotmemory.rewards), reversed(robotmemory.is_terminals)):
+        #         if is_terminal:
+        #             discounted_reward = 0
+        #         discounted_reward = reward + self.gamma * discounted_reward
+        #         _rewards.insert(0, discounted_reward)
+        #         if is_terminal:
+        #             discounted_reward = 0
+        #     rewards.append(_rewards)
 
         # flatten the rewards
         rewards = [item for sublist in rewards for item in sublist]
+        masks = [item for sublist in masks for item in sublist]
 
         # Normalize rewards
         rewards = torch.tensor(rewards).to(device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
         rewards = rewards.type(torch.float32)
+
+        masks = torch.tensor(masks).to(device)
 
         # convert list to tensor
         old_states = memory.getStatesOfAllRobots()
@@ -237,11 +265,11 @@ class PPO:
         # Train policy for K epochs: sampling and updating
         for _ in range(self.K_epochs):
             for rewards_minibatch, old_laser_minibatch, old_orientation_minibatch, old_distance_minibatch, \
-                old_velocity_minibatch, old_actions_minibatch, old_logprobs_minibatch in \
+                old_velocity_minibatch, old_actions_minibatch, old_logprobs_minibatch, mask_minibatch in \
                 zip(torch.tensor_split(rewards, batch_size), torch.tensor_split(laser, batch_size),
                     torch.tensor_split(orientation, batch_size), torch.tensor_split(distance, batch_size),
                     torch.tensor_split(velocity, batch_size), torch.tensor_split(old_actions, batch_size),
-                    torch.tensor_split(old_logprobs, batch_size)):
+                    torch.tensor_split(old_logprobs, batch_size), torch.tensor_split(masks, batch_size)):
                 # Evaluate old actions and values using current policy
                 old_states_minibatch = [old_laser_minibatch, old_orientation_minibatch, old_distance_minibatch, old_velocity_minibatch]
                 logprobs, state_values, dist_entropy = self.policy.evaluate(old_states_minibatch, old_actions_minibatch)
@@ -250,8 +278,9 @@ class PPO:
                 ratios = torch.exp(logprobs - old_logprobs_minibatch.detach())
 
                 # Advantages
-                advantages = rewards_minibatch - state_values.detach()
-                advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
+                returns, advantages = self.get_advantages(state_values, mask_minibatch, rewards_minibatch)
+                #advantages = rewards_minibatch - state_values.detach()
+                #advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
 
                 # Actor loss using Surrogate loss
                 surr1 = ratios * advantages
@@ -261,7 +290,7 @@ class PPO:
 
                 # TODO CLIP VALUE LOSS ? Probably not necessary as according to:
                 # https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/
-                critic_loss_ = 0.5 * self.MSE_loss(rewards_minibatch, state_values)
+                critic_loss_ = 0.5 * self.MSE_loss(returns, state_values)
                 critic_loss = critic_loss_
 
                 # Total loss

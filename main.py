@@ -23,7 +23,7 @@ level_files = ['SimpleObstacles.svg', 'tunnel.svg', 'svg3_tareq.svg', 'engstelle
 level_files = [level_files[1]]
 ckpt_folder = './models/debug'
 model_name = "model"
-#model_name = "model_best"
+#model_name = "model_best_current"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default=ckpt_folder, help='Location to save checkpoint models')
@@ -40,7 +40,7 @@ parser.add_argument('--max_episodes', type=float, default="inf", help='Maximum N
 parser.add_argument('--update_experience', type=int, default=250, help='how many experiences to update the policy')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)') # TODO currently not used
-parser.add_argument('--K_epochs', type=int, default=4, help='update the policy K times')
+parser.add_argument('--K_epochs', type=int, default=20, help='update the policy K times')
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
