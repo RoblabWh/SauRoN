@@ -9,9 +9,7 @@ from PyQt5.QtWidgets import QApplication
 
 from mpi4py import MPI as mpi
 
-mpi_rank = mpi.COMM_WORLD.Get_rank()
-mpi_size = mpi.COMM_WORLD.Get_size()
-print("mpi_size: ", mpi_size)
+MPI_RANK = mpi.COMM_WORLD.Get_rank()
 
 # use all svg files in the svg folder as default level_files
 level_files = []
@@ -22,8 +20,8 @@ for filename in os.listdir(svg_path):
 level_files.sort()
 
 level_files = ['SimpleObstacles.svg', 'tunnel.svg', 'svg3_tareq.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg']
-level_files = ['SimpleObstacles.svg']
-ckpt_folder = './models/banal'
+level_files = [level_files[1]]
+ckpt_folder = './models/debug'
 model_name = "model"
 #model_name = "model_best"
 
@@ -38,8 +36,8 @@ parser.add_argument('--mode', default='train', help='choose train or test')
 parser.add_argument('--restore', default=False, action='store_true', help='Restore and go on training?')
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net')
 parser.add_argument('--steps', type=int, default=1000, help='Steps in Environment per Episode')
-parser.add_argument('--max_episodes', type=int, default=10000000, help='Maximum Number of Episodes')
-parser.add_argument('--update_experience', type=int, default=128, help='how many experiences to update the policy')
+parser.add_argument('--max_episodes', type=float, default="inf", help='Maximum Number of Episodes')
+parser.add_argument('--update_experience', type=int, default=250, help='how many experiences to update the policy')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)') # TODO currently not used
 parser.add_argument('--K_epochs', type=int, default=4, help='update the policy K times')
@@ -48,7 +46,6 @@ parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
 parser.add_argument('--input_style', default='laser', help='image or laser')
 parser.add_argument('--image_size', type=float, default=256, help='size of the image that goes into the neural net')
-parser.add_argument('--sync_experience', type=int, default=128, help='how often to sync the experience')
 
 
 # Simulation settings
@@ -70,26 +67,29 @@ parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=
 # Visualization & Managing settings
 
 parser.add_argument('--visualization', type=str, default="single", help="Visualization mode. none: Don't use any visualization; single: Show only the visualization of one process; all: Show all visualizations")
+parser.add_argument('--visualization_paused', action='store_true', help="Start the visualization toggled to paused.")
 parser.add_argument('--tensorboard', type=str2bool, default=True, help='Use tensorboard')
 parser.add_argument('--print_interval', type=int, default=1, help='how many episodes to print the results out')
 parser.add_argument('--solved_percentage', type=float, default=0.99, help='stop training if objective is reached to this percentage')
-parser.add_argument('--log_interval', type=int, default=10, help='how many episodes to log into tensorboard. Also regulates how solved percentage is calculated')
+parser.add_argument('--log_interval', type=int, default=1, help='how many episodes to log into tensorboard. Also regulates how solved percentage is calculated')
 parser.add_argument('--render', default=False, action='store_true', help='Render?')
 parser.add_argument('--scale_factor', type=int, default=55, help='Scale Factor for Environment')
 parser.add_argument('--display_normals', type=bool, default=True,
                     help='Determines whether the normals of a wall are shown in the map.')
 args = parser.parse_args()
+if not os.path.exists(args.ckpt_folder):
+    os.mkdir(args.ckpt_folder)
 check_args(args)
 print(args)
 
-if mpi_rank == 0:
+if MPI_RANK == 0:
     print("Level files: ", args.level_files, flush=True)
 
-level_index = mpi_rank % len(args.level_files)
+level_index = MPI_RANK % len(args.level_files)
 
 app = None
 if args.visualization == "single":
-    if mpi_rank == 0:
+    if MPI_RANK == 0:
         app = QApplication(sys.argv)
 elif args.visualization == "all":
     app = QApplication(sys.argv)
@@ -106,7 +106,7 @@ if args.mode == 'train':
           action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
           gamma=args.gamma, lr=args.lr, betas=[0.9, 0.990], ckpt_folder=args.ckpt_folder,
           restore=args.restore, log_interval=args.log_interval, scan_size=args.image_size,
-          batch_size=args.batch_size, tensorboard=args.tensorboard, sync_experience=args.sync_experience)
+          batch_size=args.batch_size, tensorboard=args.tensorboard)
 elif args.mode == 'test':
     test(args.model_name, env, input_style=args.input_style,
          render=args.render, action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,

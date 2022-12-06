@@ -48,7 +48,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.setGeometry(200, 100, self.width, self.height)
 
         self.sonarShowing = True
-        self.simShowing = True
+        self.simShowing = not args.visualization_paused
         self.SaveNetClicked = False
         self.checkpoint_folder = None
         self.env_name = None
@@ -98,7 +98,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.btSimulation.setFixedWidth(150)
 
         self.lbSteps = QLabel(self)
-        self.lbSteps.setText("0")
+        self.lbSteps.setText("Steps: 0")
         self.lbSteps.setFont(QFont("Helvetica", 12, QFont.Black, ))
         self.lbSteps.setStyleSheet("color: rgba(0,0 ,0, 96);")
 
@@ -168,12 +168,18 @@ class SimulationWindow(QtWidgets.QMainWindow):
             hbox.addWidget(self.lbEpisodes)
 
         else:
+            self.lbTrainings = QLabel(self)
+            self.lbTrainings.setText("Trained: 0")
+            self.lbTrainings.setFont(QFont("Helvetica", 12, QFont.Black, ))
+            self.lbTrainings.setStyleSheet("color: rgba(0,0 ,0, 96);")
+
             hbox.addWidget(self.btSimulation)
             hbox.addWidget(self.btSonar)
             hbox.addWidget(self.btSaveNet)
             hbox.addWidget(spacingWidget)
             hbox.addWidget(self.lbSteps)
             hbox.addWidget(self.lbEpisodes)
+            hbox.addWidget(self.lbTrainings)
 
         self.setMenuWidget(self.optionsWidget)
 
@@ -215,15 +221,16 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         painter = QPainter(self)
 
-        # for station in self.stations:
-        #     station.paint(painter)
-        for i, robot in enumerate(self.robotRepresentations):
-            self.stations[i].paint(painter)
-            sonarShowing = self.sonarShowing
-            if self.args.mode == 'test':
-                if i != self.getActivationRobotIndex():
-                    sonarShowing = False
-            robot.paint(painter, sonarShowing)
+        if self.simShowing:
+            # for station in self.stations:
+            #     station.paint(painter)
+            for i, robot in enumerate(self.robotRepresentations):
+                self.stations[i].paint(painter)
+                sonarShowing = self.sonarShowing
+                if self.args.mode == 'test':
+                    if i != self.getActivationRobotIndex():
+                        sonarShowing = False
+                robot.paint(painter, sonarShowing)
         for wall in self.walls:
             wall.paint(painter, self.scaleFactor, self.args.display_normals)
 
@@ -232,15 +239,19 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         painter.end()
 
-    def updateRobot(self, robot, num, stepsLeft, activations, episode):
+    def updateRobot(self, robot, num, activations):
         if self.delay > 0: time.sleep(self.delay)
 
         self.robotRepresentations[num].update(robot.getPosX(), robot.getPosY(), robot.getDirectionAngle(), robot.lidarHits,
                                               self.simShowing, robot.isActive(), robot.debugAngle, activations,
                                               robot.getPieSliceWalls(), robot.posSensor)
-        if self.simShowing:
-            self.lbSteps.setText("Steps: " + str(stepsLeft))
-            self.lbEpisodes.setText("Episode: " + str(episode))
+
+    def updateInfotext(self, steps, episode):
+        self.lbSteps.setText("Steps: " + str(steps))
+        self.lbEpisodes.setText("Episode: " + str(episode))
+
+    def updateTrainingInfotext(self, counter):
+        self.lbTrainings.setText("Trained: " + str(counter))
 
     def paintUpdates(self):
         self.update()

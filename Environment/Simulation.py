@@ -181,9 +181,10 @@ class Simulation:
             if self.simulationWindow != None:
                 for i, robot in enumerate(self.robots):
                     activationsR = activations[i] if activations is not None else None
-                    self.simulationWindow.updateRobot(robot, i, self.steps - stepsLeft, activationsR, self.episode)
+                    self.simulationWindow.updateRobot(robot, i, activationsR)
                 self.simulationWindow.updateTrafficLights(proximity)
                 self.simulationWindow.paintUpdates()
+                self.simulationWindow.updateInfotext(self.steps - stepsLeft, self.episode)
         return robotsTerminations
 
     def showWindow(self, app):
@@ -222,3 +223,7 @@ class Simulation:
         levelNameSVG = self.levelFiles[self.levelID]
         levelName = levelNameSVG.split('.', 1)[0]
         return levelName
+
+    def updateTrainingCounter(self, counter):
+        if self.hasUI:
+            self.simulationWindow.updateTrainingInfotext(counter)

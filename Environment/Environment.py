@@ -251,4 +251,5 @@ class Environment:
     def getNumberOfRobots(self):
         return self.simulation.getCurrentNumberOfRobots()
 
-
+    def updateTrainingCounter(self, counter):
+        self.simulation.updateTrainingCounter(counter)
