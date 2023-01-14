@@ -1,15 +1,12 @@
 from PPO.Environment import train, test
 from Environment.Environment import Environment
 from utils import str2bool, check_args
-
+import random
 import sys
 import os
 import argparse
 from PyQt5.QtWidgets import QApplication
 
-from mpi4py import MPI as mpi
-
-MPI_RANK = mpi.COMM_WORLD.Get_rank()
 
 # use all svg files in the svg folder as default level_files
 level_files = []
@@ -19,34 +16,45 @@ for filename in os.listdir(svg_path):
         level_files.append(filename)
 level_files.sort()
 
-level_files = ['SimpleObstacles.svg', 'tunnel.svg', 'svg3_tareq.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg']
-level_files = [level_files[1]]
-ckpt_folder = './models/debug'
-model_name = "model"
-#model_name = "model_best_current"
+#level_files = ['SimpleObstacles.svg', 'tunnel2.svg', 'svg3_tareq2.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg']
+#level_files = [level_files[2]]
+level_files = ['svg3_tareq2.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg','SimpleObstacles.svg']
+for _ in range(20):
+    level_files.append('ez.svg')
+for _ in range(10):
+    level_files.append('ez2.svg')
+for _ in range(2):
+    level_files.append('ez3.svg')
+    level_files.append('ez4.svg')
+# shuffle the level files
+random.shuffle(level_files)
+
+level_files = ['ez.svg', 'ez2.svg', 'ez3.svg', 'ez4.svg', 'Simple.svg', 'Funnel.svg', 'tunnel2.svg', 'svg3_tareq2.svg', 'SimpleObstacles.svg', 'engstelle.svg','svg2_tareq2.svg', 'Zipper.svg']
+#level_files = ['ez.svg', 'ez2.svg', 'ez3.svg', 'ez4.svg', 'ez5.svg']
+level_files = ['tunnel.svg']
+ckpt_folder = './models/finaltest_0'
+model_name = "model_best"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default=ckpt_folder, help='Location to save checkpoint models')
 parser.add_argument('--model_name', default=model_name, help='Name of the modelfile')
-parser.add_argument('--mode', default='train', help='choose train or test')
-
+parser.add_argument('--mode', default='test', help='choose train or test')
 
 # Train Parameters
 
 parser.add_argument('--restore', default=False, action='store_true', help='Restore and go on training?')
-parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net')
-parser.add_argument('--steps', type=int, default=1000, help='Steps in Environment per Episode')
+parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net') # TODO not properly implemented
+parser.add_argument('--steps', type=int, default=3000, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=float, default="inf", help='Maximum Number of Episodes')
-parser.add_argument('--update_experience', type=int, default=250, help='how many experiences to update the policy')
-parser.add_argument('--batch_size', type=int, default=1, help='batch size')
+parser.add_argument('--update_experience', type=int, default=40000, help='how many experiences to update the policy')
+parser.add_argument('--batches', type=int, default=15, help='number of batches')
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)') # TODO currently not used
-parser.add_argument('--K_epochs', type=int, default=20, help='update the policy K times')
+parser.add_argument('--K_epochs', type=int, default=15, help='update the policy K times')
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
-parser.add_argument('--input_style', default='laser', help='image or laser')
+parser.add_argument('--input_style', default='laser', help='image or laser') # image not advised to use but functional
 parser.add_argument('--image_size', type=float, default=256, help='size of the image that goes into the neural net')
-
 
 # Simulation settings
 
@@ -58,9 +66,9 @@ parser.add_argument('--sim_time_step', type=float, default=0.1, help='Time betwe
 parser.add_argument('--number_of_rays', type=int, default=1081, help='The number of Rays emittet by the laser')
 parser.add_argument('--field_of_view', type=int, default=270, help='The lidars field of view in degree')
 parser.add_argument('--has_pie_slice', type=str2bool, default='False',
-                    help='Determines if an Object is places on top of the robot to reflect other robots lidar')
+                    help='Determines if an Object is places on top of the robot to reflect other robots lidar') # not advised to use but functional
 parser.add_argument('--collide_other_targets', type=str2bool, default=False,
-                    help='Determines whether the robot collides with targets of other robots (or passes through them)')
+                    help='Determines whether the robot collides with targets of other robots (or passes through them)') # not advised to use but functional
 parser.add_argument('--manually', type=str2bool, nargs='?', const=True, default=False,
                     help='Moving robot manually with wasd')
 
@@ -71,7 +79,7 @@ parser.add_argument('--visualization_paused', action='store_true', help="Start t
 parser.add_argument('--tensorboard', type=str2bool, default=True, help='Use tensorboard')
 parser.add_argument('--print_interval', type=int, default=1, help='how many episodes to print the results out')
 parser.add_argument('--solved_percentage', type=float, default=0.99, help='stop training if objective is reached to this percentage')
-parser.add_argument('--log_interval', type=int, default=1, help='how many episodes to log into tensorboard. Also regulates how solved percentage is calculated')
+parser.add_argument('--log_interval', type=int, default=20, help='how many episodes to log into tensorboard. Also regulates how solved percentage is calculated')
 parser.add_argument('--render', default=False, action='store_true', help='Render?')
 parser.add_argument('--scale_factor', type=int, default=55, help='Scale Factor for Environment')
 parser.add_argument('--display_normals', type=bool, default=True,
@@ -82,21 +90,17 @@ if not os.path.exists(args.ckpt_folder):
 check_args(args)
 print(args)
 
-if MPI_RANK == 0:
-    print("Level files: ", args.level_files, flush=True)
-
-level_index = MPI_RANK % len(args.level_files)
+level_index = 0
 
 app = None
 if args.visualization == "single":
-    if MPI_RANK == 0:
-        app = QApplication(sys.argv)
+    app = QApplication(sys.argv)
 elif args.visualization == "all":
     app = QApplication(sys.argv)
 
 env = Environment(app, args, args.time_frames, level_index)
 
-# TODO schöner ???!!
+# TODO schöner ???!! @Niklas2
 if args.input_style == 'laser':
     args.image_size = args.number_of_rays
 
@@ -106,7 +110,7 @@ if args.mode == 'train':
           action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
           gamma=args.gamma, lr=args.lr, betas=[0.9, 0.990], ckpt_folder=args.ckpt_folder,
           restore=args.restore, log_interval=args.log_interval, scan_size=args.image_size,
-          batch_size=args.batch_size, tensorboard=args.tensorboard)
+          batches=args.batches, tensorboard=args.tensorboard)
 elif args.mode == 'test':
     test(args.model_name, env, input_style=args.input_style,
          render=args.render, action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,

@@ -1,8 +1,10 @@
 *.pyc
 __pycache__
+__init__.py
 venv
 scans
 models
 old_models
 start_tensorboard.sh
 .idea/*
+test.stats

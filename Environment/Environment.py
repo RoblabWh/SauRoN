@@ -236,31 +236,56 @@ class Environment:
         :return: returns the result of the fitness function
         """
 
+        living_factor = self.steps_left / self.steps
         reward = 0
-        r_arrival = 20 # reward for reaching the goal
-        r_collision = -1 # Robot crashed with a wall or another robot
+        r_arrival = 50 # reward for reaching the goal
+        r_collision = -7 # Robot crashed with a wall or another robot
         r_runOutOfTime = 0 # Robot has run out of time
         living_penalty = -0.01 # Penalty for every step the robot is alive
         r_stop = -0.2 # Robot stood still
-        w_gp = 0.1
-        w_gn = 0.05
+        w_g = 0.5
+        w_gn = 0.3
         w_d = 0.2 # weight for the distance
-        w_w = -0.001
-        a_p = 0.005 # weight for the angle, always positive
+        w_w = -0.01
+        a_p = 0.05 # weight for the angle, always positive
 
         if reachedPickup:
             reward = r_arrival
         elif runOutOfTime:
             reward = r_runOutOfTime
         elif collision:
-            reward = r_collision
+            reward = r_collision * living_factor
         else:
-
             # reward for moving towards the goal PRIMITIVE
-            # if dist_old > dist_new:
-            #     reward += w_gp * (dist_old - dist_new)
+            # if dist_new < 0.5:
+            #     reward += 1 + dist_new * 0.5
+            # el
+            if dist_old > dist_new:
+                reward += w_g * (dist_old - dist_new)
+            else:
+                reward += w_gn * (dist_old - dist_new)
+
+            if abs(dist_old - dist_new) < 0.001:
+                reward += r_stop
+
+            # Directional reward (look at the angle between the robot and the goal)
+            a1 = np.arctan2(robot.getGoalY() - robot.getPosY(), robot.getGoalX() - robot.getPosX())
+            a2 = np.arctan2(robot.getDirectionY(), robot.getDirectionX())
+            goalangle = np.abs(a1 - a2)
+            if goalangle < np.pi/4:
+                alpha_norm = 1 - goalangle
+                reward += a_p * alpha_norm
+
+            # wiggle reward
+            abs_ang_vel = np.abs(robot.getAngularVelocity())
+            if abs_ang_vel > 0.7:
+                reward += w_w * abs_ang_vel
+
+            # delta_dist = dist_old - dist_new
+            # if delta_dist > 0:
+            #     reward += w_g * delta_dist
             # else:
-            #     reward += w_gn * (dist_old - dist_new)
+            #     reward += w_gn * delta_dist
 
             #TODO compute velocity discount factor (reward robot for moving slower linear)
             # linvel = robot.getLinearVelocity()
@@ -275,27 +300,13 @@ class Environment:
             #     reward *= w_gn
             #print("reward after: ", reward)
 
-            # Directional reward (look at the angle between the robot and the goal)
-            a1 = np.arctan2(robot.getGoalY() - robot.getPosY(), robot.getGoalX() - robot.getPosX())
-            a2 = np.arctan2(robot.getDirectionY(), robot.getDirectionX())
-            goalangle = np.abs(a1 - a2)
-            if goalangle < np.pi/4:
-                alpha_norm = 1 - goalangle
-                reward += a_p * alpha_norm
-
             #reward += living_penalty
             #print(np.around(reward, decimals=5))
 
             # PUBG Reward (only gets rewarded if it gets closer to the goal than previously)
-            if dist_old == dist_new:
-                reward += r_stop
-            if dist_new < robot.initialGoalDist:
-                reward += w_d * (robot.initialGoalDist - dist_new)
-                robot.initialGoalDist = dist_new
-
-            # abs_ang_vel = np.abs(robot.getAngularVelocity())
-            # if abs_ang_vel > 0.7:
-            #     reward += w_w * abs_ang_vel
+            # if dist_new < robot.initialGoalDist:
+            #     reward += w_d * (robot.initialGoalDist - dist_new)
+            #     robot.initialGoalDist = dist_new
 
         return np.around(reward, decimals=5)
 
@@ -327,6 +338,9 @@ class Environment:
     # returns number of robots in the simulation
     def getNumberOfRobots(self):
         return self.simulation.getCurrentNumberOfRobots()
+
+    def getLevelFiles(self):
+        return self.simulation.levelFiles
 
     def updateTrainingCounter(self, counter):
         self.simulation.updateTrainingCounter(counter)

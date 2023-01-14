@@ -75,6 +75,7 @@ class Robot:
         #self.maxAngularVelocityFact = 1/self.maxAngularVelocity
         # Maximum distance in laserscan is 20 meters
         self.maxDistFact = 1/20
+        self.maxDistSim = 22
 
         #Pie Slice (chassy for better lidar detection as used with real robots)
         self.hasPieSlice = args.has_pie_slice
@@ -397,12 +398,12 @@ class Robot:
 
 
         # frame_lidar = []
-        target = (self.station.posX, self.station.posY)
+        target = [self.station.posX, self.station.posY]
         # target = (self.station.posX + (self.station.width / 2), self.station.posY + (self.station.length/2))
         distance = math.sqrt((self.getPosX() - target[0]) ** 2 + (self.getPosY() - target[1]) ** 2)
 
-        oriRobotV = (self.getDirectionX(), self.getDirectionY())
-        oriTargetV = ((self.getPosX() - target[0]),(self.getPosY() - target[1]))
+        oriRobotV = [self.getDirectionX(), self.getDirectionY()]
+        oriTargetV = [(self.getPosX() - target[0]),(self.getPosY() - target[1])]
         skalarProd = oriRobotV[0]*oriTargetV[0]+oriRobotV[1]*oriTargetV[1]
         oriTargetVLength = distance
         oriRobotVLength = 1
@@ -417,7 +418,7 @@ class Robot:
 
         angularDeviation = math.acos(ratio)
 
-        c = (self.getPosX()+oriRobotV[0], self.getPosY()+oriRobotV[1])
+        c = [self.getPosX()+oriRobotV[0], self.getPosY()+oriRobotV[1]]
         angularDeviation = angularDeviation - math.pi
         if ((target[0] - self.getPosX()) * (c[1] - self.getPosY()) - (target[1] - self.getPosY()) * (c[0] - self.getPosX())) < 0:
             angularDeviation = angularDeviation*-1
@@ -442,12 +443,11 @@ class Robot:
         #image = scan1DTo2D(self.lidarHits)
 
         currentTimestep = (steps - stepsLeft)/steps
-
         #distance = (distance * self.maxDistFact)
         #if distance > 1 : distance = 1
         # TODO: ?!?!?! why was debugAngle used??? answer: it was the correct idea, but it may be done with fewer code
         #frame_lidar = [distances, distance, np.asarray(orientation), np.array([self.getLinearVelocity(), self.getAngularVelocity()]), currentTimestep]
-        frame_lidar = [laser, np.asarray(orientation), distance, np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
+        frame_lidar = [laser, np.asarray(orientation), np.expand_dims(np.asarray(distance/self.maxDistSim), axis=0), np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
         #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateLidar) >= self.time_steps:
@@ -542,7 +542,7 @@ class Robot:
         """
         angX = math.cos(direction)
         angY = math.sin(direction)
-        return(angX,angY)
+        return [angX, angY]
 
     def collideWithTargetStationCircular(self):
         """

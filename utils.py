@@ -6,43 +6,8 @@ from PIL import Image
 import os
 import time
 
-from mpi4py import MPI
 import pickle
 
-MPI_SEND_LIMIT = 2**31
-
-def mpi_send(obj, comm:MPI.Comm, dest:int):
-    data = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-    comm.send(len(data), dest)
-    while len(data) > 0:
-        comm.Send(data[:MPI_SEND_LIMIT], dest)
-        data = data[MPI_SEND_LIMIT:]
-
-def mpi_recv(comm:MPI.Comm, source:int = MPI.ANY_SOURCE):
-    data = bytes()
-    status = MPI.Status()
-    datalen = comm.recv(status=status)
-    source = status.Get_source()
-    recv_buffer = bytearray(min(datalen, MPI_SEND_LIMIT))
-    while len(data) < datalen:
-        comm.Recv(recv_buffer, source=source, status=status)
-        data += recv_buffer[:status.Get_count()]
-    return pickle.loads(data)
-
-def mpi_reduce(obj, comm:MPI.Comm):
-    if comm.Get_rank() == 0:
-        for i in range(1, comm.Get_size()):
-            obj += mpi_recv(comm, i)
-        return obj
-    else:
-        mpi_send(obj, comm, 0)
-
-def mpi_comm_split(comm:MPI.Comm, color:int=0, key:int=0):
-    assert comm != MPI.COMM_WORLD
-
-    new_comm = comm.Split(color, key)
-    comm.Disconnect()
-    return new_comm
 
 def initialize_output_weights(m, out_type):
     if out_type == 'actor':
@@ -72,7 +37,7 @@ def initialize_hidden_weights(m):
 def normalize(tensor):
     return (tensor - tensor.mean()) / (tensor.std() + 1e-8)
 
-def statesToTensor(list):
+def statesToObservationsTensor(list):
     states = np.asarray(list, dtype=object)
     laser = np.array(states[:, :, 0].tolist())
     ori = np.array(states[:, :, 1].tolist())
@@ -81,6 +46,8 @@ def statesToTensor(list):
     return [torch.tensor(laser, dtype=torch.float32), torch.tensor(ori, dtype=torch.float32),
             torch.tensor(dist, dtype=torch.float32), torch.tensor(vel, dtype=torch.float32)]
 
+def torchToNumpy(tensor: torch.Tensor) -> np.ndarray:
+    return tensor.detach().cpu().numpy()
 # TODO maybe use this ???!?!!
 def _scan1DTo2D(lidarHits):
 
@@ -180,52 +147,42 @@ def timeit(f):
 # check if arguments are valid
 def check_args(args):
     assert args.image_size > 0, "Image size must be positive"
-    assert args.batch_size > 0, "Batch size must be positive"
+    assert args.batches > 0, "Batches must be positive"
     assert args.lr > 0, "Learning rate must be positive"
     assert args.max_episodes > 0, "Number of episodes must be positive"
     assert args.time_frames > 0, "Number of time frames must be positive"
     assert args.print_interval > 0, "Print every must be positive"
     assert args.number_of_rays > 0, "Number of scans must be positive"
     assert args.update_experience > 0, "Update experience must be positive"
-    assert args.update_experience > args.batch_size, "Update experience must be greater than batch size"
+    assert args.update_experience > args.batches, "Update experience must be greater than batch size"
     assert args.visualization == "none" or args.visualization == "single" or args.visualization == "all", "Visualization must be none, single or all"
     assert os.path.exists(args.ckpt_folder), "Checkpoint folder does not exist."
 
 class Logger(object):
-    def __init__(self, log_dir):
+    def __init__(self, log_dir, log_interval):
         self.writer = None
         self.log_dir = log_dir
+        self.log_interval = log_interval
         self.logging = False
         self.episode = 0
-        self.last_episode = 0
+        self.last_logging_episode = 0
         # loss
         self.loss = []
         self.entropy = []
         self.critic_loss = []
         self.actor_loss = []
-        self.temp_loss = []
-        self.temp_entropy = []
-        self.temp_critic_loss = []
-        self.temp_actor_loss = []
 
         self.actor_mean_linvel = []
         self.actor_mean_angvel = []
         self.actor_var_linvel = []
         self.actor_var_angvel = []
-        self.temp_actor_mean_linvel = []
-        self.temp_actor_mean_angvel = []
-        self.temp_actor_var_linvel = []
-        self.temp_actor_var_angvel = []
 
-        self.steps = 0
-        self.temp_steps = 0
         self.reward = 0
-        self.temp_reward = 0
 
         #objective
         self.objective_reached = 0
-        self.temp_objective_reached = 0
         self.number_of_agents = 0
+        self.steps_agents = 0
 
     def __del__(self):
         if self.logging:
@@ -247,116 +204,84 @@ class Logger(object):
             self.writer.add_graph(model, (laser, ori, dist, vel))
 
     def add_loss(self, loss, entropy, critic_loss, actor_loss):
-        self.temp_loss.append(loss)
-        self.temp_entropy.append(entropy)
-        self.temp_critic_loss.append(critic_loss)
-        self.temp_actor_loss.append(actor_loss)
+        self.loss.append(loss)
+        self.entropy.append(entropy)
+        self.critic_loss.append(critic_loss)
+        self.actor_loss.append(actor_loss)
 
-    def summary_loss(self, timepoint):
-        if self.episode > self.last_episode:
+    def summary_loss(self):
+        if self.episode > self.last_logging_episode:
             if self.logging and not len(self.loss) == 0:
                 self.writer.add_scalars('loss', {'loss': np.mean(self.loss),
                                                 'entropy': np.mean(self.entropy),
                                                 'critic_loss': np.mean(self.critic_loss),
-                                                'actor loss': np.mean(self.actor_loss)}, timepoint)
-            self.loss = []
-            self.entropy = []
-            self.critic_loss = []
-            self.actor_loss = []
+                                                'actor loss': np.mean(self.actor_loss)}, self.episode)
+
+    def add_step_agents(self, steps_agents):
+        self.steps_agents += steps_agents
 
     def add_actor_output(self, actor_mean_linvel, actor_mean_angvel, actor_var_linvel, actor_var_angvel):
-        self.temp_actor_mean_linvel.append(actor_mean_linvel)
-        self.temp_actor_mean_angvel.append(actor_mean_angvel)
-        self.temp_actor_var_linvel.append(actor_var_linvel)
-        self.temp_actor_var_angvel.append(actor_var_angvel)
+        self.actor_mean_linvel.append(actor_mean_linvel)
+        self.actor_mean_angvel.append(actor_mean_angvel)
+        self.actor_var_linvel.append(actor_var_linvel)
+        self.actor_var_angvel.append(actor_var_angvel)
 
-    def summary_actor_output(self, actor_mean_linvel, actor_mean_angvel, actor_var_linvel, actor_var_angvel, timepoint):
-        if self.logging and self.episode > self.last_episode:
-            self.writer.add_scalars('actor_output', {'Mean LinVel': actor_mean_linvel,
-                                                     'Mean AngVel': actor_mean_angvel,
-                                                     'Variance LinVel': actor_var_linvel,
-                                                     'Variance AngVel': actor_var_angvel}, timepoint)
+    def summary_actor_output(self):
+        if self.logging and self.episode > self.last_logging_episode:
+            self.writer.add_scalars('actor_output', {'Mean LinVel': np.mean(self.actor_mean_linvel),
+                                                     'Mean AngVel': np.mean(self.actor_mean_angvel),
+                                                     'Variance LinVel': np.mean(self.actor_var_linvel),
+                                                     'Variance AngVel': np.mean(self.actor_var_angvel)}, self.episode)
 
-    def summary_objective(self, objective_reached, timepoint):
-        if self.logging and self.episode > self.last_episode:
-            self.writer.add_scalar('percentage_objective_reached', objective_reached, timepoint)
+    def summary_objective(self):
+        if self.logging and self.episode > self.last_logging_episode:
+            self.writer.add_scalar('objective reached', self.percentage_objective_reached(), self.episode)
 
     def add_reward(self, reward):
-        self.temp_reward += reward
+        self.reward += reward
 
     def percentage_objective_reached(self):
-        return self.objective_reached / ((self.episode - self.last_episode) * self.number_of_agents)
+        return self.objective_reached / (self.episode - self.last_logging_episode)
 
     def add_objective(self, reachedGoals):
-        self.temp_objective_reached += np.count_nonzero(reachedGoals)
-
-    def log_episode(self, episode):
-        self.episode = episode
-
-        self.loss += self.temp_loss
-        self.entropy += self.temp_entropy
-        self.critic_loss += self.temp_critic_loss
-        self.actor_loss += self.temp_actor_loss
-        self.temp_loss = []
-        self.temp_entropy = []
-        self.temp_critic_loss = []
-        self.temp_actor_loss = []
-
-        self.actor_mean_linvel += self.temp_actor_mean_linvel
-        self.actor_mean_angvel += self.temp_actor_mean_angvel
-        self.actor_var_linvel += self.temp_actor_var_linvel
-        self.actor_var_angvel += self.temp_actor_var_angvel
-        self.temp_actor_mean_linvel = []
-        self.temp_actor_mean_angvel = []
-        self.temp_actor_var_linvel = []
-        self.temp_actor_var_angvel = []
-
-        self.steps += self.temp_steps
-        self.temp_steps = 0
-        self.reward += self.temp_reward
-        self.temp_reward = 0
-
-        self.objective_reached += self.temp_objective_reached
-        self.temp_objective_reached = 0
+        self.objective_reached += (np.count_nonzero(reachedGoals) / self.number_of_agents)
 
     def set_number_of_agents(self, number_of_agents):
         self.number_of_agents = number_of_agents
 
-    def add_steps(self, steps):
-        self.temp_steps += steps
+    def summary_reward(self):
+        if self.logging and self.episode > self.last_logging_episode:
+            self.writer.add_scalar('reward per step', self.reward / self.steps_agents, self.episode)
 
-    def summary_reward(self, reward, timepoint):
-        if self.logging and self.episode > self.last_episode:
-            self.writer.add_scalar('reward', reward, timepoint)
+    def summary_steps_agents(self):
+        if self.logging and self.episode > self.last_logging_episode:
+            self.writer.add_scalar('avg steps per agent', self.steps_agents / self.number_of_agents, self.episode)
 
-    def summary_steps(self, steps, timepoint):
-        if self.logging and self.episode > self.last_episode:
-            self.writer.add_scalar('steps', steps, timepoint)
+    def log(self):
 
-    def get_means(self):
-        if self.episode > self.last_episode:
-            episode_count = self.episode - self.last_episode
-            return [True,\
-                   self.reward / episode_count,\
-                   self.percentage_objective_reached(),\
-                   self.steps / episode_count,\
-                   np.mean(self.actor_mean_linvel),\
-                   np.mean(self.actor_mean_angvel),\
-                   np.mean(self.actor_var_linvel),\
-                   np.mean(self.actor_var_angvel)]
-        else:
-            return [False, 0, 0, 0, 0, 0, 0, 0]
+        self.summary_reward()
+        objective_reached = self.percentage_objective_reached()
+        self.summary_objective()
+        self.summary_steps_agents()
+        self.summary_actor_output()
+        self.summary_loss()
+
+        self.last_logging_episode = self.episode
+        self.clear_summary()
+        return self.reward, objective_reached
 
     def clear_summary(self):
-        if self.episode > self.last_episode:
-            self.actor_mean_linvel = []
-            self.actor_mean_angvel = []
-            self.actor_var_linvel = []
-            self.actor_var_angvel = []
-            self.objective_reached = 0
-            self.steps = 0
-            self.reward = 0
-            self.last_episode = self.episode
-
+        self.actor_mean_linvel = []
+        self.actor_mean_angvel = []
+        self.actor_var_linvel = []
+        self.actor_var_angvel = []
+        self.loss = []
+        self.entropy = []
+        self.critic_loss = []
+        self.actor_loss = []
+        self.objective_reached = 0
+        self.steps_agents = 0
+        self.reward = 0
+        self.cnt_agents = 0
     def close(self):
         self.writer.close()
