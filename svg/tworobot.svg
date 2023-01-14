@@ -42,17 +42,37 @@
    fill="#e52420"
    stroke="#000000"
    stroke-miterlimit="10"
-   cx="15"
-   cy="270"
+   cx="21.190771"
+   cy="261.82114"
    r="7.5" />
+
+<circle
+   id="start_2_2_"
+   fill="#e52420"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="201.190771"
+   cy="261.82114"
+   r="7.5" />
+
+
+<circle
+   id="goal_4_1_-4"
+   fill="#66b32e"
+   stroke="#000000"
+   stroke-miterlimit="10"
+   cx="91.85321"
+   cy="31.231504"
+   r="13.99" />
+
 
 <circle
    id="goal_4_1_-3"
    fill="#66b32e"
    stroke="#000000"
    stroke-miterlimit="10"
-   cx="600"
-   cy="20"
+   cx="591.85321"
+   cy="31.231504"
    r="13.99" />
 <polygon
    fill="none"

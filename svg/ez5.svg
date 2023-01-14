@@ -6,13 +6,13 @@
    id="Ebene_1"
    x="0px"
    y="0px"
-   width="623.619px"
-   height="283.46px"
-   viewBox="0 0 623.619 283.46"
+   width="550"
+   height="249.99719"
+   viewBox="0 0 549.99999 249.9972"
    enable-background="new 0 0 623.619 283.46"
    xml:space="preserve"
-   sodipodi:docname="onerobot.svg"
-   inkscape:version="1.2 (1:1.2+202206011327+fc4e4096c5)"
+   sodipodi:docname="ez.svg"
+   inkscape:version="1.2 (1:1.2.1+202207142221+cd75a1ee6d)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -27,9 +27,9 @@
    inkscape:pagecheckerboard="0"
    inkscape:deskcolor="#505050"
    showgrid="false"
-   inkscape:zoom="0.83256899"
-   inkscape:cx="312.28643"
-   inkscape:cy="141.73"
+   inkscape:zoom="1.665138"
+   inkscape:cx="236.31675"
+   inkscape:cy="63.057838"
    inkscape:window-width="1920"
    inkscape:window-height="1031"
    inkscape:window-x="0"
@@ -42,8 +42,8 @@
    fill="#e52420"
    stroke="#000000"
    stroke-miterlimit="10"
-   cx="15"
-   cy="270"
+   cx="30"
+   cy="110"
    r="7.5" />
 
 <circle
@@ -51,13 +51,15 @@
    fill="#66b32e"
    stroke="#000000"
    stroke-miterlimit="10"
-   cx="600"
-   cy="20"
-   r="13.99" />
-<polygon
-   fill="none"
-   stroke="#000000"
-   stroke-miterlimit="10"
-   points="619.977,279.897 619.977,2.563 3.31,2.563 3.31,279.563 "
-   id="polygon10" />
+   cx="420"
+   cy="110"
+   r="10" />
+
+
+    <line x1="430" y1 ="120" x2="20" y2="120" stroke = "black" stroke-width = "2" stroke-linecap="square"/>
+    <line x1="20" y1 ="120" x2="20" y2="100" stroke = "black" stroke-width = "2" stroke-linecap="square"/>
+    <line x1="20" y1 ="100" x2="430" y2="100" stroke = "black" stroke-width = "2" stroke-linecap="square"/>
+    <line x1="430" y1 ="100" x2="430" y2="120" stroke = "black" stroke-width = "2" stroke-linecap="square"/>
+
+
 </svg>
