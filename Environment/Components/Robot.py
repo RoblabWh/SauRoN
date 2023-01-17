@@ -430,7 +430,8 @@ class Robot:
         orientation = [anglDeviationV[0], anglDeviationV[1]]
         self.debugAngle = orientation
 
-
+        noise = np.random.uniform(low=-0.04, high=0.04, size=distances.shape)
+        distances = distances + noise
         distancesNorm = distances * self.maxDistFact
         distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)
         #distancesNorm = distancesNorm.tolist()
