@@ -177,7 +177,7 @@ class Logger(object):
         self.actor_var_linvel = []
         self.actor_var_angvel = []
 
-        self.reward = 0
+        self.reward = {}
 
         #objective
         self.objective_reached = 0
@@ -237,8 +237,14 @@ class Logger(object):
         if self.logging and self.episode > self.last_logging_episode:
             self.writer.add_scalar('objective reached', self.percentage_objective_reached(), self.episode)
 
-    def add_reward(self, reward):
-        self.reward += reward
+    def add_reward(self, rewards):
+        for reward in rewards:
+            for key in reward.keys():
+                #quick and dirty change it
+                if key in self.reward.keys():
+                    self.reward[key] += reward[key]
+                else:
+                    self.reward[key] = reward[key]  
 
     def percentage_objective_reached(self):
         return self.objective_reached / (self.episode - self.last_logging_episode)
@@ -251,7 +257,11 @@ class Logger(object):
 
     def summary_reward(self):
         if self.logging and self.episode > self.last_logging_episode:
-            self.writer.add_scalar('reward per step', self.reward / self.steps_agents, self.episode)
+            self.reward['total'] = 0
+            for key in self.reward.keys():
+                self.reward[key] = self.reward[key] / self.steps_agents
+                self.reward['total'] += self.reward[key]
+            self.writer.add_scalars('reward', self.reward, self.episode)
 
     def summary_steps_agents(self):
         if self.logging and self.episode > self.last_logging_episode:
@@ -268,7 +278,7 @@ class Logger(object):
 
         self.last_logging_episode = self.episode
         self.clear_summary()
-        return self.reward, objective_reached
+        return sum([v for v in self.reward.values()]), objective_reached
 
     def clear_summary(self):
         self.actor_mean_linvel = []
@@ -281,7 +291,7 @@ class Logger(object):
         self.actor_loss = []
         self.objective_reached = 0
         self.steps_agents = 0
-        self.reward = 0
+        self.reward = {}
         self.cnt_agents = 0
     def close(self):
         self.writer.close()

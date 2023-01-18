@@ -59,13 +59,14 @@ def train(env_name, env, solved_percentage, input_style,
             o_laser, o_orientation, o_distance, o_velocity = observations
 
             memory.insertObservations(o_laser.to(device), o_orientation.to(device), o_distance.to(device), o_velocity.to(device))
-            memory.insertReward(rewards)
+            unrolled_rewards = [sum([value for value in reward.values()]) for reward in rewards]
+            memory.insertReward(unrolled_rewards)
             memory.insertAction(actions)
             memory.insertLogProb(action_logprob)
             memory.insertIsTerminal(dones)
 
             logger.add_objective(reachedGoals)
-            logger.add_reward(np.mean(rewards))
+            logger.add_reward(rewards)
             logger.add_step_agents(len(rewards))
 
             if len(memory) >= update_experience:
@@ -136,7 +137,7 @@ def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gam
 
             states, rewards, dones, _ = env.step(torchToNumpy(actions))
 
-            episode_reward += np.sum(rewards)
+            episode_reward += sum([sum([value for value in reward.values()]) for reward in rewards])
 
             if render:
                 env.render()
