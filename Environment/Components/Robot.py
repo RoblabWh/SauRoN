@@ -5,6 +5,7 @@ from pynput.keyboard import Listener
 import copy
 import numpy as np
 from utils import scan1DTo2D
+import torch
 
 import os
 import time
@@ -392,40 +393,25 @@ class Robot:
         circlesPositionsAll = np.array([circleX, circleY])
         self.collisionDistances, self.collisionDistancesRobots = rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colliderLines, circlesPositionsAll, circleR)
 
-
         self.lidarHits = (lidarHits)
         self.distances = (distances)
 
+        # calculate distance
+        distance = np.linalg.norm(
+            np.array([self.getPosX(), self.getPosY()]) - np.array([self.station.posX, self.station.posY]))
 
-        # frame_lidar = []
-        target = [self.station.posX, self.station.posY]
-        # target = (self.station.posX + (self.station.width / 2), self.station.posY + (self.station.length/2))
-        distance = math.sqrt((self.getPosX() - target[0]) ** 2 + (self.getPosY() - target[1]) ** 2)
+        # calculate the angle between the robot orientation and the target
+        orientation_vec = np.array([self.getDirectionX(), self.getDirectionY()])
+        target_vec = np.array([self.station.posX - self.getPosX(), self.station.posY - self.getPosY()])
+        angle = np.arctan2(np.linalg.norm(np.cross(orientation_vec, target_vec)), np.dot(orientation_vec, target_vec))
 
-        oriRobotV = [self.getDirectionX(), self.getDirectionY()]
-        oriTargetV = [(self.getPosX() - target[0]),(self.getPosY() - target[1])]
-        skalarProd = oriRobotV[0]*oriTargetV[0]+oriRobotV[1]*oriTargetV[1]
-        oriTargetVLength = distance
-        oriRobotVLength = 1
-        ratio = skalarProd/(oriTargetVLength*oriRobotVLength)
+        # determine the sign of angle
+        if (np.cross(target_vec, orientation_vec) > 0):
+            angle = -angle
 
-        if ratio>1 or ratio<-1:
-            print("oriRobotV:", oriRobotV, "| oriTargetV:", oriTargetV, "| skalarProd:", skalarProd, "| oriTargetVLength:", oriTargetVLength, "|ratio: ", ratio)
-            if ratio<-1:
-                ratio = -1
-            else:
-                ratio = 1
+        self.angularDeviation = angle
 
-        angularDeviation = math.acos(ratio)
-
-        c = [self.getPosX()+oriRobotV[0], self.getPosY()+oriRobotV[1]]
-        angularDeviation = angularDeviation - math.pi
-        if ((target[0] - self.getPosX()) * (c[1] - self.getPosY()) - (target[1] - self.getPosY()) * (c[0] - self.getPosX())) < 0:
-            angularDeviation = angularDeviation*-1
-
-        self.angularDeviation = angularDeviation
-
-        anglDeviationV = self.directionVectorFromAngle(angularDeviation)
+        anglDeviationV = self.directionVectorFromAngle(self.angularDeviation)
 
         orientation = [anglDeviationV[0], anglDeviationV[1]]
         self.debugAngle = orientation
@@ -492,31 +478,31 @@ class Robot:
         # tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + (self.maxAngularVelocity + self.minAngularVelocity) * 0.5
         tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity) * 0.5) + ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)
         tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity) * 0.5) + ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)
-        # # beschleunigen
-        # if linVel < tarLinVel:
-        #     linVel += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
-        #     if linVel > self.maxLinearVelocity:
-        #         linVel = self.maxLinearVelocity
-        #
-        # # bremsen
-        # elif linVel > tarLinVel:
-        #     linVel += self.minLinearAcceleration * dt
-        #     if linVel < self.minLinearVelocity:
-        #         linVel = self.minLinearVelocity
-        #
-        # # nach links drehen
-        # if angVel < tarAngVel:
-        #     angVel += self.maxAngularAcceleration * dt
-        #     if angVel > self.maxAngularVelocity:
-        #         angVel = self.maxAngularVelocity
-        #
-        # # nach rechts drehen
-        # elif angVel > tarAngVel:
-        #     angVel += self.minAngularAcceleration * dt
-        #     if angVel < self.minAngularVelocity:
-        #         angVel = self.minAngularVelocity
+        # beschleunigen
+        if linVel < tarLinVel:
+            linVel += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
+            if linVel > self.maxLinearVelocity:
+                linVel = self.maxLinearVelocity
 
-        # return linVel, angVel
+        # bremsen
+        elif linVel > tarLinVel:
+            linVel += self.minLinearAcceleration * dt
+            if linVel < self.minLinearVelocity:
+                linVel = self.minLinearVelocity
+
+        # nach links drehen
+        if angVel < tarAngVel:
+            angVel += self.maxAngularAcceleration * dt
+            if angVel > self.maxAngularVelocity:
+                angVel = self.maxAngularVelocity
+
+        # nach rechts drehen
+        elif angVel > tarAngVel:
+            angVel += self.minAngularAcceleration * dt
+            if angVel < self.minAngularVelocity:
+                angVel = self.minAngularVelocity
+
+        return linVel, angVel
         # maybe ändern
 
         # check boundaries
@@ -707,42 +693,26 @@ class FastCollisionRay:
 
         x1 = self.rayOrigin[0] #originX
         y1 = self.rayOrigin[1] #originY
-        #x2V = np.swapaxes(np.array([self.rayDirX for _ in range(len(points1[0]))]),0,1) #directionX
-        #y2V = np.swapaxes(np.array([self.rayDirY for _ in range(len(points1[0]))]),0,1) #directionY
         x2Vswap = np.tile(self.rayDirX, (len(points1[0]), 1))
         x2V = np.swapaxes(x2Vswap, 0, 1)  # directionX
         y2Vswap = np.tile(self.rayDirY, (len(points1[0]), 1))
-        y2V = np.swapaxes(y2Vswap, 0, 1)
+        y2V = np.swapaxes(y2Vswap, 0, 1) #directionY
         x2 = x2V+x1
         y2 = y2V+y1
-
-        #nX = np.array([normals[0] for _ in range(len(self.rayDirX))]) #normalsXArray
-        #nY = np.array([normals[1] for _ in range(len(self.rayDirX))]) #normalsXArray
 
         nX = np.tile(normals[0], (len(self.rayDirX), 1))
         nY = np.tile(normals[1], (len(self.rayDirX), 1))
 
         skalarProd = nX * x2V + nY * y2V
 
-        #x3 = np.array([points1[0] for _ in range(len(self.rayDirX))]) #lineStartXArray
-        #y3 = np.array([points1[1] for _ in range(len(self.rayDirX))]) #lineStartYArray
-        #x4 = np.array([points2[0] for _ in range(len(self.rayDirX))]) #lineEndXArray
-        #y4 = np.array([points2[1] for _ in range(len(self.rayDirX))]) #lineEndYArray
-
-        x3 = np.tile(points1[0], (len(self.rayDirX), 1))
-        y3 = np.tile(points1[1], (len(self.rayDirX), 1))
-        x4 = np.tile(points2[0], (len(self.rayDirX), 1))
-        y4 = np.tile(points2[1], (len(self.rayDirX), 1))
-
-        #t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-        #t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+        x3 = np.tile(points1[0], (len(self.rayDirX), 1)) #lineStartXArray
+        y3 = np.tile(points1[1], (len(self.rayDirX), 1)) #lineStartYArray
+        x4 = np.tile(points2[0], (len(self.rayDirX), 1)) #lineEndXArray
+        y4 = np.tile(points2[1], (len(self.rayDirX), 1)) #lineEndYArray
 
         # Ersten den denominator berechnen, da er für t1 und t2 gleich ist.
-        # 1 / ... um später für beiden die Multiplikation zu verwenden. Division ist die teuerste mathematische Operation ;)
         denominator = np.where(skalarProd<0, 1.0 / ((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4)), -1)
 
-        # t1=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))*denominator #Faktor des Laserstrahls vom Roboter bis zum Schnittpunkt
-        # t2=((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))*denominator #Faktor vom Startpunkt des Geradenabschnitts bis zum Schnittpunkt
         t1=np.where(skalarProd<0, ((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))*denominator,-1) #Faktor des Laserstrahls vom Roboter bis zum Schnittpunkt
         t2=np.where(skalarProd<0,((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))*denominator, -1) #Faktor vom Startpunkt des Geradenabschnitts bis zum Schnittpunkt
 
@@ -759,22 +729,16 @@ class FastCollisionRay:
         # Dafür benötigt: Mittelpunkte aller Roboter und Linie (also Start und Ziel)
 
         if len(pointsRobots[0]) > 0:
-            #qX = np.array([pointsRobots[0] for _ in range(len(collisionPoints[0]))])
-            #qY = np.array([pointsRobots[1] for _ in range(len(collisionPoints[0]))])
             qX = np.tile(pointsRobots[0], (len(collisionPoints[0]), 1))
             qY = np.tile(pointsRobots[1], (len(collisionPoints[0]), 1))
 
-            #radii = np.array([radius for _ in range(len(collisionPoints[0]))])
             radii = np.tile(radius, (len(collisionPoints[0]), 1))
             qX = np.swapaxes(qX,0,1)
             qY = np.swapaxes(qY,0,1)
             radii = np.swapaxes(radii,0,1)
-            #colX = np.array([collisionPoints[0] for _ in range(len(pointsRobots[0]))])
-            #colY = np.array([collisionPoints[1] for _ in range(len(pointsRobots[0]))])
 
             colX = np.tile(collisionPoints[0], (len(pointsRobots[0]), 1))
             colY = np.tile(collisionPoints[1], (len(pointsRobots[0]), 1))
-
 
             vX = colX - x1
             vY = colY - y1
@@ -818,6 +782,7 @@ class FastCollisionRay:
         collisionPoints = np.swapaxes(collisionPoints, 0, 1) # für Rückgabe in x,y-Paaren
 
         return [t1NearestHit, collisionPoints]
+
 
     def shortestDistanceToCollidors(self, pos, lineSegments, circles, radii):
         x1 = pos[0]  # originX

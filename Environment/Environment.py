@@ -163,31 +163,28 @@ class Environment:
         living_factor = self.steps_left / self.steps
         reward = {}
         r_arrival = 10 # reward for reaching the goal
-        r_collision = -1 # Robot crashed with a wall or another robot
-        r_runOutOfTime = 0 # Robot has run out of time
-        living_penalty = -0.01 # Penalty for every step the robot is alive
-        r_stop = -0.001 # Robot stood still
-        w_g = 1.5
-        w_gn = 1.3
-        w_d = 0.2 # weight for the distance
-        w_w = -0.001
-        a_p = 0.005 # weight for the angle, always positive
+        r_collision = -0.1 # Robot crashed with a wall or another robot
+        r_runOutOfTime = -0.1 # Robot has run out of time
+        r_stop = -0.05 # Robot stood still
+        w_g = 0.6
+        w_gn = 0.05 #1.3
+        w_w = -0.2
+        a_p = 0.05 # weight for the angle, always positive
 
         if reachedPickup:
             reward['arrival'] = r_arrival
         elif runOutOfTime:
             reward['out_of_time'] = r_runOutOfTime
         elif collision:
-            reward['collision'] = r_collision * living_factor
+            reward['collision'] = r_collision #* living_factor
         else:
-            # reward for moving towards the goal PRIMITIVE
-            # if dist_new < 0.5:
-            #     reward += 1 + dist_new * 0.5
-            # el
             if dist_old > dist_new:
                 reward['dist'] = w_g * (dist_old - dist_new)
             else:
                 reward['dist'] = w_gn * (dist_old - dist_new)
+
+            # if np.min(robot.get_state_lidar()[0][0]) < 0.012:
+            #     reward['wall'] = w_w
 
             if abs(dist_old - dist_new) < 0.001:
                 reward['stop'] = r_stop
@@ -201,9 +198,11 @@ class Environment:
                 reward['directional'] = a_p * alpha_norm
 
             # wiggle reward
-            abs_ang_vel = np.abs(robot.getAngularVelocity())
-            if abs_ang_vel > 0.7:
-                reward['wiggle'] = w_w * abs_ang_vel
+            # abs_ang_vel = np.abs(robot.getAngularVelocity())
+            # if abs_ang_vel > 0.7:
+            #     reward['wiggle'] = w_w * abs_ang_vel
+
+        return reward
 
             # delta_dist = dist_old - dist_new
             # if delta_dist > 0:
@@ -231,7 +230,7 @@ class Environment:
             # if dist_new < robot.initialGoalDist:
             #     reward += w_d * (robot.initialGoalDist - dist_new)
             #     robot.initialGoalDist = dist_new
-        return reward
+        #return reward
         #return np.around(reward, decimals=5)
 
     def reset(self, level=None):

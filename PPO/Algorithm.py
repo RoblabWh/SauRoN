@@ -6,7 +6,7 @@ from torch.distributions import MultivariateNormal, Normal
 import torch
 import numpy as np
 
-from utils import initialize_hidden_weights, initialize_output_weights, torchToNumpy
+from utils import initialize_hidden_weights, initialize_output_weights, torchToNumpy, RunningMeanStd
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -25,31 +25,23 @@ class Inputspace(nn.Module):
             in_f = self.get_in_features(h_in=in_f, kernel_size=4, stride=2)
             features_scan = (int(in_f) ** 2) * 32
         else:
-            # self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=12, kernel_size=7, stride=3)
-            # initialize_hidden_weights(self.lidar_conv1)
-            # in_f = self.get_in_features(h_in=scan_size, kernel_size=7, stride=3)
-            # self.lidar_conv2 = nn.Conv1d(in_channels=12, out_channels=24, kernel_size=5, stride=2)
-            # initialize_hidden_weights(self.lidar_conv2)
-            # in_f = self.get_in_features(h_in=in_f, kernel_size=5, stride=2)
-            # features_scan = (int(in_f)) * 24
-
-            self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=32, kernel_size=3, stride=1)
+            self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=16, kernel_size=3, stride=1)
             initialize_hidden_weights(self.lidar_conv1)
             in_f = self.get_in_features(h_in=scan_size, kernel_size=3, stride=1)
-            self.lidar_conv2 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
+            self.lidar_conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=3, stride=1)
             initialize_hidden_weights(self.lidar_conv2)
             in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
             self.maxPool = nn.MaxPool1d(kernel_size=2, stride=2)
             in_f = self.get_in_features(h_in=in_f, kernel_size=2, stride=2)
-            self.lidar_conv3 = nn.Conv1d(in_channels=64, out_channels=128, kernel_size=3, stride=1)
+            self.lidar_conv3 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
             initialize_hidden_weights(self.lidar_conv3)
             in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
-            features_scan = (int(in_f)) * 128
+            features_scan = (int(in_f)) * 64
 
         self.flatten = nn.Flatten()
 
         ori_out_features = 32
-        dist_out_features = 32
+        dist_out_features = 16
         vel_out_features = 32
         self.ori_dense = nn.Linear(in_features=2, out_features=ori_out_features)
         initialize_hidden_weights(self.ori_dense)
@@ -59,13 +51,15 @@ class Inputspace(nn.Module):
         initialize_hidden_weights(self.vel_dense)
 
         # four is the number of timeframes TODO make this dynamic
-        lidar_out_features = 192
+        lidar_out_features = 256
         input_features = lidar_out_features + (ori_out_features + dist_out_features + vel_out_features) * 4
 
         self.lidar_flat = nn.Linear(in_features=features_scan, out_features=lidar_out_features)
         initialize_hidden_weights(self.lidar_flat)
-        self.input_dense = nn.Linear(in_features=input_features, out_features=256)
+        self.input_dense = nn.Linear(in_features=input_features, out_features=384)
+        self.input_dense2 = nn.Linear(in_features=384, out_features=384)
         initialize_hidden_weights(self.input_dense)
+        initialize_hidden_weights(self.input_dense2)
 
     def get_in_features(self, h_in, padding=0, dilation=1, kernel_size=0, stride=1):
         return (((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1)
@@ -88,6 +82,7 @@ class Inputspace(nn.Module):
 
         concated_input = torch.cat((laser_flat, orientation_flat, distance_flat, velocity_flat), dim=1)
         input_dense = F.relu(self.input_dense(concated_input))
+        input_dense = F.relu(self.input_dense2(input_dense))
 
         #other_dense = F.relu(self.other_flat(concat))
         #concat_all = torch.cat((laser_flat, other_dense), dim=1)
@@ -103,7 +98,7 @@ class Actor(nn.Module):
         self.Inputspace = Inputspace(scan_size, input_style)
 
         # Mu
-        self.mu = nn.Linear(in_features=256, out_features=2)
+        self.mu = nn.Linear(in_features=384, out_features=2)
         initialize_output_weights(self.mu, 'actor')
         # Logstd
         self.log_std = nn.Parameter(torch.zeros(2, ))
@@ -122,7 +117,7 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.Inputspace = Inputspace(scan_size, input_style)
         # Value
-        self.value = nn.Linear(in_features=256, out_features=1)
+        self.value = nn.Linear(in_features=384, out_features=1)
         initialize_output_weights(self.value, 'critic')
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
@@ -206,6 +201,7 @@ class PPO:
         self.old_policy.load_state_dict(self.policy.state_dict())
 
         self.MSE_loss = nn.MSELoss()
+        self.running_reward_std = RunningMeanStd()
 
     def select_action(self, observations):
         # prepare data
@@ -253,9 +249,11 @@ class PPO:
         masks = [item for sublist in masks for item in sublist]
 
         # Normalize rewards
+        self.running_reward_std.update(np.array(rewards))
+        rewards = np.clip(np.array(rewards) / self.running_reward_std.get_std(), -10, 10)
         rewards = torch.tensor(rewards).type(torch.float32).to(device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
-        rewards = rewards.type(torch.float32)
+        # rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
+        #rewards = rewards.type(torch.float32)
 
         masks = torch.tensor(masks).to(device)
 

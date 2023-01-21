@@ -10,6 +10,7 @@ class SwarmMemory:
         self.environmentMemory = []
         self.currentTerminalStates = []
         self.init()
+        self.relativeIndices = self.getRelativeIndices()
 
     def init(self):
         self.environmentMemory = [Memory() for _ in range(self.robotsCount)]
@@ -28,37 +29,32 @@ class SwarmMemory:
         return relativeIndices
 
     def insertObservations(self, laser, orientation, distance, velocity):
-        relativeIndices = self.getRelativeIndices()
-        for i in range(len(relativeIndices)):
-            self.environmentMemory[relativeIndices[i]].observations.append([laser[i], orientation[i], distance[i], velocity[i]])
+        for i in range(len(self.relativeIndices)):
+            self.environmentMemory[self.relativeIndices[i]].observations.append([laser[i], orientation[i], distance[i], velocity[i]])
 
     def insertAction(self, action):
-        relativeIndices = self.getRelativeIndices()
-        for i in range(len(relativeIndices)):
-            self.environmentMemory[relativeIndices[i]].actions.append(action[i])
+        for i in range(len(self.relativeIndices)):
+            self.environmentMemory[self.relativeIndices[i]].actions.append(action[i])
 
     def insertReward(self, reward):
-        relativeIndices = self.getRelativeIndices()
-        for i in range(len(relativeIndices)):
-            self.environmentMemory[relativeIndices[i]].rewards.append(reward[i])
+        for i in range(len(self.relativeIndices)):
+            self.environmentMemory[self.relativeIndices[i]].rewards.append(reward[i])
 
     def insertLogProb(self, logprob):
-        relativeIndices = self.getRelativeIndices()
-        for i in range(len(relativeIndices)):
-            self.environmentMemory[relativeIndices[i]].logprobs.append(logprob[i])
+        for i in range(len(self.relativeIndices)):
+            self.environmentMemory[self.relativeIndices[i]].logprobs.append(logprob[i])
 
     def insertReachedGoal(self, reachedGoal, isTerminal):
         terminalGoal = np.logical_and(reachedGoal, isTerminal)
-        relativeIndices = self.getRelativeIndices()
         for idx in np.where(isTerminal)[0]:
-            self.environmentMemory[relativeIndices[idx]].reached_goal.append(terminalGoal[idx])
+            self.environmentMemory[self.relativeIndices[idx]].reached_goal.append(terminalGoal[idx])
 
     def insertIsTerminal(self, isTerminal):
-        relativeIndices = self.getRelativeIndices()
-        for i in range(len(relativeIndices)):
-            self.environmentMemory[relativeIndices[i]].is_terminals.append(isTerminal[i])
+        for i in range(len(self.relativeIndices)):
+            self.environmentMemory[self.relativeIndices[i]].is_terminals.append(isTerminal[i])
             if isTerminal[i]:
-                self.currentTerminalStates[relativeIndices[i]] = True
+                self.currentTerminalStates[self.relativeIndices[i]] = True
+        self.relativeIndices = self.getRelativeIndices()
 
         # check if currentTerminalStates is all True
         if all(self.currentTerminalStates):
