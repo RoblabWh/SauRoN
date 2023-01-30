@@ -65,24 +65,24 @@ class Inputspace(nn.Module):
         return (((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1)
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
-        laser = F.relu(self.lidar_conv1(laser))
-        laser = F.relu(self.lidar_conv2(laser))
+        laser = F.leaky_relu(self.lidar_conv1(laser))
+        laser = F.leaky_relu(self.lidar_conv2(laser))
         laser = self.maxPool(laser)
-        laser = F.relu(self.lidar_conv3(laser))
+        laser = F.leaky_relu(self.lidar_conv3(laser))
         laser_flat = self.flatten(laser)
 
-        orientation_to_goal = F.relu(self.ori_dense(orientation_to_goal))
-        distance_to_goal = F.relu(self.dist_dense(distance_to_goal))
-        velocity = F.relu(self.vel_dense(velocity))
+        orientation_to_goal = torch.tanh(self.ori_dense(orientation_to_goal))
+        distance_to_goal = F.leaky_relu(self.dist_dense(distance_to_goal))
+        velocity = F.leaky_relu(self.vel_dense(velocity))
 
-        laser_flat = F.relu(self.lidar_flat(laser_flat))
+        laser_flat = F.leaky_relu(self.lidar_flat(laser_flat))
         orientation_flat = self.flatten(orientation_to_goal)
         distance_flat = self.flatten(distance_to_goal)
         velocity_flat = self.flatten(velocity)
 
         concated_input = torch.cat((laser_flat, orientation_flat, distance_flat, velocity_flat), dim=1)
-        input_dense = F.relu(self.input_dense(concated_input))
-        input_dense = F.relu(self.input_dense2(input_dense))
+        input_dense = torch.tanh(self.input_dense(concated_input))
+        input_dense = torch.tanh(self.input_dense2(input_dense))
 
         #other_dense = F.relu(self.other_flat(concat))
         #concat_all = torch.cat((laser_flat, other_dense), dim=1)
@@ -117,12 +117,14 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.Inputspace = Inputspace(scan_size, input_style)
         # Value
-        self.value = nn.Linear(in_features=384, out_features=1)
+        self.dense = nn.Linear(in_features=384, out_features=120)
+        self.value = nn.Linear(in_features=120, out_features=1)
         initialize_output_weights(self.value, 'critic')
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser, orientation_to_goal, distance_to_goal, velocity)
-        value = F.relu(self.value(x))
+        dense = F.leaky_relu(self.dense(x))
+        value = F.leaky_relu(self.value(dense))
         return value
 
 
@@ -307,7 +309,7 @@ class PPO:
 
                 # TODO CLIP VALUE LOSS ? Probably not necessary as according to:
                 # https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/
-                critic_loss_ = 0.5 * self.MSE_loss(returns, values)
+                critic_loss_ = 0.005 * self.MSE_loss(returns, values)
                 critic_loss = critic_loss_ - entropy
 
                 # Total loss

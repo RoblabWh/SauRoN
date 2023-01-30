@@ -162,14 +162,14 @@ class Environment:
 
         living_factor = self.steps_left / self.steps
         reward = {}
-        r_arrival = 10 # reward for reaching the goal
-        r_collision = -0.1 # Robot crashed with a wall or another robot
-        r_runOutOfTime = -0.1 # Robot has run out of time
+        r_arrival = 25 # reward for reaching the goal
+        r_collision = -10 # Robot crashed with a wall or another robot
+        r_runOutOfTime = 0 # Robot has run out of time
         r_stop = -0.05 # Robot stood still
-        w_g = 0.6
+        w_g = 1.2
         w_gn = 0.05 #1.3
         w_w = -0.2
-        a_p = 0.05 # weight for the angle, always positive
+        a_p = 0.045 # weight for the angle, always positive
 
         if reachedPickup:
             reward['arrival'] = r_arrival
@@ -190,12 +190,12 @@ class Environment:
                 reward['stop'] = r_stop
 
             # Directional reward (look at the angle between the robot and the goal)
-            a1 = np.arctan2(robot.getGoalY() - robot.getPosY(), robot.getGoalX() - robot.getPosX())
-            a2 = np.arctan2(robot.getDirectionY(), robot.getDirectionX())
-            goalangle = np.abs(a1 - a2)
-            if goalangle < np.pi/4:
-                alpha_norm = 1 - goalangle
-                reward['directional'] = a_p * alpha_norm
+            # a1 = np.arctan2(robot.getGoalY() - robot.getPosY(), robot.getGoalX() - robot.getPosX())
+            # a2 = np.arctan2(robot.getDirectionY(), robot.getDirectionX())
+            # goalangle = np.abs(a1 - a2)
+            # if goalangle < np.pi/4:
+            #     alpha_norm = 1 - goalangle
+            #     reward['directional'] = a_p * alpha_norm
 
             # wiggle reward
             # abs_ang_vel = np.abs(robot.getAngularVelocity())
