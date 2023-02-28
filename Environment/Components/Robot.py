@@ -109,6 +109,8 @@ class Robot:
             if not station is pickUp:
                 self.collidorStationsCircles.append((pickUp.getPosX(), pickUp.getPosY(), pickUp.getRadius()))
 
+        #direction = (self.getDirectionAngle() + 2 * math.pi) % (2 * math.pi)
+        #self.rayCol = FastCollisionRay([self.startposX, self.startposY], self.args.number_of_rays, direction, self.radius, self.fieldOfView)
 
         self.manuell = args.manually
         if self.manuell:
@@ -167,21 +169,15 @@ class Robot:
             if not station is self.station:
                 self.collidorStationsCircles.append((station.getPosX(), station.getPosY(), station.getRadius()))
 
-
         self.active = True
         linVel = 0
         angVel = 0
-        tarLinVel = 0
-        tarAngVel = 0
         goalDist = math.sqrt((posX - self.goalX) ** 2 + (posY - self.goalY) ** 2)
 
-        # frame = [posX, posY, direction, linVel, angVel, goalX, goalY, tarLinVel, tarAngVel]
         frame = [posX, posY, directionX, directionY, linVel, angVel, self.goalX, self.goalY, goalDist, orientation]
-
 
         for _ in range(self.time_steps):
             self.push_frame(frame)
-
 
         self.stateLidar = []
 
@@ -194,6 +190,8 @@ class Robot:
 
         # reward variables
         self.initialGoalDist = goalDist
+        direction = (self.getDirectionAngle() + 2 * math.pi) % (2 * math.pi)
+        self.rayCol = FastCollisionRay([posX, posY], self.args.number_of_rays, direction, self.radius, self.fieldOfView)
 
         if self.hasPieSlice:
             self.posSensor = [posX + self.offsetSensorDist * directionX, posY + self.offsetSensorDist * directionY]
@@ -312,7 +310,6 @@ class Robot:
         for i, w in enumerate(walls):
             w.updatePos(points[i], points[(i+1)%len(walls)])
 
-
     def updatePieSlice(self, deltaAngle, deltaPos):
         points = self.pieSlicePoints
         posX, posY = self.getPosX(), self.getPosY()
@@ -353,7 +350,6 @@ class Robot:
         colliderLines = self.walls + self.collidorStationsWalls + self.robotsPieSliceWalls
         collidorCirclePosWithoutRobots = [(wall.getPosX(), wall.getPosY(), wall.getRadius()) for wall in self.circleWalls]
         collidorCirclePosOnlyRobots = []
-        collidorCircleAllForTerminations = []
 
         for robotA in robots:
             if robotA is not self:
@@ -361,8 +357,6 @@ class Robot:
 
         if self.args.collide_other_targets:
             collidorCirclePosWithoutRobots += self.collidorStationsCircles
-
-
 
         colLinesStartPoints = np.swapaxes(np.array([cl.getStart() for cl in colliderLines]), 0, 1)  # [[x,x,x,x],[y,y,y,y]]
         colLinesEndPoints = np.swapaxes(np.array([cl.getEnd() for cl in colliderLines]), 0, 1)
@@ -377,24 +371,24 @@ class Robot:
             position = [self.getPosX(), self.getPosY()]
             usedCircleCollider = collidorCircleAllForTerminations
 
-
         circleX = [r[0] for r in usedCircleCollider]
         circleY = [r[1] for r in usedCircleCollider]
         circleR = [r[2] for r in usedCircleCollider]
 
         circlesPositions = np.array([circleX, circleY])
 
-        rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.fieldOfView)
-        distances, lidarHits = (rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
+        #rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.fieldOfView)
+        self.rayCol.new_scan(position, dir)
+        distances, lidarHits = (self.rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
 
         circleX = [r[0] for r in collidorCircleAllForTerminations]
         circleY = [r[1] for r in collidorCircleAllForTerminations]
         circleR = [r[2] for r in collidorCircleAllForTerminations]
         circlesPositionsAll = np.array([circleX, circleY])
-        self.collisionDistances, self.collisionDistancesRobots = rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colliderLines, circlesPositionsAll, circleR)
+        self.collisionDistances, self.collisionDistancesRobots = self.rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colliderLines, circlesPositionsAll, circleR)
 
-        self.lidarHits = (lidarHits)
-        self.distances = (distances)
+        self.lidarHits = [lidarHits]
+        self.distances = [distances]
 
         # calculate distance
         distance = np.linalg.norm(
@@ -406,7 +400,7 @@ class Robot:
         angle = np.arctan2(np.linalg.norm(np.cross(orientation_vec, target_vec)), np.dot(orientation_vec, target_vec))
 
         # determine the sign of angle
-        if (np.cross(target_vec, orientation_vec) > 0):
+        if np.cross(target_vec, orientation_vec) > 0:
             angle = -angle
 
         self.angularDeviation = angle
@@ -418,24 +412,16 @@ class Robot:
 
         noise = np.random.uniform(low=-0.04, high=0.04, size=distances.shape)
         distances = distances + noise
-        distancesNorm = distances * self.maxDistFact
-        distancesNorm = np.where(distancesNorm > 1, 1, distancesNorm)
-        #distancesNorm = distancesNorm.tolist()
+        laser = distances * self.maxDistFact
+        laser = np.where(laser > 1, 1, laser)
 
         # Convert 1D scan to 2D Scan
         if self.args.input_style == "image":
-            laser = scan1DTo2D(distancesNorm, img_size=self.args.image_size)
-        else:
-            laser = distancesNorm
-        #image = scan1DTo2D(self.lidarHits)
+            laser = scan1DTo2D(laser, img_size=self.args.image_size)
 
         currentTimestep = (steps - stepsLeft)/steps
-        #distance = (distance * self.maxDistFact)
-        #if distance > 1 : distance = 1
-        # TODO: ?!?!?! why was debugAngle used??? answer: it was the correct idea, but it may be done with fewer code
-        #frame_lidar = [distances, distance, np.asarray(orientation), np.array([self.getLinearVelocity(), self.getAngularVelocity()]), currentTimestep]
+
         frame_lidar = [laser, np.asarray(orientation), np.expand_dims(np.asarray(distance/self.maxDistSim), axis=0), np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
-        #frame_lidar = [distancesNorm, orientation, [(distance * self.maxDistFact)], [self.getLinearVelocityNorm(), self.getAngularVelocityNorm()], currentTimestep]
 
         if len(self.stateLidar) >= self.time_steps:
             self.stateLidar.pop(0)
@@ -444,7 +430,6 @@ class Robot:
             self.stateLidar.append(frame_lidar)
 
     def get_state_lidar(self, reversed = False):
-        #tmp_state = self.stateLidar.copy()
         tmp_state = copy.deepcopy(self.stateLidar)
         if reversed:
              tmp_state.reverse()
@@ -452,73 +437,58 @@ class Robot:
 
     def computeNextVelocityContinuous(self, dt, linVel, angVel, tarLinVel, tarAngVel):
         """
-        :param dt: float -
-            passed (simulated) time since last call
-        :param linVel: float -
-            current linear velocity
-        :param angVel: float -
-            current angular velocity
-        :param tarLinVel: float/ int -
-            target linear velocity
-        :param tarAngVel: float/ int -
-            target angular velocity
-
-        :return: tuple
-            (float - linear velocity, float - angular velocity)
+        :param dt: float - passed (simulated) time since last call
+        :param linVel: float - current linear velocity
+        :param angVel: float - current angular velocity
+        :param tarLinVel: float/ int - target linear velocity
+        :param tarAngVel: float/ int - target angular velocity
+        :return: tuple (float - linear velocity, float - angular velocity)
         """
+
         self.netOutput = (tarLinVel, tarAngVel)
 
-        assert(tarLinVel <= 1 or tarAngVel <= 1 or tarLinVel >= -1 or tarAngVel >= -1), f"velocitiy recieved from neural net is out of  bounds. Fix your Code! {tarLinVel}, {tarAngVel}"
-        # tarLinVel = max(-1, min(tarLinVel, 1))
-        # tarAngVel = max(-1, min(tarAngVel, 1))
+        # Check if tarLinVel and tarAngVel are within bounds
+        if tarLinVel < -1 or tarLinVel > 1 or tarAngVel < -1 or tarAngVel > 1:
+            raise Exception("velocity received from neural net is out of bounds. Fix your code!")
 
-        #print("linVel: ", linVel, "angVel: ", angVel)
-        #print("tarLinVelNorm: ", tarLinVel, "tarAngVelNorm: ", tarAngVel)
-        # mapping the net output range of -1 to 1 onto the velocitiy ranges of the robot
-        # tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity)* 0.5) + (self.maxAngularVelocity + self.minAngularVelocity) * 0.5
-        tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity) * 0.5) + ((self.minAngularVelocity + self.maxAngularVelocity) * 0.5)
-        tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity) * 0.5) + ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)
-        # beschleunigen
-        if linVel < tarLinVel:
-            linVel += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
-            if linVel > self.maxLinearVelocity:
-                linVel = self.maxLinearVelocity
+        # Map the net output range of -1 to 1 onto the velocity ranges of the robot
+        tarAngVel = tarAngVel * ((self.maxAngularVelocity - self.minAngularVelocity) * 0.5) + (
+                    (self.minAngularVelocity + self.maxAngularVelocity) * 0.5)
+        tarLinVel = tarLinVel * ((self.maxLinearVelocity - self.minLinearVelocity) * 0.5) + (
+                    (self.minLinearVelocity + self.maxLinearVelocity) * 0.5)
 
-        # bremsen
-        elif linVel > tarLinVel:
-            linVel += self.minLinearAcceleration * dt
-            if linVel < self.minLinearVelocity:
-                linVel = self.minLinearVelocity
-
-        # nach links drehen
-        if angVel < tarAngVel:
-            angVel += self.maxAngularAcceleration * dt
-            if angVel > self.maxAngularVelocity:
-                angVel = self.maxAngularVelocity
-
-        # nach rechts drehen
-        elif angVel > tarAngVel:
-            angVel += self.minAngularAcceleration * dt
-            if angVel < self.minAngularVelocity:
-                angVel = self.minAngularVelocity
-
-        return linVel, angVel
-        # maybe ändern
-
-        # check boundaries
-        if tarLinVel > self.maxLinearVelocity:
-            tarLinVel = self.maxLinearVelocity
-
-        if tarLinVel < self.minLinearVelocity:
-            tarLinVel = self.minLinearVelocity
-
-        if tarAngVel > self.maxAngularVelocity:
-            tarAngVel = self.maxAngularVelocity
-
-        if tarAngVel < self.minAngularVelocity:
-            tarAngVel = self.minAngularVelocity
+        # Check boundaries
+        tarLinVel = max(self.minLinearVelocity, min(tarLinVel, self.maxLinearVelocity))
+        tarAngVel = max(self.minAngularVelocity, min(tarAngVel, self.maxAngularVelocity))
 
         return np.around(tarLinVel, decimals=5), np.around(tarAngVel, decimals=5)
+
+        # # beschleunigen
+        # if linVel < tarLinVel:
+        #     linVel += self.maxLinearAcceleration * dt  # v(t) = v(t-1) + a * dt
+        #     if linVel > self.maxLinearVelocity:
+        #         linVel = self.maxLinearVelocity
+        #
+        # # bremsen
+        # elif linVel > tarLinVel:
+        #     linVel += self.minLinearAcceleration * dt
+        #     if linVel < self.minLinearVelocity:
+        #         linVel = self.minLinearVelocity
+        #
+        # # nach links drehen
+        # if angVel < tarAngVel:
+        #     angVel += self.maxAngularAcceleration * dt
+        #     if angVel > self.maxAngularVelocity:
+        #         angVel = self.maxAngularVelocity
+        #
+        # # nach rechts drehen
+        # elif angVel > tarAngVel:
+        #     angVel += self.minAngularAcceleration * dt
+        #     if angVel < self.minAngularVelocity:
+        #         angVel = self.minAngularVelocity
+        #
+        # return linVel, angVel
+        # maybe ändern
 
 
     def directionVectorFromAngle(self, direction):
@@ -656,7 +626,6 @@ class Robot:
             self.angTast = 0
 
 
-
 class FastCollisionRay:
     """
     A class for simulating light rays around the robot by using numpy calculations to find possible intersections
@@ -675,12 +644,28 @@ class FastCollisionRay:
         :param radius: the radius of the robot itself
         """
         self.rayOrigin = rayOrigin
+        self.numberOfRays = numberOfRays
 
-        stepSize = fov / numberOfRays
-        steps = np.array([startAngle+i*stepSize for i in range(numberOfRays)])
-        self.rayDirX = np.array([math.cos(step) for step in steps])
-        self.rayDirY = np.array([math.sin(step) for step in steps])
-        self.ownRadius = radius
+        self.stepSize = fov / numberOfRays
+        self.rayOrigin = rayOrigin
+        steps = np.arange(startAngle, (startAngle + self.stepSize * self.numberOfRays) - (self.stepSize / 2), self.stepSize)
+        self.rayDirX = np.cos(steps)
+        self.rayDirY = np.sin(steps)
+        # self.rayOrigin = rayOrigin
+        # steps = np.array([startAngle+ i * self.stepSize for i in range(self.numberOfRays)])
+        # self.rayDirX = np.array([math.cos(step) for step in steps])
+        # self.rayDirY = np.array([math.sin(step) for step in steps])
+        # self.ownRadius = radius
+
+    def new_scan(self, rayOrigin, startAngle):
+        self.rayOrigin = rayOrigin
+        steps = np.arange(startAngle, (startAngle + self.stepSize * self.numberOfRays) - (self.stepSize / 2), self.stepSize)
+        self.rayDirX = np.cos(steps)
+        self.rayDirY = np.sin(steps)
+        # self.rayOrigin = rayOrigin
+        # steps = np.array([startAngle+ i * self.stepSize for i in range(self.numberOfRays)])
+        # self.rayDirX = np.array([math.cos(step) for step in steps])
+        # self.rayDirY = np.array([math.sin(step) for step in steps])
 
     def lineRayIntersectionPoint(self, points1, points2, normals, pointsRobots, radius, sensorOffset):
         """
@@ -783,32 +768,21 @@ class FastCollisionRay:
 
         return [t1NearestHit, collisionPoints]
 
-
     def shortestDistanceToCollidors(self, pos, lineSegments, circles, radii):
-        x1 = pos[0]  # originX
-        y1 = pos[1]  # originY
+        x1, y1 = pos  # originX and originY
 
-        x2 = np.array([lineSegments[i].getStart()[0] for i in range(len(lineSegments))])  # lineStartXArray
-        y2 = np.array([lineSegments[i].getStart()[1] for i in range(len(lineSegments))])  # lineStartYArray
-        x3 = np.array([lineSegments[i].getEnd()[0] for i in range(len(lineSegments))])  # lineEndXArray
-        y3 = np.array([lineSegments[i].getEnd()[1] for i in range(len(lineSegments))])  # lineEndYArray
+        x2, y2 = np.array([segment.getStart() for segment in lineSegments]).T  # lineStartXArray and lineStartYArray
+        x3, y3 = np.array([segment.getEnd() for segment in lineSegments]).T  # lineEndXArray and lineEndYArray
 
-        sqrDist = (x2 - x3) ** 2 + (y2 - y3) ** 2
-        t = np.where((sqrDist == 0), 0, ((x1 - x2) * (x3 - x2) + (y1 - y2) * (y3 - y2)) / sqrDist)
-        t = np.clip(t, 0, 1)
-
-        dist = (x1 - (x2 + t * (x3 - x2))) ** 2 + (y1 - (y2 + t * (y3 - y2))) ** 2
-        dist = np.sqrt(dist)
+        t = np.clip(((x1 - x2) * (x3 - x2) + (y1 - y2) * (y3 - y2)) / ((x2 - x3) ** 2 + (y2 - y3) ** 2), 0, 1)
+        dist = np.sqrt((x1 - (x2 + t * (x3 - x2))) ** 2 + (y1 - (y2 + t * (y3 - y2))) ** 2)
 
         if len(circles[0]) > 0:
-            x4 = np.array([circles[0][i] for i in range(len(circles[0]))])  # circleXArray
-            y4 = np.array([circles[1][i] for i in range(len(circles[1]))])  # circleYArray
-            r = np.array([radii[i] for i in range(len(radii))])        # circleradiusArray
-
-            distCircles = np.sqrt((x1-x4)**2 + (y1-y4)**2) - r
+            x4, y4 = np.array(circles) # circleXArray and circleYArray
+            distCircles = np.sqrt((x1 - x4) ** 2 + (y1 - y4) ** 2) - radii
             dist = np.concatenate((dist, distCircles))
         else:
-            distCircles = [] ## WATCH
+            distCircles = []
 
         return dist, distCircles
 

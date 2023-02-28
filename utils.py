@@ -43,6 +43,8 @@ def statesToObservationsTensor(list):
     ori = np.array(states[:, :, 1].tolist())
     dist = np.array(states[:, :, 2].tolist())
     vel = np.array(states[:, :, 3].tolist())
+    if (laser.dtype or ori.dtype) == np.dtype("object"):
+        print("warn")
     return [torch.tensor(laser, dtype=torch.float32), torch.tensor(ori, dtype=torch.float32),
             torch.tensor(dist, dtype=torch.float32), torch.tensor(vel, dtype=torch.float32)]
 

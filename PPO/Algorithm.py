@@ -16,27 +16,18 @@ class Inputspace(nn.Module):
     def __init__(self, scan_size, input_style):
         super(Inputspace, self).__init__()
 
-        if input_style == 'image':
-            self.lidar_conv1 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=16, stride=4)
-            initialize_hidden_weights(self.lidar_conv1)
-            in_f = self.get_in_features(h_in=scan_size, kernel_size=16, stride=4)
-            self.lidar_conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2)
-            initialize_hidden_weights(self.lidar_conv2)
-            in_f = self.get_in_features(h_in=in_f, kernel_size=4, stride=2)
-            features_scan = (int(in_f) ** 2) * 32
-        else:
-            self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=16, kernel_size=3, stride=1)
-            initialize_hidden_weights(self.lidar_conv1)
-            in_f = self.get_in_features(h_in=scan_size, kernel_size=3, stride=1)
-            self.lidar_conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=3, stride=1)
-            initialize_hidden_weights(self.lidar_conv2)
-            in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
-            self.maxPool = nn.MaxPool1d(kernel_size=2, stride=2)
-            in_f = self.get_in_features(h_in=in_f, kernel_size=2, stride=2)
-            self.lidar_conv3 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
-            initialize_hidden_weights(self.lidar_conv3)
-            in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
-            features_scan = (int(in_f)) * 64
+        self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=16, kernel_size=3, stride=1)
+        initialize_hidden_weights(self.lidar_conv1)
+        in_f = self.get_in_features(h_in=scan_size, kernel_size=3, stride=1)
+        self.lidar_conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=3, stride=1)
+        initialize_hidden_weights(self.lidar_conv2)
+        in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
+        # self.maxPool = nn.MaxPool1d(kernel_size=2, stride=2)
+        # in_f = self.get_in_features(h_in=in_f, kernel_size=2, stride=2)
+        # self.lidar_conv3 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
+        # initialize_hidden_weights(self.lidar_conv3)
+        # in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
+        features_scan = (int(in_f)) * 32
 
         self.flatten = nn.Flatten()
 
@@ -65,17 +56,17 @@ class Inputspace(nn.Module):
         return (((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1)
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
-        laser = F.leaky_relu(self.lidar_conv1(laser))
-        laser = F.leaky_relu(self.lidar_conv2(laser))
-        laser = self.maxPool(laser)
-        laser = F.leaky_relu(self.lidar_conv3(laser))
+        laser = torch.tanh(self.lidar_conv1(laser))
+        laser = torch.tanh(self.lidar_conv2(laser))
+        #laser = self.maxPool(laser)
+        #laser = torch.tanh(self.lidar_conv3(laser))
         laser_flat = self.flatten(laser)
 
         orientation_to_goal = torch.tanh(self.ori_dense(orientation_to_goal))
-        distance_to_goal = F.leaky_relu(self.dist_dense(distance_to_goal))
-        velocity = F.leaky_relu(self.vel_dense(velocity))
+        distance_to_goal = torch.tanh(self.dist_dense(distance_to_goal))
+        velocity = torch.tanh(self.vel_dense(velocity))
 
-        laser_flat = F.leaky_relu(self.lidar_flat(laser_flat))
+        laser_flat = torch.tanh(self.lidar_flat(laser_flat))
         orientation_flat = self.flatten(orientation_to_goal)
         distance_flat = self.flatten(distance_to_goal)
         velocity_flat = self.flatten(velocity)
@@ -123,8 +114,8 @@ class Critic(nn.Module):
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser, orientation_to_goal, distance_to_goal, velocity)
-        dense = F.leaky_relu(self.dense(x))
-        value = F.leaky_relu(self.value(dense))
+        dense = torch.tanh(self.dense(x))
+        value = torch.tanh(self.value(dense))
         return value
 
 

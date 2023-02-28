@@ -26,20 +26,23 @@ for _ in range(10):
 for _ in range(2):
     level_files.append('ez3.svg')
     level_files.append('ez4.svg')
+
 # shuffle the level files
 random.shuffle(level_files)
 
 level_files = ['ez.svg', 'ez2.svg', 'ez3.svg', 'ez4.svg', 'Simple.svg', 'Funnel.svg', 'tunnel2.svg', 'svg3_tareq2.svg', 'SimpleObstacles.svg', 'engstelle.svg','svg2_tareq2.svg', 'Zipper.svg']
+#level_files = ['engstelle.svg']
 #level_files = ['ez.svg', 'ez2.svg', 'ez3.svg', 'ez4.svg', 'ez5.svg']
 #level_files = ['Simple.svg', 'Funnel.svg', 'tunnel2.svg']
 #level_files = ['svg3_tareq2.svg', 'SimpleObstacles.svg', 'engstelle.svg','svg2_tareq2.svg', 'Zipper.svg']
-ckpt_folder = './models/totaleAufgabe'
-model_name = "model"
+level_files = ['svg3_tareq2.svg']
+ckpt_folder = './models/AftershowAnTell2'
+model_name = "model_best_current"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default=ckpt_folder, help='Location to save checkpoint models')
 parser.add_argument('--model_name', default=model_name, help='Name of the modelfile')
-parser.add_argument('--mode', default='train', help='choose train or test')
+parser.add_argument('--mode', default='test', help='choose train or test')
 
 # Train Parameters
 
@@ -47,10 +50,10 @@ parser.add_argument('--restore', default=False, action='store_true', help='Resto
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net') # TODO not properly implemented
 parser.add_argument('--steps', type=int, default=2500, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=float, default="inf", help='Maximum Number of Episodes')
-parser.add_argument('--update_experience', type=int, default=10000, help='how many experiences to update the policy') #40000
+parser.add_argument('--update_experience', type=int, default=20000, help='how many experiences to update the policy') #40000
 parser.add_argument('--batches', type=int, default=2, help='number of batches') #15
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)') # TODO currently not used
-parser.add_argument('--K_epochs', type=int, default=15, help='update the policy K times')
+parser.add_argument('--K_epochs', type=int, default=7, help='update the policy K times')
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)

@@ -164,9 +164,9 @@ class Environment:
         reward = {}
         r_arrival = 25 # reward for reaching the goal
         r_collision = -10 # Robot crashed with a wall or another robot
-        r_runOutOfTime = 0 # Robot has run out of time
-        r_stop = -0.05 # Robot stood still
-        w_g = 1.2
+        r_runOutOfTime = -1 # Robot has run out of time
+        r_stop = -0.01 # Robot stood still
+        w_g = 2.2
         w_gn = 0.05 #1.3
         w_w = -0.2
         a_p = 0.045 # weight for the angle, always positive
@@ -178,16 +178,31 @@ class Environment:
         elif collision:
             reward['collision'] = r_collision #* living_factor
         else:
+            # Distance Reward
             if dist_old > dist_new:
                 reward['dist'] = w_g * (dist_old - dist_new)
             else:
                 reward['dist'] = w_gn * (dist_old - dist_new)
 
+            # Protect engine Reward
+            currentLinVel = np.around(robot.state_raw[robot.time_steps - 1][4], decimals=5)
+            lastLinVel = np.around(robot.state_raw[robot.time_steps - 2][4], decimals=5)
+
+            currentAngVel = np.around(robot.state_raw[robot.time_steps - 1][5], decimals=5)
+            lastAngVel = np.around(robot.state_raw[robot.time_steps - 2][5], decimals=5)
+
+            if (np.abs(currentLinVel - lastLinVel) < 0.15) and (np.abs(currentAngVel - lastAngVel) < 0.30):
+                reward['motorReward'] = 0.01
+            else:
+                reward['motorReward'] = -0.01
+
+            # Stop Reward
+            # if abs(dist_old - dist_new) < 0.001:
+            #     reward['stop'] = r_stop
+
+            # Minimal distance to obstacle
             # if np.min(robot.get_state_lidar()[0][0]) < 0.012:
             #     reward['wall'] = w_w
-
-            if abs(dist_old - dist_new) < 0.001:
-                reward['stop'] = r_stop
 
             # Directional reward (look at the angle between the robot and the goal)
             # a1 = np.arctan2(robot.getGoalY() - robot.getPosY(), robot.getGoalX() - robot.getPosX())
@@ -197,41 +212,17 @@ class Environment:
             #     alpha_norm = 1 - goalangle
             #     reward['directional'] = a_p * alpha_norm
 
-            # wiggle reward
+            # Wiggle reward
             # abs_ang_vel = np.abs(robot.getAngularVelocity())
             # if abs_ang_vel > 0.7:
             #     reward['wiggle'] = w_w * abs_ang_vel
-
-        return reward
-
-            # delta_dist = dist_old - dist_new
-            # if delta_dist > 0:
-            #     reward += w_g * delta_dist
-            # else:
-            #     reward += w_gn * delta_dist
-
-            #TODO compute velocity discount factor (reward robot for moving slower linear)
-            # linvel = robot.getLinearVelocity()
-            # dist = (dist_old - dist_new)
-            # vel_discount = np.power((1.5 - max(linvel, 0.1)), (1 / max(dist, 0.1)))
-            # print("reward before: ", reward)
-            # print("linvel:", linvel, "veldiscount:", vel_discount, "dist:", (dist_old - dist_new))
-            # reward = vel_discount * (dist_old - dist_new)
-            # if dist_old > dist_new:
-            #     reward *= w_gp
-            # else:
-            #     reward *= w_gn
-            #print("reward after: ", reward)
-
-            #reward += living_penalty
-            #print(np.around(reward, decimals=5))
 
             # PUBG Reward (only gets rewarded if it gets closer to the goal than previously)
             # if dist_new < robot.initialGoalDist:
             #     reward += w_d * (robot.initialGoalDist - dist_new)
             #     robot.initialGoalDist = dist_new
-        #return reward
-        #return np.around(reward, decimals=5)
+
+        return reward
 
     def reset(self, level=None):
         """
