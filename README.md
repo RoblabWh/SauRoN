@@ -52,3 +52,69 @@ To train run:
 To train with MPI:
 
 ```mpirun -n N_PROC python main.py --mode train```
+
+
+## Params
+
+### Training Parameters:
+`--restore`: If set to `True`, restores and continues training from previous checkpoint. **Default: `False`**
+
+`--time_frames`: The number of timeframes (past states) that will be analyzed by the neural net. **Default: 4**
+
+`--steps`: The number of steps in the environment per episode. **Default: 2500**
+
+`--max_episodes`: The maximum number of episodes to run. **Default: `inf`**
+
+`--update_experience`: How many experiences to use to update the policy. **Default: 20000**
+
+`--batches`: The number of batches to use. **Default: 2**
+
+`--action_std`: The constant standard deviation for the action distribution (Multivariate Normal). **Default: 0.5**
+
+`--K_epochs`: The number of times to update the policy. **Default: 7**
+
+`--eps_clip`: The epsilon value for p/q clipping. **Default: 0.2**
+
+`--gamma`: The discount factor. **Default: 0.99**
+
+`--lr`: The learning rate. Default: **0.0003**
+
+`--input_style`: Choose between using images (image) or laser readings (laser). **Default: `laser`**
+
+`--image_size`: The size of the image that is input to the neural net. **Default: 256**
+
+
+### Simulation Settings:
+`--level_files`: A list of level files as strings. **Default: [`'svg3_tareq2.svg'`]**
+
+`--sim_time_step`: The time between steps. `Default: 0.1`
+
+
+### Robot Settings:
+`--number_of_rays`: The number of rays emitted by the laser. `Default: 1081`
+
+`--field_of_view`: The lidar's field of view in degrees. `Default: 270`
+
+`--collide_other_targets`: Determines whether the robot collides with targets of other robots (or passes through them). `Default: False`
+
+`--manually`: Move the robot manually with wasd. `Default: False`
+
+
+### Visualization and Managing Settings:
+`--visualization`: Choose the visualization mode: none, single or all. **Default: `"single"`**
+
+`--visualization_paused`: Start the visualization toggled to paused. **Default: `False`**
+
+`--tensorboard`: Use tensorboard. **Default: `True`**
+
+`--print_interval`: How many episodes to print the results out. **Default: 1**
+
+`--solved_percentage`: Stop training if objective is reached to this percentage. **Default: 0.99**
+
+`--log_interval`: How many episodes to log into tensorboard. Also regulates how solved percentage is calculated. **Default: 30**
+
+`--render`: Whether to render the environment. **Default: `False`**
+
+`--scale_factor`: The scale factor for the environment. **Default: 55**
+
+`--display_normals`: Determines whether the normals of a wall are shown in the map. **Default: `True`**
