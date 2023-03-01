@@ -14,6 +14,15 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Inputspace(nn.Module):
 
     def __init__(self, scan_size, input_style):
+        """
+        A PyTorch Module that represents the input space of a neural network.
+
+        This module takes in four inputs: a lidar scan, orientation to goal, distance to goal, and velocity.
+        It then applies convolutional and dense layers to each input separately and concatenates the outputs
+        to produce a flattened feature vector that can be fed into a downstream neural network.
+
+        :param scan_size: The number of lidar scans in the input lidar scan.
+        """
         super(Inputspace, self).__init__()
 
         self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=16, kernel_size=3, stride=1)
@@ -58,8 +67,6 @@ class Inputspace(nn.Module):
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         laser = torch.tanh(self.lidar_conv1(laser))
         laser = torch.tanh(self.lidar_conv2(laser))
-        #laser = self.maxPool(laser)
-        #laser = torch.tanh(self.lidar_conv3(laser))
         laser_flat = self.flatten(laser)
 
         orientation_to_goal = torch.tanh(self.ori_dense(orientation_to_goal))
@@ -75,15 +82,19 @@ class Inputspace(nn.Module):
         input_dense = torch.tanh(self.input_dense(concated_input))
         input_dense = torch.tanh(self.input_dense2(input_dense))
 
-        #other_dense = F.relu(self.other_flat(concat))
-        #concat_all = torch.cat((laser_flat, other_dense), dim=1)
-        #concat = torch.cat([laser_flat, orientation_flat, distance_flat, velocity_flat], dim=1)
-        #densed = F.relu(self.concated_some(concat_all))
-
         return input_dense
 
 
 class Actor(nn.Module):
+    """
+    A PyTorch Module that represents the actor network of a PPO agent.
+
+    This module takes in four inputs: a lidar scan, orientation to goal, distance to goal, and velocity.
+    It then applies convolutional and dense layers to each input separately and concatenates the outputs
+    to produce a flattened feature vector that can be fed into a downstream neural network.
+
+    :param scan_size: The number of lidar scans in the input lidar scan.
+    """
     def __init__(self, scan_size, input_style):
         super(Actor, self).__init__()
         self.Inputspace = Inputspace(scan_size, input_style)
@@ -104,6 +115,15 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
+    """
+    A PyTorch Module that represents the critic network of a PPO agent.
+
+    This module takes in four inputs: a lidar scan, orientation to goal, distance to goal, and velocity.
+    It then applies convolutional and dense layers to each input separately and concatenates the outputs
+    to produce a flattened feature vector that can be fed into a downstream neural network.
+
+    :param scan_size: The number of lidar scans in the input lidar scan.
+    """
     def __init__(self, scan_size, input_style):
         super(Critic, self).__init__()
         self.Inputspace = Inputspace(scan_size, input_style)
@@ -120,6 +140,13 @@ class Critic(nn.Module):
 
 
 class ActorCritic(nn.Module):
+    """
+    A PyTorch Module that represents the actor-critic network of a PPO agent.
+
+    This module takes in four inputs: a lidar scan, orientation to goal, distance to goal, and velocity.
+    It then applies convolutional and dense layers to each input separately and concatenates the outputs
+    to produce a flattened feature vector that can be fed into a downstream neural network.
+    """
     def __init__(self, action_std, scan_size, input_style, logger):
         super(ActorCritic, self).__init__()
         action_dim = 2
@@ -135,6 +162,12 @@ class ActorCritic(nn.Module):
         #self.action_var = torch.full((action_dim, ), action_std * action_std).to(device)
 
     def act(self, states):
+        """
+        Returns an action sampled from the actor's distribution and the log probability of that action.
+
+        :param states: A tuple of the current lidar scan, orientation to goal, distance to goal, and velocity.
+        :return: A tuple of the sampled action and the log probability of that action.
+        """
         laser, orientation, distance, velocity = states
         # TODO: check if normalization of states is necessary
         # was suggested in: Implementation_Matters in Deep RL: A Case Study on PPO and TRPO
@@ -152,12 +185,27 @@ class ActorCritic(nn.Module):
         return action, action_logprob
 
     def act_certain(self, states):
+        """
+        Returns an action from the actor's distribution without sampling.
+
+        :param states: A tuple of the current lidar scan, orientation to goal, distance to goal, and velocity.
+        :return: The action from the actor's distribution.
+        """
         laser, orientation, distance, velocity = states
         action, _ = self.actor(laser, orientation, distance, velocity)
 
         return action
 
     def evaluate(self, state, action):
+        """
+        Returns the log probability of the given action, the value of the given state, and the entropy of the actor's
+        distribution.
+
+        :param state: A tuple of the current lidar scan, orientation to goal, distance to goal, and velocity.
+        :param action: The action to evaluate.
+        :return: A tuple of the log probability of the given action, the value of the given state, and the entropy of the
+        actor's distribution.
+        """
         laser, orientation, distance, velocity = state
         state_value = self.critic(laser, orientation, distance, velocity)
 
@@ -172,6 +220,22 @@ class ActorCritic(nn.Module):
 
 
 class PPO:
+    """
+    This class represents the PPO Algorithm. It is used to train an actor-critic network.
+
+    :param scan_size: The number of lidar scans in the input lidar scan.
+    :param action_std: The standard deviation of the action distribution.
+    :param input_style: The style of the input to the network.
+    :param lr: The learning rate of the network.
+    :param betas: The betas of the Adam optimizer.
+    :param gamma: The discount factor.
+    :param K_epochs: The number of epochs to train the network.
+    :param eps_clip: The epsilon value for clipping.
+    :param logger: The logger to log data to.
+    :param restore: Whether to restore the network from a checkpoint.
+    :param ckpt: The checkpoint to restore from.
+    """
+
     def __init__(self, scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, logger, restore=False, ckpt=None):
         self.lr = lr
         self.betas = betas
@@ -197,11 +261,9 @@ class PPO:
         self.running_reward_std = RunningMeanStd()
 
     def select_action(self, observations):
-        # prepare data
         return self.old_policy.act(observations)
 
     def select_action_certain(self, observations):
-        # prepare data
         return self.old_policy.act_certain(observations)
 
     def saveCurrentWeights(self, ckpt_folder, env_name):
@@ -209,6 +271,14 @@ class PPO:
         torch.save(self.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_current.pth'.format(env_name))
 
     def get_advantages(self, values, masks, rewards):
+        """
+        Computes the advantages of the given rewards and values.
+
+        :param values: The values of the states.
+        :param masks: The masks of the states.
+        :param rewards: The rewards of the states.
+        :return: The advantages of the states.
+        """
         returns = []
         gae = 0
         a = [ai.unsqueeze(0) for ai in values]
@@ -224,6 +294,20 @@ class PPO:
         return returns, (adv - adv.mean()) / (adv.std() + 1e-10)
 
     def update(self, memory, batches):
+        """
+        This function implements the update step of the Proximal Policy Optimization (PPO) algorithm for a swarm of
+        robots. It takes in the memory buffer containing the experiences of the swarm, as well as the number of batches
+        to divide the experiences into for training. The function first computes the discounted rewards for each robot
+        in the swarm and normalizes them. It then flattens the rewards and masks and converts them to PyTorch tensors.
+        Next, the function retrieves the observations, actions, and log probabilities from the memory buffer and divides
+        them into minibatches for training. For each minibatch, it calculates the advantages using the generalized
+        advantage estimator (GAE) and trains the policy for K epochs using the surrogate loss function. The function
+        then updates the weights of the actor and critic networks using the optimizer.
+        Finally, the function copies the updated weights to the old policy for future use in the next update step.
+
+        :param memory: The memory to update the network with.
+        :param batches: The number of batches to divide the memory into.
+        """
         # computes the discounted reward for every robots in memory
         rewards = []
         masks = []
@@ -245,8 +329,6 @@ class PPO:
         self.running_reward_std.update(np.array(rewards))
         rewards = np.clip(np.array(rewards) / self.running_reward_std.get_std(), -10, 10)
         rewards = torch.tensor(rewards).type(torch.float32).to(device)
-        # rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
-        #rewards = rewards.type(torch.float32)
 
         masks = torch.tensor(masks).to(device)
 
@@ -257,15 +339,6 @@ class PPO:
         old_logprobs = torch.stack(memory.getLogProbsOfAllRobots()).to(device)
 
         # TODO randomize the order of experiences that it DOESNT interfer with GAE calculation
-        # indices = torch.randperm(laser.shape[0])
-        # laser = laser[indices]
-        # orientation = orientation[indices]
-        # distance = distance[indices]
-        # velocity = velocity[indices]
-        # old_actions = old_actions[indices]
-        # old_logprobs = old_logprobs[indices]
-        # rewards = rewards[indices]
-        # masks = masks[indices]
 
         # Train policy for K epochs: sampling and updating
         for rewards_minibatch, old_laser_minibatch, old_orientation_minibatch, old_distance_minibatch, \
@@ -277,6 +350,7 @@ class PPO:
 
             old_states_minibatch = [old_laser_minibatch, old_orientation_minibatch, old_distance_minibatch,
                                     old_velocity_minibatch]
+            # Advantages
             _, values_, _ = self.policy.evaluate(old_states_minibatch, old_actions_minibatch)
             returns, advantages = self.get_advantages(values_.detach(), mask_minibatch, rewards_minibatch)
 
@@ -308,7 +382,6 @@ class PPO:
                 self.logger.add_loss(loss.detach().mean().item(), entropy=entropy.detach().mean().item(), critic_loss=critic_loss.detach().mean().item(), actor_loss=actor_loss.detach().mean().item())
 
                 # Backward gradients
-                #self.optimizer.zero_grad()
                 self.optimizer_a.zero_grad()
                 actor_loss.mean().backward(retain_graph=True)
                 # Global gradient norm clipping https://vitalab.github.io/article/2020/01/14/Implementation_Matters.html
@@ -320,15 +393,7 @@ class PPO:
                 # Global gradient norm clipping https://vitalab.github.io/article/2020/01/14/Implementation_Matters.html
                 torch.nn.utils.clip_grad_norm_(self.policy.critic.parameters(), max_norm=0.5)
                 self.optimizer_c.step()
-                #with torch.cuda.amp.autocast(True):
-                #loss.mean().backward()
-
-
-                # self.optimizer_a.step()
-                # self.optimizer_c.step()
-                #self.optimizer.step()
 
         # Copy new weights to old_policy
         self.old_policy.actor.load_state_dict(self.policy.actor.state_dict())
         self.old_policy.critic.load_state_dict(self.policy.critic.state_dict())
-        #self.old_policy.load_state_dict(self.policy.state_dict())

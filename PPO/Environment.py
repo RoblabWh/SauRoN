@@ -114,6 +114,7 @@ def train(env_name, env, solved_percentage, input_style,
     if tensorboard:
         logger.close()
 
+
 def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes, scan_size=121):
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'

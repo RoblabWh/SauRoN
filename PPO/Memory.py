@@ -1,4 +1,8 @@
 class Memory:   # collected from old policy
+    """
+    Memory class used to store the transitions that the agent observes, and
+    on which it will be trained.
+    """
     def __init__(self):
         self.observations = []
         self.actions = []

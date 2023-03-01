@@ -4,6 +4,12 @@ import copy
 from PPO.Memory import Memory
 
 class SwarmMemory:
+    """
+    This class is used to store the memory of the environment. It is used to store the observations, actions, rewards,
+    logprobs, reached_goal and is_terminal. It is used to store the memory of the environment for each robot.
+
+    :param robotsCount: The number of robots in the environment
+    """
     def __init__(self, robotsCount = 0):
         self.robotsCount = robotsCount
         self.swarmMemory = []
@@ -21,6 +27,9 @@ class SwarmMemory:
 
     # Gets relative Index according to currentTerminalStates
     def getRelativeIndices(self):
+        """
+        This function returns the indices of the robots that are not in a terminal state.
+        """
         relativeIndices = []
         for i in range(len(self.currentTerminalStates)):
             if not self.currentTerminalStates[i]:
@@ -50,6 +59,12 @@ class SwarmMemory:
             self.environmentMemory[self.relativeIndices[idx]].reached_goal.append(terminalGoal[idx])
 
     def insertIsTerminal(self, isTerminal):
+        """
+        This function inserts the isTerminal values in the memory. It also checks if all robots are in a terminal state.
+        If so, it resets the currentTerminalStates to False.
+
+        :param isTerminal: The isTerminal values of the robots
+        """
         for i in range(len(self.relativeIndices)):
             self.environmentMemory[self.relativeIndices[i]].is_terminals.append(isTerminal[i])
             if isTerminal[i]:
@@ -65,6 +80,9 @@ class SwarmMemory:
             self.swarmMemory.append(copy.deepcopy(memory))
 
     def getObservationOfAllRobots(self):
+        """
+        This function returns the observations of all robots in the swarm.
+        """
         laser = []
         orientation = []
         distance = []
@@ -100,6 +118,9 @@ class SwarmMemory:
         self.swarmMemory = []
 
     def clear_episode(self):
+        """
+        This function clears the memory of the environment. It also resets the currentTerminalStates to False.
+        """
         for memory in self.environmentMemory:
             memory.clear_memory()
         self.environmentMemory = self.environmentMemory[:self.robotsCount]

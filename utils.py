@@ -10,6 +10,11 @@ import pickle
 
 
 def initialize_output_weights(m, out_type):
+    """
+    Initialize the weights of the output layer of the actor and critic networks
+    :param m: the layer to initialize
+    :param out_type: the type of the output layer (actor or critic)
+    """
     if out_type == 'actor':
         torch.nn.init.orthogonal_(m.weight.data, gain=0.01)
         if m.bias is not None:
@@ -20,6 +25,10 @@ def initialize_output_weights(m, out_type):
             torch.nn.init.constant_(m.bias.data, 0)
 
 def initialize_hidden_weights(m):
+    """
+    Initialize the weights of the hidden layers of the actor and critic networks
+    :param m: the layer to initialize
+    """
     if isinstance(m, torch.nn.Conv2d):
         torch.nn.init.orthogonal_(m.weight.data, gain=np.sqrt(2))
         if m.bias is not None:
@@ -33,11 +42,18 @@ def initialize_hidden_weights(m):
         if m.bias is not None:
             torch.nn.init.constant_(m.bias.data, 0)
 
-# normalizes a tensor to mean zero and standard deviation one
 def normalize(tensor):
+    """
+    Normalizes a tensor to mean zero and standard deviation one
+    """
     return (tensor - tensor.mean()) / (tensor.std() + 1e-8)
 
 def statesToObservationsTensor(list):
+    """
+    The observations are the laser scan, the orientation, the distance to the goal and the velocity.
+    :param list: the list of states
+    :return: a list of observations
+    """
     states = np.asarray(list, dtype=object)
     laser = np.array(states[:, :, 0].tolist())
     ori = np.array(states[:, :, 1].tolist())
@@ -50,13 +66,9 @@ def statesToObservationsTensor(list):
 
 def torchToNumpy(tensor: torch.Tensor) -> np.ndarray:
     return tensor.detach().cpu().numpy()
+
 # TODO maybe use this ???!?!!
 def _scan1DTo2D(lidarHits):
-
-    #theta = np.radians(-135)
-    #rotMatrix = np.array([[np.cos(theta), -np.sin(theta)],
-    #                     [np.sin(theta), np.cos(theta)]])
-    #data = np.dot(lidarHits, rotMatrix.T)
     data = lidarHits * 5
     data = data.astype(int)
     image = np.zeros((121, 121))
@@ -76,6 +88,12 @@ def _scan1DTo2D(lidarHits):
     return image
 
 def scan1DTo2D(distancesNorm, img_size, print=False):
+    """
+    Converts a 1D scan to a 2D image
+    :param distancesNorm: the 1D scan
+    :param img_size: the size of the image
+    :param print: if true, the image is saved in the scans folder
+    """
     scanplot = []
     angle_min = 0
     angle_increment = np.radians(0.25)
@@ -161,6 +179,12 @@ def check_args(args):
     assert os.path.exists(args.ckpt_folder), "Checkpoint folder does not exist."
 
 class Logger(object):
+    """
+    Logger class for logging training and evaluation metrics. It uses tensorboardX to log the metrics.
+
+    :param log_dir: (string) directory where the logs will be saved
+    :param log_interval: (int) interval for logging
+    """
     def __init__(self, log_dir, log_interval):
         self.writer = None
         self.log_dir = log_dir
@@ -302,6 +326,9 @@ class Logger(object):
 
 
 class RunningMeanStd(object):
+    """
+    This class is used to calculate the running mean and standard deviation of a data.
+    """
     # from https://github.com/openai/baselines
     # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
     def __init__(self, epsilon=1e-4, shape=()):
