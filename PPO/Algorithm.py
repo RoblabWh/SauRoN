@@ -25,23 +25,23 @@ class Inputspace(nn.Module):
         """
         super(Inputspace, self).__init__()
 
-        self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=16, kernel_size=3, stride=1)
+        self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=32, kernel_size=3, stride=1)
         initialize_hidden_weights(self.lidar_conv1)
         in_f = self.get_in_features(h_in=scan_size, kernel_size=3, stride=1)
-        self.lidar_conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=3, stride=1)
+        self.lidar_conv2 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
         initialize_hidden_weights(self.lidar_conv2)
         in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
-        # self.maxPool = nn.MaxPool1d(kernel_size=2, stride=2)
-        # in_f = self.get_in_features(h_in=in_f, kernel_size=2, stride=2)
-        # self.lidar_conv3 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
-        # initialize_hidden_weights(self.lidar_conv3)
-        # in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
-        features_scan = (int(in_f)) * 32
+        self.maxPool = nn.MaxPool1d(kernel_size=2, stride=2)
+        in_f = self.get_in_features(h_in=in_f, kernel_size=2, stride=2)
+        self.lidar_conv3 = nn.Conv1d(in_channels=64, out_channels=128, kernel_size=3, stride=1)
+        initialize_hidden_weights(self.lidar_conv3)
+        in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
+        features_scan = (int(in_f)) * 128
 
         self.flatten = nn.Flatten()
 
         ori_out_features = 32
-        dist_out_features = 16
+        dist_out_features = 32
         vel_out_features = 32
         self.ori_dense = nn.Linear(in_features=2, out_features=ori_out_features)
         initialize_hidden_weights(self.ori_dense)
@@ -51,38 +51,43 @@ class Inputspace(nn.Module):
         initialize_hidden_weights(self.vel_dense)
 
         # four is the number of timeframes TODO make this dynamic
-        lidar_out_features = 256
+        lidar_out_features = 192
         input_features = lidar_out_features + (ori_out_features + dist_out_features + vel_out_features) * 4
 
         self.lidar_flat = nn.Linear(in_features=features_scan, out_features=lidar_out_features)
         initialize_hidden_weights(self.lidar_flat)
-        self.input_dense = nn.Linear(in_features=input_features, out_features=384)
-        self.input_dense2 = nn.Linear(in_features=384, out_features=384)
+        self.input_dense = nn.Linear(in_features=input_features, out_features=256)
         initialize_hidden_weights(self.input_dense)
-        initialize_hidden_weights(self.input_dense2)
 
     def get_in_features(self, h_in, padding=0, dilation=1, kernel_size=0, stride=1):
         return (((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1)
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
-        laser = torch.tanh(self.lidar_conv1(laser))
-        laser = torch.tanh(self.lidar_conv2(laser))
+        laser = F.relu(self.lidar_conv1(laser))
+        laser = F.relu(self.lidar_conv2(laser))
+        laser = self.maxPool(laser)
+        laser = F.relu(self.lidar_conv3(laser))
         laser_flat = self.flatten(laser)
 
-        orientation_to_goal = torch.tanh(self.ori_dense(orientation_to_goal))
-        distance_to_goal = torch.tanh(self.dist_dense(distance_to_goal))
-        velocity = torch.tanh(self.vel_dense(velocity))
+        orientation_to_goal = F.relu(self.ori_dense(orientation_to_goal))
+        distance_to_goal = F.relu(self.dist_dense(distance_to_goal))
+        velocity = F.relu(self.vel_dense(velocity))
 
-        laser_flat = torch.tanh(self.lidar_flat(laser_flat))
+        laser_flat = F.relu(self.lidar_flat(laser_flat))
         orientation_flat = self.flatten(orientation_to_goal)
         distance_flat = self.flatten(distance_to_goal)
         velocity_flat = self.flatten(velocity)
 
         concated_input = torch.cat((laser_flat, orientation_flat, distance_flat, velocity_flat), dim=1)
-        input_dense = torch.tanh(self.input_dense(concated_input))
-        input_dense = torch.tanh(self.input_dense2(input_dense))
+        input_dense = F.relu(self.input_dense(concated_input))
+
+        #other_dense = F.relu(self.other_flat(concat))
+        #concat_all = torch.cat((laser_flat, other_dense), dim=1)
+        #concat = torch.cat([laser_flat, orientation_flat, distance_flat, velocity_flat], dim=1)
+        #densed = F.relu(self.concated_some(concat_all))
 
         return input_dense
+
 
 
 class Actor(nn.Module):
@@ -100,7 +105,7 @@ class Actor(nn.Module):
         self.Inputspace = Inputspace(scan_size, input_style)
 
         # Mu
-        self.mu = nn.Linear(in_features=384, out_features=2)
+        self.mu = nn.Linear(in_features=256, out_features=2)
         initialize_output_weights(self.mu, 'actor')
         # Logstd
         self.log_std = nn.Parameter(torch.zeros(2, ))
@@ -128,14 +133,12 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.Inputspace = Inputspace(scan_size, input_style)
         # Value
-        self.dense = nn.Linear(in_features=384, out_features=120)
-        self.value = nn.Linear(in_features=120, out_features=1)
+        self.value = nn.Linear(in_features=256, out_features=1)
         initialize_output_weights(self.value, 'critic')
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser, orientation_to_goal, distance_to_goal, velocity)
-        dense = torch.tanh(self.dense(x))
-        value = torch.tanh(self.value(dense))
+        value = F.relu(self.value(x))
         return value
 
 
