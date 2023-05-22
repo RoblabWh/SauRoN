@@ -2,6 +2,7 @@ from Environment.Simulation import Simulation
 
 import math
 import numpy as np
+from utils import is_staying_in_place
 
 
 class Environment:
@@ -162,13 +163,15 @@ class Environment:
 
         living_factor = self.steps_left / self.steps
         reward = {}
-        r_arrival = 25 # reward for reaching the goal
-        r_collision = -10 # Robot crashed with a wall or another robot
-        r_runOutOfTime = -1 # Robot has run out of time
+        r_arrival = 250 # reward for reaching the goal
+        r_collision = -250 # Robot crashed with a wall or another robot
+        r_runOutOfTime = -50 # Robot has run out of time
         r_stop = -0.01 # Robot stood still
-        w_g = 2.2
-        w_gn = 0.05 #1.3
-        w_w = -0.2
+        w_g = 30.2
+        w_d = 15
+        w_gn = 30.2
+        w_w = -0.5
+        w_p = 0.1
         a_p = 0.045 # weight for the angle, always positive
 
         if reachedPickup:
@@ -178,11 +181,11 @@ class Environment:
         elif collision:
             reward['collision'] = r_collision #* living_factor
         else:
-            # Distance Reward
-            if dist_old > dist_new:
-                reward['dist'] = w_g * (dist_old - dist_new)
-            else:
-                reward['dist'] = w_gn * (dist_old - dist_new)
+            # # Distance Reward
+            # if dist_old > dist_new:
+            #     reward['dist'] = w_g * (dist_old - dist_new)
+            # else:
+            #     reward['dist'] = w_gn * (dist_old - dist_new)
 
             # Protect engine Reward
             currentLinVel = np.around(robot.state_raw[robot.time_steps - 1][4], decimals=5)
@@ -192,9 +195,13 @@ class Environment:
             lastAngVel = np.around(robot.state_raw[robot.time_steps - 2][5], decimals=5)
 
             if (np.abs(currentLinVel - lastLinVel) < 0.15) and (np.abs(currentAngVel - lastAngVel) < 0.30):
-                reward['motorReward'] = 0.01
+                reward['motorReward'] = 0.1
             else:
-                reward['motorReward'] = -0.01
+                reward['motorReward'] = -0.1
+
+            # Agent stays in the same region for some time, indicating being stuck or driving in circles
+            if is_staying_in_place(robot.last_positions):
+                reward['stucked'] = -1
 
             # Stop Reward
             # if abs(dist_old - dist_new) < 0.001:
@@ -213,14 +220,13 @@ class Environment:
             #     reward['directional'] = a_p * alpha_norm
 
             # Wiggle reward
-            # abs_ang_vel = np.abs(robot.getAngularVelocity())
-            # if abs_ang_vel > 0.7:
-            #     reward['wiggle'] = w_w * abs_ang_vel
+            if currentAngVel > 0.7:
+                reward['wiggle'] = w_w * currentAngVel
 
             # PUBG Reward (only gets rewarded if it gets closer to the goal than previously)
-            # if dist_new < robot.initialGoalDist:
-            #     reward += w_d * (robot.initialGoalDist - dist_new)
-            #     robot.initialGoalDist = dist_new
+            if dist_new < robot.initialGoalDist:
+                reward['pubg'] = w_d * (robot.initialGoalDist - dist_new)
+                robot.initialGoalDist = dist_new
 
         return reward
 

@@ -16,7 +16,7 @@ def initialize_output_weights(m, out_type):
     :param out_type: the type of the output layer (actor or critic)
     """
     if out_type == 'actor':
-        torch.nn.init.orthogonal_(m.weight.data, gain=0.01)
+        torch.nn.init.orthogonal_(m.weight.data, gain=1)
         if m.bias is not None:
             torch.nn.init.constant_(m.bias.data, 0)
     elif out_type == 'critic':
@@ -30,15 +30,15 @@ def initialize_hidden_weights(m):
     :param m: the layer to initialize
     """
     if isinstance(m, torch.nn.Conv2d):
-        torch.nn.init.orthogonal_(m.weight.data, gain=np.sqrt(2))
+        torch.nn.init.orthogonal_(m.weight.data, gain=1)
         if m.bias is not None:
             torch.nn.init.constant_(m.bias.data, 0)
     elif isinstance(m, torch.nn.Linear):
-        torch.nn.init.orthogonal_(m.weight.data, gain=np.sqrt(2))
+        torch.nn.init.orthogonal_(m.weight.data, gain=1)
         if m.bias is not None:
             torch.nn.init.constant_(m.bias.data, 0)
     elif isinstance(m, torch.nn.Conv1d):
-        torch.nn.init.orthogonal_(m.weight.data, gain=np.sqrt(2))
+        torch.nn.init.orthogonal_(m.weight.data, gain=1)
         if m.bias is not None:
             torch.nn.init.constant_(m.bias.data, 0)
 
@@ -362,3 +362,42 @@ class RunningMeanStd(object):
 
     def get_std(self):
         return np.sqrt(self.var + self.epsilon)
+    
+class CircularBuffer:
+    def __init__(self, size):
+        self.buffer = [[-1, -1]] * size  # Initialize buffer with zeros
+        self.index = 0  # Pointer to current position
+
+    def add(self, x, y):
+        self.buffer[self.index] = [x, y]  # Overwrite current position with new position
+        self.index = (self.index + 1) % len(self.buffer)  # Move pointer to next position, wrap around if at end
+
+    def count_invalid_positions(self):
+        return self.buffer.count([-1, -1])
+
+    def get_buffer(self):
+        return self.buffer
+    
+def is_staying_in_place(buffer, threshold=1.0):
+    # Make sure the buffer is full of valid positions
+    if buffer.count_invalid_positions() > 0:
+        return False
+
+    all_positions = buffer.get_buffer()
+    xs, ys = zip(*all_positions)  # Unpack coordinates
+
+    return (max(xs) - min(xs)) < threshold and (max(ys) - min(ys)) < threshold
+
+
+def distance(pos1, pos2):
+    """
+    Computes the Euclidean distance between two positions.
+
+    Args:
+        pos1 (tuple): The first position (x, y).
+        pos2 (tuple): The second position (x, y).
+
+    Returns:
+        float: The Euclidean distance between the two positions.
+    """
+    return ((pos2[0] - pos1[0])**2 + (pos2[1] - pos1[1])**2)**0.5

@@ -4,7 +4,7 @@ import math
 from pynput.keyboard import Listener
 import copy
 import numpy as np
-from utils import scan1DTo2D
+from utils import scan1DTo2D, CircularBuffer
 import torch
 
 import os
@@ -17,7 +17,7 @@ class Robot:
     Defines a Robot that can move inside of simulation
     """
 
-    def __init__(self, position, startOrientation, station, args, walls, allStations, circleWalls):
+    def __init__(self, idx, position, startOrientation, station, args, walls, allStations, circleWalls):
         """
         :param position: tuple (float,float) -
         :param position: tuple (float,float) -
@@ -37,8 +37,13 @@ class Robot:
             target stations of the other robots can be used as a collider
         """
         self.args = args
+        
+        self.idx = idx
 
         self.startposX, self.startposY = position
+        self.buffersize = 80
+        self.last_positions = CircularBuffer(self.buffersize)
+        self.last_positions.add(self.startposX, self.startposY)
         self.startDirectionX = math.cos(startOrientation)
         self.startDirectionY = math.sin(startOrientation)
         self.startOrientation = startOrientation
@@ -146,6 +151,8 @@ class Robot:
             self.startposX, self.startposY = pos
         posX = self.startposX
         posY = self.startposY
+        self.last_positions = CircularBuffer(self.buffersize)
+        self.last_positions.add(posX, posY)
 
         if(orientation != None):
             self.startDirectionX = math.cos(orientation)
@@ -267,6 +274,8 @@ class Robot:
         deltaPosY = directionVector[1] * linVel * dt  # math.sin(direction) * linVel * dt
         posX += deltaPosX
         posY += deltaPosY
+
+        self.last_positions.add(posX, posY)
 
         direction = (self.getDirectionAngle() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
         directionVector = self.directionVectorFromAngle(direction)
