@@ -7,9 +7,10 @@ import time
 from utils import statesToObservationsTensor, torchToNumpy
 
 
-def train(env_name, env, solved_percentage, input_style,
-          max_episodes, max_timesteps, update_experience, action_std, K_epochs, eps_clip,
-          gamma, lr, betas, ckpt_folder, restore, tensorboard, scan_size=121, log_interval=10, batches=1):
+def train(env_name, env, solved_percentage, input_style, max_episodes, max_timesteps,
+          update_experience, action_std, _lambda, K_epochs, eps_clip, gamma, lr,
+          betas, ckpt_folder, restore, tensorboard, scan_size=121, log_interval=10,
+          batches=1, advantages_func=None):
 
     # Tensorboard
     logger = Logger(ckpt_folder, log_interval)
@@ -19,16 +20,13 @@ def train(env_name, env, solved_percentage, input_style,
 
     memory = SwarmMemory(env.getNumberOfRobots())
 
-    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, logger=logger)
+    ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
+
+    ppo = PPO(scan_size=scan_size, action_std=action_std, input_style=input_style, lr=lr,
+              betas=betas, gamma=gamma, _lambda=_lambda, K_epochs=K_epochs, eps_clip=eps_clip,
+              logger=logger, restore=restore, ckpt=ckpt, advantages_func=advantages_func)
     device = ppo.policy.device
     env.setUISaveListener(ppo, ckpt_folder, env_name)
-
-    ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
-    if restore:
-        print('Load checkpoint from {}'.format(ckpt), flush=True)
-        pretrained_model = torch.load(ckpt, map_location=lambda storage, loc: storage)
-        ppo.policy.load_state_dict(pretrained_model)
-        ppo.old_policy.load_state_dict(pretrained_model)
 
     training_counter = 0
 
@@ -51,14 +49,13 @@ def train(env_name, env, solved_percentage, input_style,
         for t in range(max_timesteps):
             observations = statesToObservationsTensor(states)
             # Run old policy
-            with torch.no_grad():
-                actions, action_logprob = ppo.select_action(observations)
+            actions, action_logprob = ppo.select_action(observations)
 
             states, rewards, dones, reachedGoals = env.step(torchToNumpy(actions))
 
             o_laser, o_orientation, o_distance, o_velocity = observations
 
-            memory.insertObservations(o_laser.to(device), o_orientation.to(device), o_distance.to(device), o_velocity.to(device))
+            memory.insertObservations(o_laser, o_orientation, o_distance, o_velocity)
             unrolled_rewards = [sum([value for value in reward.values()]) for reward in rewards]
             memory.insertReward(unrolled_rewards)
             memory.insertAction(actions)
@@ -72,7 +69,7 @@ def train(env_name, env, solved_percentage, input_style,
             if len(memory) >= update_experience:
                 
                 print('{}. training with {} experiences'.format(training_counter, len(memory)), flush=True)
-                memory.copyMemory()
+                # memory.copyMemory()
                 ppo.update(memory, batches)
                 print('Time: {}'.format(time.time() - starttime), flush=True)
                 starttime = time.time()
@@ -89,13 +86,13 @@ def train(env_name, env, solved_percentage, input_style,
 
             if objective_reached >= solved_percentage:
                 print(f"\nPercentage of: {objective_reached:.2f} reached!", flush=True)
-                torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_solved.pth'.format(env_name))
+                ppo.saveCurrentWeights(f"{env_name}_solved")
                 print('Save as solved!!', flush=True)
                 break
 
             if objective_reached > best_objective_reached:
                 best_objective_reached = objective_reached
-                torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_best.pth'.format(env_name))
+                ppo.saveCurrentWeights(f"{env_name}_best")
                 print(
                     f'Best performance with avg reward of {best_reward:.2f} saved at training {training_counter}.',
                     flush=True)
@@ -109,18 +106,22 @@ def train(env_name, env, solved_percentage, input_style,
             memory.copyMemory()
         memory.clear_episode()
 
-    torch.save(ppo.policy.state_dict(), ckpt_folder + '/PPO_continuous_{}_ended.pth'.format(env_name))
+    ppo.saveCurrentWeights(f"{env_name}_final")
 
     if tensorboard:
         logger.close()
 
 
-def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes, scan_size=121):
+def test(env_name, env, render, action_std, input_style, _lambda,
+         K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes,
+         scan_size=121, advantages_func=None):
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
     print('Load checkpoint from {}'.format(ckpt))
 
-    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, K_epochs, eps_clip, restore=True, ckpt=ckpt, logger=None)
+    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, _lambda,
+              K_epochs, eps_clip, restore=True, ckpt=ckpt, logger=None,
+              advantages_func=advantages_func)
 
     episode_reward, time_step = 0, 0
     avg_episode_reward, avg_length = 0, 0
@@ -133,8 +134,7 @@ def test(env_name, env, render, action_std, input_style, K_epochs, eps_clip, gam
             observations = statesToObservationsTensor(states)
 
             # Run old policy
-            with torch.no_grad():
-                actions = ppo.select_action_certain(observations)
+            actions = ppo.select_action_certain(observations)
 
             states, rewards, dones, _ = env.step(torchToNumpy(actions))
 

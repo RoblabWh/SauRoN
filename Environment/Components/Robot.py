@@ -470,7 +470,7 @@ class Robot:
         tarLinVel = max(self.minLinearVelocity, min(tarLinVel, self.maxLinearVelocity))
         tarAngVel = max(self.minAngularVelocity, min(tarAngVel, self.maxAngularVelocity))
 
-        return np.around(tarLinVel, decimals=5), np.around(tarAngVel, decimals=5)
+        return np.around(tarLinVel, decimals=3), np.around(tarAngVel, decimals=3)
 
         # # beschleunigen
         # if linVel < tarLinVel:

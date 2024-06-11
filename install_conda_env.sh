@@ -8,4 +8,4 @@ if [ -z ${env_name} ]; then
   env_name=${default_env_name}
 fi
 
-conda env update --name "${env_name}" --file "${0%/*}/environment.yml"
+conda env update --name "${env_name}" --file "environment.yml"

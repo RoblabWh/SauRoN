@@ -10,15 +10,17 @@ from PyQt5.QtWidgets import QApplication
 
 # use all svg files in the svg folder as default level_files
 level_files = []
-svg_path = os.path.join(os.path.split(sys.argv[0])[0], "svg")
-for filename in os.listdir(svg_path):
-    if os.path.isfile(os.path.join(svg_path, filename)):
-        level_files.append(filename)
-level_files.sort()
+# svg_path = os.path.join(os.path.split(sys.argv[0])[0], "svg")
+# for filename in os.listdir(svg_path):
+#     if os.path.isfile(os.path.join(svg_path, filename)):
+#         level_files.append(filename)
+# level_files.sort()
 
 #level_files = ['SimpleObstacles.svg', 'tunnel2.svg', 'svg3_tareq2.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg']
 #level_files = [level_files[2]]
-level_files = ['svg3_tareq2.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg','SimpleObstacles.svg']
+#level_files = ['svg3_tareq2.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg','SimpleObstacles.svg']
+
+# Stage 1
 for _ in range(20):
     level_files.append('ez.svg')
 for _ in range(10):
@@ -27,13 +29,21 @@ for _ in range(2):
     level_files.append('ez3.svg')
     level_files.append('ez4.svg')
 
+# Stage 2
+# for _ in range(20):
+#     level_files.append('Simple.svg')
+# for _ in range(10):
+#     level_files.append('Funnel.svg')
+# for _ in range(2):
+#     level_files.append('engstelle.svg')
+
 # shuffle the level files
 random.shuffle(level_files)
 
-level_files = ['ez.svg', 'ez2.svg', 'ez3.svg', 'ez4.svg', 'Simple.svg', 'Funnel.svg', 'tunnel2.svg', 'svg3_tareq2.svg', 'SimpleObstacles.svg', 'engstelle.svg','svg2_tareq2.svg', 'Zipper.svg']
-level_files = ['svg3_tareq2.svg']
-ckpt_folder = './models/test'
-model_name = "model"
+#level_files = ['ez.svg', 'ez2.svg', 'ez3.svg', 'ez4.svg', 'Simple.svg', 'Funnel.svg', 'tunnel2.svg', 'svg3_tareq2.svg', 'SimpleObstacles.svg', 'engstelle.svg','svg2_tareq2.svg', 'Zipper.svg']
+#level_files = ['Simple_12.svg']
+ckpt_folder = './models/simple'
+model_name = "manuell"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default=ckpt_folder, help='Location to save checkpoint models')
@@ -46,9 +56,10 @@ parser.add_argument('--restore', default=False, action='store_true', help='Resto
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net') # TODO not properly implemented
 parser.add_argument('--steps', type=int, default=2500, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=float, default="inf", help='Maximum Number of Episodes')
-parser.add_argument('--update_experience', type=int, default=2000, help='how many experiences to update the policy') #40000
+parser.add_argument('--update_experience', type=int, default=1500, help='how many experiences to update the policy') #40000
 parser.add_argument('--batches', type=int, default=5, help='number of batches') #15
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)') # TODO currently not used
+parser.add_argument('--_lambda', type=float, default=0.99, help='lambda for advantage calculation')
 parser.add_argument('--K_epochs', type=int, default=7, help='update the policy K times')
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
@@ -86,7 +97,7 @@ parser.add_argument('--display_normals', type=bool, default=True,
                     help='Determines whether the normals of a wall are shown in the map.')
 args = parser.parse_args()
 if not os.path.exists(args.ckpt_folder):
-    os.mkdir(args.ckpt_folder)
+    os.makedirs(args.ckpt_folder)
 check_args(args)
 print(args)
 
@@ -107,12 +118,12 @@ if args.input_style == 'laser':
 if args.mode == 'train':
     train(args.model_name, env, input_style=args.input_style, solved_percentage=args.solved_percentage,
           max_episodes=args.max_episodes, max_timesteps=args.steps, update_experience=args.update_experience,
-          action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
+          action_std=args.action_std, _lambda=args._lambda, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
           gamma=args.gamma, lr=args.lr, betas=[0.9, 0.990], ckpt_folder=args.ckpt_folder,
           restore=args.restore, log_interval=args.log_interval, scan_size=args.image_size,
           batches=args.batches, tensorboard=args.tensorboard)
 elif args.mode == 'test':
     test(args.model_name, env, input_style=args.input_style,
-         render=args.render, action_std=args.action_std, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
+         render=args.render, action_std=args.action_std, _lambda=args._lambda, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
          gamma=args.gamma, lr=args.lr, betas=[0.9, 0.990], ckpt_folder=args.ckpt_folder, test_episodes=100,
          scan_size=args.image_size)

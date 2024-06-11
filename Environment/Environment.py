@@ -10,7 +10,7 @@ class Environment:
     Defines the environment of the reinforcement learning algorithm
     """
 
-    def __init__(self, app, args, timeframes, level):
+    def __init__(self, app, args, timeframes, level, reward_func=None):
         """
         :param app: PyQt5.QtWidgets.QApplication
         :param args: args defined in main
@@ -29,6 +29,10 @@ class Environment:
         self.done = False
         self.shape = np.asarray([0]).shape
         self.piFact = 1 / math.pi
+        if reward_func is None:
+            self.reward_func = self.createReward
+        else:
+            self.reward_func = reward_func
 
     def get_observation(self, i):
         """
@@ -143,7 +147,7 @@ class Environment:
 
         ########### REWARD CALCULATION ################
 
-        reward = self.createReward(robot, distance_new, distance_old, reachedPickup, collision, runOutOfTime)
+        reward = self.reward_func(robot, distance_new, distance_old, reachedPickup, collision, runOutOfTime)
 
         return [next_state, reward, not robot.isActive(), reachedPickup]
 
@@ -167,9 +171,9 @@ class Environment:
         r_collision = -250 # Robot crashed with a wall or another robot
         r_runOutOfTime = -50 # Robot has run out of time
         r_stop = -0.01 # Robot stood still
-        w_g = 30.2
+        w_g = 300.2
         w_d = 15
-        w_gn = 30.2
+        w_gn = 300.2
         w_w = -0.5
         w_p = 0.1
         a_p = 0.045 # weight for the angle, always positive
@@ -181,11 +185,11 @@ class Environment:
         elif collision:
             reward['collision'] = r_collision #* living_factor
         else:
-            # # Distance Reward
-            # if dist_old > dist_new:
-            #     reward['dist'] = w_g * (dist_old - dist_new)
-            # else:
-            #     reward['dist'] = w_gn * (dist_old - dist_new)
+            # Distance Reward
+            if dist_old > dist_new:
+                reward['dist'] = w_g * (dist_old - dist_new)
+            else:
+                reward['dist'] = w_gn * (dist_old - dist_new)
 
             # Protect engine Reward
             currentLinVel = np.around(robot.state_raw[robot.time_steps - 1][4], decimals=5)
@@ -224,9 +228,9 @@ class Environment:
                 reward['wiggle'] = w_w * currentAngVel
 
             # PUBG Reward (only gets rewarded if it gets closer to the goal than previously)
-            if dist_new < robot.initialGoalDist:
-                reward['pubg'] = w_d * (robot.initialGoalDist - dist_new)
-                robot.initialGoalDist = dist_new
+            # if dist_new < robot.initialGoalDist:
+            #     reward['pubg'] = w_d * (robot.initialGoalDist - dist_new)
+            #     robot.initialGoalDist = dist_new
 
         return reward
 

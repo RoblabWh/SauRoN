@@ -190,7 +190,7 @@ class SVGLevelParser:
         self.stationsData = [stationsData[i][:-1] for i in range(0,len(stationsData))]
 
         for i, data in enumerate(self.robotsData):
-            self.robots += [Robot.Robot((data[0], data[1]), 0, self.stations[i], args, self.lines, self.stations, self.circles)]
+            self.robots += [Robot.Robot(i, (data[0], data[1]), 0, self.stations[i], args, self.lines, self.stations, self.circles)]
 
     def getRobots(self):
         return self.robots

@@ -202,7 +202,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
     def clickedSaveNet(self):
         for observer in self.saveButtonListenrs:
-            observer.saveCurrentWeights(self.checkpoint_folder, self.env_name)
+            observer.saveCurrentWeights("manuell")
 
     def updateButtons(self):
 
