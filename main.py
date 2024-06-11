@@ -10,22 +10,19 @@ from PyQt5.QtWidgets import QApplication
 
 # use all svg files in the svg folder as default level_files
 level_files = []
+# Uncomment to use all svg files in the svg folder as default level_files
 # svg_path = os.path.join(os.path.split(sys.argv[0])[0], "svg")
 # for filename in os.listdir(svg_path):
 #     if os.path.isfile(os.path.join(svg_path, filename)):
 #         level_files.append(filename)
 # level_files.sort()
 
-#level_files = ['SimpleObstacles.svg', 'tunnel2.svg', 'svg3_tareq2.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg']
-#level_files = [level_files[2]]
-#level_files = ['svg3_tareq2.svg', 'engstelle.svg', 'Simple.svg', 'Funnel.svg','SimpleObstacles.svg']
-
 # Stage 1
 for _ in range(20):
     level_files.append('ez.svg')
 for _ in range(10):
     level_files.append('ez2.svg')
-for _ in range(2):
+for _ in range(5):
     level_files.append('ez3.svg')
     level_files.append('ez4.svg')
 
@@ -40,10 +37,10 @@ for _ in range(2):
 # shuffle the level files
 random.shuffle(level_files)
 
-#level_files = ['ez.svg', 'ez2.svg', 'ez3.svg', 'ez4.svg', 'Simple.svg', 'Funnel.svg', 'tunnel2.svg', 'svg3_tareq2.svg', 'SimpleObstacles.svg', 'engstelle.svg','svg2_tareq2.svg', 'Zipper.svg']
-#level_files = ['Simple_12.svg']
+#['ez.svg', 'ez2.svg', 'ez3.svg', 'ez4.svg', 'Simple.svg', 'Funnel.svg', 'tunnel2.svg', 'svg3_tareq2.svg', 'SimpleObstacles.svg', 'engstelle.svg','svg2_tareq2.svg', 'Zipper.svg']
+level_files = ['ez3.svg']
 ckpt_folder = './models/simple'
-model_name = "manuell"
+model_name = "batch_6"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default=ckpt_folder, help='Location to save checkpoint models')
@@ -57,7 +54,7 @@ parser.add_argument('--time_frames', type=int, default=4, help='Number of Timefr
 parser.add_argument('--steps', type=int, default=2500, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=float, default="inf", help='Maximum Number of Episodes')
 parser.add_argument('--update_experience', type=int, default=1500, help='how many experiences to update the policy') #40000
-parser.add_argument('--batches', type=int, default=5, help='number of batches') #15
+parser.add_argument('--batches', type=int, default=64, help='number of batches') #15
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)') # TODO currently not used
 parser.add_argument('--_lambda', type=float, default=0.99, help='lambda for advantage calculation')
 parser.add_argument('--K_epochs', type=int, default=7, help='update the policy K times')

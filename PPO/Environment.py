@@ -25,7 +25,7 @@ def train(env_name, env, solved_percentage, input_style, max_episodes, max_times
     ppo = PPO(scan_size=scan_size, action_std=action_std, input_style=input_style, lr=lr,
               betas=betas, gamma=gamma, _lambda=_lambda, K_epochs=K_epochs, eps_clip=eps_clip,
               logger=logger, restore=restore, ckpt=ckpt, advantages_func=advantages_func)
-    device = ppo.policy.device
+
     env.setUISaveListener(ppo, ckpt_folder, env_name)
 
     training_counter = 0
@@ -94,7 +94,7 @@ def train(env_name, env, solved_percentage, input_style, max_episodes, max_times
                 best_objective_reached = objective_reached
                 ppo.saveCurrentWeights(f"{env_name}_best")
                 print(
-                    f'Best performance with avg reward of {best_reward:.2f} saved at training {training_counter}.',
+                    f'Best performance with avg reward of NOT CALCULATED saved at training {training_counter}.',
                     flush=True)
                 print(f'Percentage of objective reached: {objective_reached:.4f}', flush=True)
 

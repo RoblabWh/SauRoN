@@ -301,7 +301,7 @@ class PPO:
             self.policy.load_state_dict(torch.load(path, map_location=lambda storage, loc: storage))
             return True
         except FileNotFoundError:
-            warnings.warn(f"Could not load model from {path}. Falling back to train mode.")
+            warnings.warn(f"Could not restore model from {path}. Falling back to train mode.")
             return False
 
     def select_action(self, observations):
