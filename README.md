@@ -43,7 +43,7 @@ There are several other options for the hyperparameters, vizualization and robot
 
 There is a trained network provided under `./models`. If the installation was successful the following command should run a pretrained network:
  
-```python main.py --ckpt_folder ./pretrained/ --model batch_6 --mode test --level_files 'ez3.svg'```
+```python main.py --ckpt_folder ./pretrained --model batch_8 --mode test --level_files 'kreuzung.svg'```
 
 To train run:
 

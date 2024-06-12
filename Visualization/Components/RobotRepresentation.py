@@ -107,9 +107,6 @@ class RobotRepresentation:
             for border in self.pieSliceBorders:
                 border.paint(painter, self.scale, self.args.display_normals)
 
-
-
-
     def update(self, x, y, direction, lidarHits, simShowing, isActive, dirV, activations, pieSliceBorders = None, sensorPos = None):
         if simShowing:
             self.posX = x * self.scale

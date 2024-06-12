@@ -11,36 +11,42 @@ from PyQt5.QtWidgets import QApplication
 # use all svg files in the svg folder as default level_files
 level_files = []
 # Uncomment to use all svg files in the svg folder as default level_files
-# svg_path = os.path.join(os.path.split(sys.argv[0])[0], "svg")
-# for filename in os.listdir(svg_path):
-#     if os.path.isfile(os.path.join(svg_path, filename)):
-#         level_files.append(filename)
-# level_files.sort()
+svg_path = os.path.join(os.path.split(sys.argv[0])[0], "svg")
+for filename in os.listdir(svg_path):
+    if os.path.isfile(os.path.join(svg_path, filename)):
+        level_files.append(filename)
+level_files.sort()
 
 # Stage 1
-for _ in range(20):
-    level_files.append('ez.svg')
-for _ in range(10):
-    level_files.append('ez2.svg')
-for _ in range(5):
-    level_files.append('ez3.svg')
-    level_files.append('ez4.svg')
-
-# Stage 2
-# for _ in range(20):
+# for _ in range(4):
+#     level_files.append('ez.svg')
+# for _ in range(3):
+#     level_files.append('ez2.svg')
+# for _ in range(2):
+#     level_files.append('ez3.svg')
+#     level_files.append('ez4.svg')
+#     level_files.append('ez5.svg')
+# level_files.append('ez6.svg')
+# level_files.append('ez7.svg')
+# level_files.append('ez8.svg')
+#
+# # Stage 2
+# for _ in range(15):
 #     level_files.append('Simple.svg')
+#     level_files.append('SimpleObstacles.svg')
 # for _ in range(10):
 #     level_files.append('Funnel.svg')
-# for _ in range(2):
+#     level_files.append('Zipper.svg')
+# for _ in range(5):
 #     level_files.append('engstelle.svg')
 
 # shuffle the level files
 random.shuffle(level_files)
 
 #['ez.svg', 'ez2.svg', 'ez3.svg', 'ez4.svg', 'Simple.svg', 'Funnel.svg', 'tunnel2.svg', 'svg3_tareq2.svg', 'SimpleObstacles.svg', 'engstelle.svg','svg2_tareq2.svg', 'Zipper.svg']
-level_files = ['ez3.svg']
-ckpt_folder = './models/simple'
-model_name = "batch_6"
+#level_files = ['svg3_tareq2.svg']
+ckpt_folder = './models/bignet_batchnorm'
+model_name = "batch_8_best"
 
 parser = argparse.ArgumentParser(description='SauRoN Simulation')
 parser.add_argument('--ckpt_folder', default=ckpt_folder, help='Location to save checkpoint models')
@@ -51,23 +57,23 @@ parser.add_argument('--mode', default='train', help='choose train or test')
 
 parser.add_argument('--restore', default=False, action='store_true', help='Restore and go on training?')
 parser.add_argument('--time_frames', type=int, default=4, help='Number of Timeframes (past States) which will be analyzed by neural net') # TODO not properly implemented
-parser.add_argument('--steps', type=int, default=2500, help='Steps in Environment per Episode')
+parser.add_argument('--steps', type=int, default=1500, help='Steps in Environment per Episode')
 parser.add_argument('--max_episodes', type=float, default="inf", help='Maximum Number of Episodes')
-parser.add_argument('--update_experience', type=int, default=1500, help='how many experiences to update the policy') #40000
-parser.add_argument('--batches', type=int, default=64, help='number of batches') #15
+parser.add_argument('--update_experience', type=int, default=3000, help='how many experiences to update the policy') #40000
+parser.add_argument('--batches', type=int, default=8, help='number of batches') #15
 parser.add_argument('--action_std', type=float, default=0.5, help='constant std for action distribution (Multivariate Normal)') # TODO currently not used
-parser.add_argument('--_lambda', type=float, default=0.99, help='lambda for advantage calculation')
-parser.add_argument('--K_epochs', type=int, default=7, help='update the policy K times')
+parser.add_argument('--_lambda', type=float, default=0.95, help='lambda for advantage calculation')
+parser.add_argument('--K_epochs', type=int, default=4, help='update the policy K times')
 parser.add_argument('--eps_clip', type=float, default=0.2, help='epsilon for p/q clipped')
 parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
 parser.add_argument('--lr', type=float, default=0.0003)
-parser.add_argument('--input_style', default='laser', help='image or laser') # image not advised to use but functional
+parser.add_argument('--inputspace', default='big', help='big or small') # image not advised to use but functional
 parser.add_argument('--image_size', type=float, default=256, help='size of the image that goes into the neural net')
 
 # Simulation settings
 
 parser.add_argument('--level_files', type=str, nargs='+', default=level_files, help='List of level files as strings')
-parser.add_argument('--sim_time_step', type=float, default=0.1, help='Time between steps') #.125
+parser.add_argument('--sim_time_step', type=float, default=1, help='Time between steps') #.125
 
 # Robot settings
 
@@ -108,19 +114,19 @@ elif args.visualization == "all":
 
 env = Environment(app, args, args.time_frames, level_index)
 
-# TODO schöner ???!! @Niklas2
-if args.input_style == 'laser':
-    args.image_size = args.number_of_rays
+# TODO schöner ???!! @Niklas2 DEPRECATED
+# if args.input_style == 'laser':
+#     args.image_size = args.number_of_rays
 
 if args.mode == 'train':
-    train(args.model_name, env, input_style=args.input_style, solved_percentage=args.solved_percentage,
+    train(args.model_name, env, inputspace=args.inputspace, solved_percentage=args.solved_percentage,
           max_episodes=args.max_episodes, max_timesteps=args.steps, update_experience=args.update_experience,
-          action_std=args.action_std, _lambda=args._lambda, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
+          _lambda=args._lambda, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
           gamma=args.gamma, lr=args.lr, betas=[0.9, 0.990], ckpt_folder=args.ckpt_folder,
-          restore=args.restore, log_interval=args.log_interval, scan_size=args.image_size,
+          restore=args.restore, log_interval=args.log_interval, scan_size=args.number_of_rays,
           batches=args.batches, tensorboard=args.tensorboard)
 elif args.mode == 'test':
-    test(args.model_name, env, input_style=args.input_style,
-         render=args.render, action_std=args.action_std, _lambda=args._lambda, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
+    test(args.model_name, env, inputspace=args.inputspace,
+         render=args.render, _lambda=args._lambda, K_epochs=args.K_epochs, eps_clip=args.eps_clip,
          gamma=args.gamma, lr=args.lr, betas=[0.9, 0.990], ckpt_folder=args.ckpt_folder, test_episodes=100,
-         scan_size=args.image_size)
+         scan_size=args.number_of_rays)

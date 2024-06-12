@@ -176,6 +176,7 @@ def check_args(args):
     assert args.update_experience > 0, "Update experience must be positive"
     assert args.update_experience > args.batches, "Update experience must be greater than batch size"
     assert args.visualization == "none" or args.visualization == "single" or args.visualization == "all", "Visualization must be none, single or all"
+    assert args.inputspace == "big" or args.inputspace == "small", "Input space must be big or small"
     assert os.path.exists(args.ckpt_folder), "Checkpoint folder does not exist."
 
 class Logger(object):

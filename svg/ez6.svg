@@ -1,0 +1,84 @@
+<svg
+   xmlns="http://www.w3.org/2000/svg"
+   version="1.1"
+   id="Ebene_1"
+   x="0px"
+   y="0px"
+   width="800"
+   height="800"
+   viewBox="0 0 800 800"
+   enable-background="new 0 0 623.619 283.46"
+   xml:space="preserve">
+  <metadata
+   id="namedview13"
+/>
+
+<circle
+   id="start_2_1_"
+   stroke-miterlimit="10"
+   cx="550"
+   cy="233"
+   r="7.5"
+   style="fill:#e52420;stroke:#000000;stroke-miterlimit:10" />
+
+    <circle
+   id="goal_4_1_-3"
+   stroke-miterlimit="10"
+   cx="135"
+   cy="240"
+   r="13.99"
+   style="fill:#66b32e;stroke:#000000;stroke-miterlimit:10" />
+    <circle
+   id="goal_4_2_-3"
+   stroke-miterlimit="10"
+   cx="635"
+   cy="240"
+   r="13.99"
+   style="fill:#66b32e;stroke:#000000;stroke-miterlimit:10" />
+      <circle
+   id="goal_4_5_-3"
+   stroke-miterlimit="10"
+   cx="535"
+   cy="540"
+   r="13.99"
+   style="fill:#66b32e;stroke:#000000;stroke-miterlimit:10" />
+<circle
+   id="goal_4_1_-3"
+   stroke-miterlimit="10"
+   cx="405"
+   cy="140"
+   r="13.99"
+   style="fill:#66b32e;stroke:#000000;stroke-miterlimit:10" />
+  <circle
+   id="goal_4_1_-2"
+   stroke-miterlimit="10"
+   cx="205"
+   cy="540"
+   r="13.99"
+   style="fill:#66b32e;stroke:#000000;stroke-miterlimit:10" />
+    <circle
+   id="goal_4_1_-3"
+   stroke-miterlimit="10"
+   cx="225"
+   cy="725"
+   r="13.99"
+   style="fill:#66b32e;stroke:#000000;stroke-miterlimit:10" />
+  <line x1="750" y1="50" x2="750" y2="750" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="750" y1="750" x2="200" y2="750" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="200" y1="750" x2="200" y2="700" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="200" y1="700" x2="500" y2="700" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="500" y1="700" x2="500" y2="500" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="500" y1="500" x2="350" y2="500" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="350" y1="500" x2="350" y2="600" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="350" y1="600" x2="150" y2="600" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="150" y1="600" x2="150" y2="400" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="150" y1="400" x2="450" y2="400" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="450" y1="400" x2="450" y2="200" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="450" y1="200" x2="300" y2="200" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="300" y1="200" x2="300" y2="300" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="300" y1="300" x2="100" y2="300" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="100" y1="300" x2="100" y2="150" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="100" y1="150" x2="250" y2="150" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="250" y1="150" x2="250" y2="50" stroke="black" stroke-width="2" stroke-linecap="square"/>
+  <line x1="250" y1="50" x2="750" y2="50" stroke="black" stroke-width="2" stroke-linecap="square"/>
+</svg>

@@ -7,8 +7,8 @@ import time
 from utils import statesToObservationsTensor, torchToNumpy
 
 
-def train(env_name, env, solved_percentage, input_style, max_episodes, max_timesteps,
-          update_experience, action_std, _lambda, K_epochs, eps_clip, gamma, lr,
+def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timesteps,
+          update_experience, _lambda, K_epochs, eps_clip, gamma, lr,
           betas, ckpt_folder, restore, tensorboard, scan_size=121, log_interval=10,
           batches=1, advantages_func=None):
 
@@ -22,7 +22,7 @@ def train(env_name, env, solved_percentage, input_style, max_episodes, max_times
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
 
-    ppo = PPO(scan_size=scan_size, action_std=action_std, input_style=input_style, lr=lr,
+    ppo = PPO(scan_size=scan_size, inputspace=inputspace, lr=lr,
               betas=betas, gamma=gamma, _lambda=_lambda, K_epochs=K_epochs, eps_clip=eps_clip,
               logger=logger, restore=restore, ckpt=ckpt, advantages_func=advantages_func)
 
@@ -57,6 +57,7 @@ def train(env_name, env, solved_percentage, input_style, max_episodes, max_times
 
             memory.insertObservations(o_laser, o_orientation, o_distance, o_velocity)
             unrolled_rewards = [sum([value for value in reward.values()]) for reward in rewards]
+            # TODO Occasional error here, investigate
             memory.insertReward(unrolled_rewards)
             memory.insertAction(actions)
             memory.insertLogProb(action_logprob)
@@ -83,7 +84,7 @@ def train(env_name, env, solved_percentage, input_style, max_episodes, max_times
 
         if i_episode % log_interval == 0:
             running_reward, objective_reached = logger.log()
-
+            print(f'Percentage of objective reached: {objective_reached:.4f}', flush=True)
             if objective_reached >= solved_percentage:
                 print(f"\nPercentage of: {objective_reached:.2f} reached!", flush=True)
                 ppo.saveCurrentWeights(f"{env_name}_solved")
@@ -96,7 +97,6 @@ def train(env_name, env, solved_percentage, input_style, max_episodes, max_times
                 print(
                     f'Best performance with avg reward of NOT CALCULATED saved at training {training_counter}.',
                     flush=True)
-                print(f'Percentage of objective reached: {objective_reached:.4f}', flush=True)
 
         # if training_counter >= 100:
         #     break
@@ -112,14 +112,14 @@ def train(env_name, env, solved_percentage, input_style, max_episodes, max_times
         logger.close()
 
 
-def test(env_name, env, render, action_std, input_style, _lambda,
+def test(env_name, env, render, inputspace, _lambda,
          K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes,
          scan_size=121, advantages_func=None):
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
     print('Load checkpoint from {}'.format(ckpt))
 
-    ppo = PPO(scan_size, action_std, input_style, lr, betas, gamma, _lambda,
+    ppo = PPO(scan_size, inputspace, lr, betas, gamma, _lambda,
               K_epochs, eps_clip, restore=True, ckpt=ckpt, logger=None,
               advantages_func=advantages_func)
 

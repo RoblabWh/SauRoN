@@ -205,6 +205,7 @@ class Simulation:
 
     def loadLevel(self, levelID):
         # print("LevelID: ", levelID)
+        # print("Loading ", self.levelFiles[levelID])
         selectedLevel = SVGParser.SVGLevelParser(self.levelFiles[levelID], self.args)
         self.robots = selectedLevel.getRobots()
         if self.args.manually:

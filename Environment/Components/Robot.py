@@ -63,18 +63,30 @@ class Robot:
         self.fieldOfView = args.field_of_view / 180 * np.pi
 
         # Robot Hardware Params
+        # self.width = 0.35  # m
+        # self.length = 0.35  # m
+        # self.radius = self.width / 2
+        #
+        # self.maxLinearVelocity = 0.6  # m/s
+        # self.minLinearVelocity = 0  # m/s
+        # self.maxLinearAcceleration = 1.5  # m/s^2
+        # self.minLinearAcceleration = -1.5  # m/s^2
+        # self.maxAngularVelocity = 1.5  # rad/s
+        # self.minAngularVelocity = -1.5 # rad/s
+        # self.maxAngularAcceleration = 1.5 * math.pi   #rad/s^2
+        # self.minAngularAcceleration = -1.5 * math.pi  #rad/s^2
         self.width = 0.35  # m
         self.length = 0.35  # m
         self.radius = self.width / 2
 
-        self.maxLinearVelocity = 0.6  # m/s
+        self.maxLinearVelocity = 0.175  # m/s
         self.minLinearVelocity = 0  # m/s
-        self.maxLinearAcceleration = 1.5  # m/s^2
-        self.minLinearAcceleration = -1.5  # m/s^2
-        self.maxAngularVelocity = 1.5  # rad/s
-        self.minAngularVelocity = -1.5 # rad/s
-        self.maxAngularAcceleration = 1.5 * math.pi   #rad/s^2
-        self.minAngularAcceleration = -1.5 * math.pi  #rad/s^2
+        self.maxLinearAcceleration = 0.05  # m/s^2
+        self.minLinearAcceleration = -0.05  # m/s^2
+        self.maxAngularVelocity = 1  # rad/s
+        self.minAngularVelocity = -1 # rad/s
+        self.maxAngularAcceleration = 0.05 * math.pi   #rad/s^2
+        self.minAngularAcceleration = -0.05 * math.pi  #rad/s^2
 
         #Factors for normalization
         #self.maxLinearVelocityFact = 1/self.maxLinearVelocity
@@ -268,7 +280,10 @@ class Robot:
 
         #print("linVel: ", linVel, "angVel: ", angVel)
         oldDir = self.getDirectionAngle()
-        directionVector = self.directionVectorFromAngle(oldDir)
+        #directionVector = self.directionVectorFromAngle(oldDir)
+
+        direction = (self.getDirectionAngle() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
+        directionVector = self.directionVectorFromAngle(direction)
 
         deltaPosX = directionVector[0] * linVel * dt  # math.cos(direction) * linVel * dt
         deltaPosY = directionVector[1] * linVel * dt  # math.sin(direction) * linVel * dt
@@ -277,18 +292,17 @@ class Robot:
 
         self.last_positions.add(posX, posY)
 
-        direction = (self.getDirectionAngle() + (angVel * dt) + 2 * math.pi) % (2 * math.pi)
-        directionVector = self.directionVectorFromAngle(direction)
         deltaDir = direction - oldDir
 
         goalDist = math.sqrt((posX-goalX)**2+(posY-goalY)**2)
 
         self.stepsAlive += 1
 
-        frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist, direction]
-        #print("linVel: ", linVel, "angVel: ", angVel)
-        #print("linVelNorm: ", self.getLinearVelocityNorm(), "angVelNorm: ", self.getAngularVelocityNorm())
+        # TODO Question: Should the linVel and angVel be saved with or without dt ?
+        frame = [posX, posY, directionVector[0], directionVector[1], linVel * dt, angVel * dt, goalX, goalY, goalDist, direction]
+
         self.push_frame(frame)
+
         if self.hasPieSlice:
             self.updatePieSlice(deltaDir, (deltaPosX, deltaPosY))
         else:
@@ -424,9 +438,9 @@ class Robot:
         laser = distances * self.maxDistFact
         laser = np.where(laser > 1, 1, laser)
 
-        # Convert 1D scan to 2D Scan
-        if self.args.input_style == "image":
-            laser = scan1DTo2D(laser, img_size=self.args.image_size)
+        # Convert 1D scan to 2D Scan # TODO DEPRECATED
+        # if self.args.input_style == "image":
+        #     laser = scan1DTo2D(laser, img_size=self.args.image_size)
 
         currentTimestep = (steps - stepsLeft)/steps
 
