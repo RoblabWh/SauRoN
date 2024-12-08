@@ -48,19 +48,26 @@ def normalize(tensor):
     """
     return (tensor - tensor.mean()) / (tensor.std() + 1e-8)
 
+def statesToObservationsNumpy(list):
+    states = np.asarray(list, dtype=object)
+    laser = np.array(states[:, :, 0].tolist(), dtype=np.float32)
+    ori = np.array(states[:, :, 1].tolist(), dtype=np.float32)
+    dist = np.array(states[:, :, 2].tolist(), dtype=np.float32)
+    vel = np.array(states[:, :, 3].tolist(), dtype=np.float32)
+    return [laser, ori, dist, vel]
 def statesToObservationsTensor(list):
     """
     The observations are the laser scan, the orientation, the distance to the goal and the velocity.
     :param list: the list of states
     :return: a list of observations
     """
+    # nstates = tuple(np.array(state) for state in zip(*list))
+    # laser, ori, dist, vel, _ = nstates
     states = np.asarray(list, dtype=object)
     laser = np.array(states[:, :, 0].tolist())
     ori = np.array(states[:, :, 1].tolist())
     dist = np.array(states[:, :, 2].tolist())
     vel = np.array(states[:, :, 3].tolist())
-    if (laser.dtype or ori.dtype) == np.dtype("object"):
-        print("warn")
     return [torch.tensor(laser, dtype=torch.float32), torch.tensor(ori, dtype=torch.float32),
             torch.tensor(dist, dtype=torch.float32), torch.tensor(vel, dtype=torch.float32)]
 

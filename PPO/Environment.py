@@ -1,10 +1,11 @@
 from PPO.Algorithm import PPO
 from PPO.SwarmMemory import SwarmMemory
+from PPO.CoolMemory import SwarmMemory as CoolSwarmMemory
 from utils import Logger
 import numpy as np
 import torch
 import time
-from utils import statesToObservationsTensor, torchToNumpy
+from utils import statesToObservationsTensor,statesToObservationsNumpy, torchToNumpy
 
 
 def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timesteps,
@@ -18,7 +19,8 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
     best_reward = 0
     best_objective_reached = 0
 
-    memory = SwarmMemory(env.getNumberOfRobots())
+    #memory = SwarmMemory(env.getNumberOfRobots())
+    memory = CoolSwarmMemory(env.getNumberOfRobots())
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
 
@@ -43,25 +45,25 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
         level_idx += 1
 
         logger.set_number_of_agents(env.getNumberOfRobots())
-        memory.robotsCount = env.getNumberOfRobots()
-        memory.init()
+        # memory.robotsCount = env.getNumberOfRobots()
+        # memory.init()
+        memory.unroll_last_episode(env.getNumberOfRobots())
 
         for t in range(max_timesteps):
-            observations = statesToObservationsTensor(states)
+            observations = states
             # Run old policy
-            actions, action_logprob = ppo.select_action(observations)
+            actions, action_logprob = ppo.select_action(statesToObservationsTensor(states))
 
             states, rewards, dones, reachedGoals = env.step(torchToNumpy(actions))
 
-            o_laser, o_orientation, o_distance, o_velocity = observations
-
-            memory.insertObservations(o_laser, o_orientation, o_distance, o_velocity)
+            # memory.insertObservations(o_laser, o_orientation, o_distance, o_velocity)
             unrolled_rewards = [sum([value for value in reward.values()]) for reward in rewards]
             # TODO Occasional error here, investigate
-            memory.insertReward(unrolled_rewards)
-            memory.insertAction(actions)
-            memory.insertLogProb(action_logprob)
-            memory.insertIsTerminal(dones)
+            # memory.insertReward(unrolled_rewards)
+            # memory.insertAction(actions)
+            # memory.insertLogProb(action_logprob)
+            # memory.insertIsTerminal(dones)
+            memory.add(statesToObservationsNumpy(observations), actions, action_logprob, unrolled_rewards, dones)
 
             logger.add_objective(reachedGoals)
             logger.add_reward(rewards)
@@ -71,11 +73,9 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
                 
                 print('{}. training with {} experiences'.format(training_counter, len(memory)), flush=True)
                 # memory.copyMemory()
-                ppo.update(memory, batches)
+                ppo.update(memory, batches, next_obs=statesToObservationsTensor(states))
                 print('Time: {}'.format(time.time() - starttime), flush=True)
                 starttime = time.time()
-                memory.clear_episode()
-                memory.clear_memory()
                 training_counter += 1
                 env.updateTrainingCounter(training_counter)
 
@@ -102,9 +102,9 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
         #     break
 
         i_episode += 1
-        if len(memory) > 0:
-            memory.copyMemory()
-        memory.clear_episode()
+        # if len(memory) > 0:
+        #     memory.copyMemory()
+        # memory.clear_episode()
 
     ppo.saveCurrentWeights(f"{env_name}_final")
 

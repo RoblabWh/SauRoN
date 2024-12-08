@@ -457,6 +457,12 @@ class Robot:
         if reversed:
              tmp_state.reverse()
         return tmp_state
+        # tmp_state = copy.deepcopy(self.stateLidar)
+        # zipstate = list(zip(*tmp_state))
+        # states = []
+        # for state in zipstate:
+        #     states.append(np.array(state))
+        # return states
 
     def computeNextVelocityContinuous(self, dt, linVel, angVel, tarLinVel, tarAngVel):
         """

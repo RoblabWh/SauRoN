@@ -75,10 +75,23 @@ class Environment:
         :return: returns True if every robot has finished or the steps have run out
         """
 
-        robotsDone = True
+        # robotsDone = True
+        # for robot in self.simulation.robots:
+        #     if robot.isActive():
+        #         robotsDone = False
+        #         break
+        # return self.steps_left <= 0 or robotsDone
+
+        """
+        Checks whether at least one robot is done (either crashed with a wall, crashed with another robot, reached their goal or
+        the steps have run out) so the simulation continues as long as at least one robot is still active or the steps
+        have not been used up.
+        :return: returns True if every robot has finished or the steps have run out
+        """
+        robotsDone = False
         for robot in self.simulation.robots:
-            if robot.isActive():
-                robotsDone = False
+            if not robot.isActive():
+                robotsDone = True
                 break
         return self.steps_left <= 0 or robotsDone
 
@@ -107,7 +120,7 @@ class Environment:
                 state, reward, done, reachedPickup = self.extractRobotData(i, robotsTermination[i])
                 states.append(state)
                 rewards.append(reward)
-                dones.append(done)
+                dones.append(1 - done)
                 reachedPickups.append(reachedPickup)
             else:
                 # set robot to inactive if it has crashed with a wall or another robot

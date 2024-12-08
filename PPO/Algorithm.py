@@ -179,6 +179,7 @@ class PPO:
         self._lambda = _lambda
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # Folder the models are stored in
         if not restore:
@@ -242,7 +243,7 @@ class PPO:
 
         return returns.detach().to(device)
 
-    def get_advantages(self, gamma, _lambda, values, masks, rewards):
+    def get_advantages(self, values, masks, rewards):
         """
         Computes the advantages of the given rewards and values.
 
@@ -257,41 +258,37 @@ class PPO:
 
         for i in reversed(range(len(rewards))):
             delta = rewards[i] - values[i]
-            if masks[i] == 0:
-                delta = delta + gamma * values[i + 1]
-            gae = delta + gamma * _lambda * masks[i] * gae
+            if masks[i] == 1:
+                delta = delta + self.gamma * values[i + 1]
+            gae = delta + self.gamma * self._lambda * masks[i] * gae
             advantages.insert(0, gae)
             returns.insert(0, gae + values[i])
 
         advantages = torch.FloatTensor(advantages).to(device)
-        if advantages.numel() > 1:
-            norm_adv = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
-        else:
-            norm_adv = advantages / (torch.abs(advantages) + 1e-10)
+        norm_adv = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
 
         returns = torch.FloatTensor(returns).to(device)
-        # norm_returns = (returns - returns.mean()) / (returns.std() + 1e-10)
 
         return norm_adv, returns
 
-    def get_advantages_returns(self, states, actions, masks, rewards):
-        # Advantages
-        with torch.no_grad():
-            _, values_, _ = self.policy.evaluate(states, actions)
-            if values_.dim() == 0:
-                values_ = values_.unsqueeze(0)
-            if masks[-1] == 0:
-                last_state = (states[0][-1].unsqueeze(0),
-                              states[1][-1].unsqueeze(0),
-                              states[2][-1].unsqueeze(0),
-                              states[3][-1].unsqueeze(0))
-                bootstrapped_value = self.policy.critic(*last_state).detach()
-                values_ = torch.cat((values_, bootstrapped_value[0]), dim=0)
-            advantages, returns = self.advantage_func(self.gamma, self._lambda, values_.detach(), masks, rewards)
+    # def get_advantages_returns(self, states, actions, masks, rewards):
+    #     # Advantages
+    #     with torch.no_grad():
+    #         _, values_, _ = self.policy.evaluate(states, actions)
+    #         if values_.dim() == 0:
+    #             values_ = values_.unsqueeze(0)
+    #         if masks[-1] == 0:
+    #             last_state = (states[0][-1].unsqueeze(0),
+    #                           states[1][-1].unsqueeze(0),
+    #                           states[2][-1].unsqueeze(0),
+    #                           states[3][-1].unsqueeze(0))
+    #             bootstrapped_value = self.policy.critic(*last_state).detach()
+    #             values_ = torch.cat((values_, bootstrapped_value[0]), dim=0)
+    #         advantages, returns = self.advantage_func(self.gamma, self._lambda, values_.detach(), masks, rewards)
+    #
+    #     return advantages, returns
 
-        return advantages, returns
-
-    def update(self, memory, batches):
+    def update(self, memory, batches, next_obs):
         """
         This function implements the update step of the Proximal Policy Optimization (PPO) algorithm for a swarm of
         robots. It takes in the memory buffer containing the experiences of the swarm, as well as the number of batches
@@ -307,6 +304,8 @@ class PPO:
         :param batch_size: The size of batches.
         """
 
+        memory.unroll_last_episode(0)
+
         batch_size = len(memory)
         mini_batch_size = int(batch_size / batches)
 
@@ -316,44 +315,32 @@ class PPO:
         if batch_size == 1:
             raise ValueError("Batch size must be greater than 1.")
 
-        # Unroll current and previous memory if there is any
-        if len(memory.swarmMemory) > 0:
-            p_states, p_actions, p_logprobs, p_rewards, p_masks = memory.unroll_memory(memory.swarmMemory)
-            if p_rewards.numel() > 1:
-                p_rewards = (p_rewards - p_rewards.mean()) / (p_rewards.std() + 1e-10)
-            else:
-                p_rewards = p_rewards / (torch.abs(p_rewards) + 1e-10)
-        else:
-            p_states, p_actions, p_logprobs, p_rewards, p_masks = [], [], [], [], []
+        states, actions, old_logprobs, rewards, masks = memory.to_tensor()
 
-        c_states, c_actions, c_logprobs, c_rewards, c_masks = memory.unroll_memory(memory.environmentMemory)
+        # Advantages
+        with torch.no_grad():
+            advantages = []
+            returns = []
+            for i in range(len(states)):
+                _, values_, _ = self.policy.evaluate(states[i], actions[i])
+                if masks[i][-1] == 1:
+                    laser, orientation, distance, velocity = next_obs
+                    bootstrapped_value = self.policy.critic(laser.to(self.device), orientation.to(self.device), distance.to(self.device), velocity.to(self.device)).detach()
+                    # TODO hier nochmal guckne next_obs ist wahrscheinlich quatsch
+                    values_ = torch.cat((values_, bootstrapped_value[0]), dim=0)
+                adv, ret = self.get_advantages(values_.detach(), masks[i], rewards[i].detach())
+                advantages.append(adv)
+                returns.append(ret)
 
-        if c_rewards.numel() > 1:
-            c_rewards = (c_rewards - c_rewards.mean()) / (c_rewards.std() + 1e-10)
-        else:
-            c_rewards = c_rewards / (torch.abs(c_rewards) + 1e-10)
-
-        # Calculate the bootstrapped advantages & returns for the last episode
-        if c_rewards.numel() == 0:
-            b_advantages, b_returns = torch.FloatTensor(np.array([])), torch.FloatTensor(np.array([]))
-        else:
-            b_advantages, b_returns = memory.calculate_bootstrapped_advantages_returns(self.get_advantages_returns)
-
-        if len(p_states) == 0:
-            states = c_states
-            actions = c_actions
-            old_logprobs = c_logprobs
-            advantages = b_advantages
-            returns = b_returns
-        else:
-            adv, ret = self.get_advantages_returns(p_states, p_actions, p_masks, p_rewards)
-
-            states = tuple(torch.concat([p_states[i], c_states[i]]) for i in range(len(p_states)))
-            actions = torch.concat([p_actions, c_actions])
-            old_logprobs = torch.concat([p_logprobs, c_logprobs])
-
-            advantages = torch.concat([adv, b_advantages])
-            returns = torch.concat([ret, b_returns])
+        # Merge all agent states, actions, rewards etc.
+        advantages = torch.cat(advantages)
+        returns = torch.cat(returns)
+        actions = torch.cat(actions)
+        old_logprobs = torch.cat(old_logprobs)
+        states_ = tuple()
+        for i in range(len(states[0])):
+            states_ += (torch.cat([states[k][i] for k in range(len(states))]),)
+        states = states_
 
         # Logger
         log_values = []
