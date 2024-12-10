@@ -34,14 +34,14 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
 
     i_episode = 1
     level_idx = 0
-    levels = len(env.getLevelFiles())
+    levels = len(env.getLevelManager())
     starttime = time.time()
 
     # training loop
     while i_episode < (max_episodes + 1):
         logger.episode = i_episode
         #states = env.reset()
-        states = env.reset(level_idx % levels)
+        next_states = env.reset()
         level_idx += 1
 
         logger.set_number_of_agents(env.getNumberOfRobots())
@@ -50,22 +50,17 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
         memory.unroll_last_episode(env.getNumberOfRobots())
 
         for t in range(max_timesteps):
-            observations = states
+            current_states = next_states
             # Run old policy
-            actions, action_logprob = ppo.select_action(statesToObservationsTensor(states))
+            actions, action_logprob = ppo.select_action(statesToObservationsTensor(current_states))
 
-            states, rewards, dones, reachedGoals = env.step(torchToNumpy(actions))
+            next_states, rewards, dones, reached_goals = env.step(torchToNumpy(actions))
 
             # memory.insertObservations(o_laser, o_orientation, o_distance, o_velocity)
             unrolled_rewards = [sum([value for value in reward.values()]) for reward in rewards]
-            # TODO Occasional error here, investigate
-            # memory.insertReward(unrolled_rewards)
-            # memory.insertAction(actions)
-            # memory.insertLogProb(action_logprob)
-            # memory.insertIsTerminal(dones)
-            memory.add(statesToObservationsNumpy(observations), actions, action_logprob, unrolled_rewards, dones)
+            memory.add(statesToObservationsNumpy(current_states), statesToObservationsNumpy(next_states), actions, action_logprob, unrolled_rewards, dones)
 
-            logger.add_objective(reachedGoals)
+            logger.add_objective(reached_goals)
             logger.add_reward(rewards)
             logger.add_step_agents(len(rewards))
 
@@ -73,13 +68,14 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
                 
                 print('{}. training with {} experiences'.format(training_counter, len(memory)), flush=True)
                 # memory.copyMemory()
-                ppo.update(memory, batches, next_obs=statesToObservationsTensor(states))
+                ppo.update(memory, batches)
                 print('Time: {}'.format(time.time() - starttime), flush=True)
                 starttime = time.time()
                 training_counter += 1
                 env.updateTrainingCounter(training_counter)
 
             if env.is_done():
+                env.update_level_manager(goals_reached=reached_goals)
                 break
 
         if i_episode % log_interval == 0:
@@ -95,7 +91,7 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
                 best_objective_reached = objective_reached
                 ppo.saveCurrentWeights(f"{env_name}_best")
                 print(
-                    f'Best performance with avg reward of NOT CALCULATED saved at training {training_counter}.',
+                    f'Best performance at training {training_counter}.',
                     flush=True)
 
         # if training_counter >= 100:

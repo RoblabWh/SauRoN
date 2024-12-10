@@ -30,9 +30,9 @@ class SwarmMemory(object):
                 warnings.warn("State type not recognized")
         return tuple_state
 
-    def add(self, state, action, action_logprobs, reward, done):
+    def add(self, state, next_state, action, action_logprobs, reward, done):
         for i in range(self.num_agents):
-            self.memory[i].add(self.get_agent_state(state, agent_id=i), action[i], action_logprobs[i], reward[i], done[i])
+            self.memory[i].add(self.get_agent_state(state, agent_id=i), self.get_agent_state(next_state, agent_id=i), action[i], action_logprobs[i], reward[i], done[i])
 
     def __len__(self):
         length = 0
@@ -44,16 +44,17 @@ class SwarmMemory(object):
         return length
 
     def to_tensor(self):
-        states, actions, logprobs, rewards, not_dones = [], [], [], [], []
+        states, next_states, actions, logprobs, rewards, not_dones = [], [], [], [], [], []
         for memories in self.past_memories:
             for memory in memories:
-                state, action, logprob, reward, not_done = memory.to_tensor()
+                state, next_state, action, logprob, reward, not_done = memory.to_tensor()
                 states.append(state)
+                next_states.append(next_state)
                 actions.append(action)
                 logprobs.append(logprob)
                 rewards.append(reward)
                 not_dones.append(not_done)
-        return states, actions, logprobs, rewards, not_dones
+        return states, next_states, actions, logprobs, rewards, not_dones
 
     def change_horizon(self, new_horizon):
         for i in range(self.num_agents):
@@ -74,6 +75,7 @@ class Memory(object):
         self.size = 0
 
         self.state = [0 for _ in range(max_size)]
+        self.next_state = [0 for _ in range(max_size)]
         self.action = np.zeros((max_size, action_dim))
         self.logprobs = np.zeros((max_size,))
         self.reward = np.zeros((max_size,))
@@ -84,8 +86,9 @@ class Memory(object):
     def __len__(self):
         return self.size
 
-    def add(self, state, action, action_logprobs, reward, done):
+    def add(self, state, next_state, action, action_logprobs, reward, done):
         self.state[self.ptr] = tuple(s for s in state)
+        self.next_state[self.ptr] = tuple(s for s in next_state)
         self.action[self.ptr] = action
         self.logprobs[self.ptr] = action_logprobs
         self.reward[self.ptr] = reward
@@ -96,6 +99,7 @@ class Memory(object):
 
     def to_tensor(self):
         return tuple(torch.FloatTensor(np.array(state)).squeeze(1).to(self.device) for state in zip(*self.state[:self.size])), \
+               tuple(torch.FloatTensor(np.array(next_state)).squeeze(1).to(self.device) for next_state in zip(*self.next_state[:self.size])), \
                torch.FloatTensor(self.action[:self.size]).to(self.device), \
                torch.FloatTensor(self.logprobs[:self.size]).to(self.device), \
                torch.FloatTensor(self.reward[:self.size]).to(self.device), \
@@ -104,6 +108,7 @@ class Memory(object):
     def change_horizon(self, new_horizon):
         self.max_size = new_horizon
         self.state = [0 for _ in range(self.max_size)]
+        self.next_state = [0 for _ in range(self.max_size)]
         self.action = np.zeros((self.max_size, self.action_dim))
         self.logprobs = np.zeros((self.max_size,))
         self.reward = np.zeros((self.max_size,))
@@ -116,6 +121,7 @@ class Memory(object):
         self.size = 0
 
         self.state = [0 for _ in range(self.max_size)]
+        self.next_state = [0 for _ in range(self.max_size)]
         self.action.fill(0)
         self.logprobs.fill(0)
         self.reward.fill(0)

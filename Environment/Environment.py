@@ -10,7 +10,7 @@ class Environment:
     Defines the environment of the reinforcement learning algorithm
     """
 
-    def __init__(self, app, args, timeframes, level, reward_func=None):
+    def __init__(self, app, args, reward_func=None):
         """
         :param app: PyQt5.QtWidgets.QApplication
         :param args: args defined in main
@@ -21,10 +21,9 @@ class Environment:
         self.args = args
         self.steps = args.steps
         self.steps_left = args.steps
-        self.level = level
-        self.simulation = Simulation(app, args, timeframes, level)
+        self.simulation = Simulation(app, args)
         self.episode = -1
-        self.timeframs = timeframes
+        self.timeframs = args.time_frames
         self.total_reward = 0.0
         self.done = False
         self.shape = np.asarray([0]).shape
@@ -52,7 +51,7 @@ class Environment:
         else:
             reversed = True #determines the order of the state (reversed = false : current state in last place and the oldest at Index 0)
             #return np.asarray(self.simulation.robots[i].get_state_lidar(reversed))  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
-            return self.simulation.robots[i].get_state_lidar(reversed)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
+            return self.simulation.robots[i].get_robot_states(reversed)  # Sonardaten von x Frames, Winkel zum Ziel, Abstand zum Ziel
 
     @staticmethod
     def get_actions():
@@ -88,12 +87,19 @@ class Environment:
         have not been used up.
         :return: returns True if every robot has finished or the steps have run out
         """
-        robotsDone = False
+        robot_done = False
         for robot in self.simulation.robots:
             if not robot.isActive():
-                robotsDone = True
+                robot_done = True
                 break
-        return self.steps_left <= 0 or robotsDone
+        return self.steps_left <= 0 or robot_done
+
+    def update_level_manager(self, goals_reached):
+        """
+        Updates the levelmanager after the episode has ended
+        :param goals_reached: list of booleans
+        """
+        self.simulation.levelManager.update(goals_reached)
 
     def step(self, actions, activations = None, proximity = None):
         """
@@ -120,7 +126,7 @@ class Environment:
                 state, reward, done, reachedPickup = self.extractRobotData(i, robotsTermination[i])
                 states.append(state)
                 rewards.append(reward)
-                dones.append(1 - done)
+                dones.append(int(done))
                 reachedPickups.append(reachedPickup)
             else:
                 # set robot to inactive if it has crashed with a wall or another robot
@@ -180,29 +186,32 @@ class Environment:
 
         living_factor = self.steps_left / self.steps
         reward = {}
-        r_arrival = 2500 # reward for reaching the goal
-        r_collision = -2500 # Robot crashed with a wall or another robot
-        r_runOutOfTime = -500 # Robot has run out of time
+        r_arrival = 10 # reward for reaching the goal
+        r_collision = -10 # Robot crashed with a wall or another robot
+        r_run_out_of_time = -5 # Robot has run out of time
         r_stop = -0.01 # Robot stood still
-        w_g = 300
+        w_g = 0.1
         w_d = 15
-        w_gn = 100
-        w_w = -50
+        w_gn = 0
+        w_w = -0.1
         w_p = 0.1
         a_p = 0.045 # weight for the angle, always positive
 
         if reachedPickup:
             reward['arrival'] = r_arrival
         elif runOutOfTime:
-            reward['out_of_time'] = r_runOutOfTime
+            reward['out_of_time'] = r_run_out_of_time
         elif collision:
             reward['collision'] = r_collision #* living_factor
         else:
             # Distance Reward
             if dist_old > dist_new:
-                reward['dist'] = w_g * (dist_old - dist_new)
+                reward['dist'] = w_g #w_g * (dist_old - dist_new)
             else:
-                reward['dist'] = w_gn * (dist_old - dist_new)
+                reward['dist'] = w_gn #w_gn * (dist_old - dist_new)
+
+            if np.min(robot.get_robot_states()[0][0]) < 0.03:
+                reward['wall'] = w_w
 
             # Protect engine Reward
             # currentLinVel = np.around(robot.state_raw[robot.time_steps - 1][4], decimals=5)
@@ -247,14 +256,12 @@ class Environment:
 
         return reward
 
-    def reset(self, level=None):
+    def reset(self):
         """
         Resets the simulation after each epoch
         :param level: int - defines the reset level
         """
-        if level is None:
-            level = self.level
-        self.simulation.reset(level)
+        self.simulation.reset()
         self.steps_left = self.steps
         self.episode += 1
         self.simulation.episode = self.episode
@@ -276,8 +283,8 @@ class Environment:
     def getNumberOfRobots(self):
         return self.simulation.getCurrentNumberOfRobots()
 
-    def getLevelFiles(self):
-        return self.simulation.levelFiles
+    def getLevelManager(self):
+        return self.simulation.levelManager
 
     def updateTrainingCounter(self, counter):
         self.simulation.updateTrainingCounter(counter)

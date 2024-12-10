@@ -1,0 +1,67 @@
+<svg width="800" height="600" viewBox="0 0 750 500" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="75" cy="475" fill="#e52420" id="start_3_1_" r="7.5" stroke="#000000" stroke-miterlimit="10"/>
+  <circle cx="670" cy="75" fill="#66b32e" id="goal_2_1_-71" r="13.99" stroke="#000000" stroke-miterlimit="10" transform="matrix(1 0 0 1 0 0)"/>
+  <circle cx="620" cy="175" fill="#66b32e" id="goal_2_1_-72" r="13.99" stroke="#000000" stroke-miterlimit="10" transform="matrix(1 0 0 1 0 0)"/>
+  <circle cx="570" cy="275" fill="#66b32e" id="goal_2_1_-73" r="13.99" stroke="#000000" stroke-miterlimit="10" transform="matrix(1 0 0 1 0 0)"/>
+  <circle cx="520" cy="375" fill="#66b32e" id="goal_2_1_-74" r="13.99" stroke="#000000" stroke-miterlimit="10" transform="matrix(1 0 0 1 0 0)"/>
+  <circle cx="470" cy="475" fill="#66b32e" id="goal_2_1_-75" r="13.99" stroke="#000000" stroke-miterlimit="10" transform="matrix(1 0 0 1 0 0)"/>
+
+  <!-- Starting at (50,50), moving horizontally -->
+  <line stroke="black" stroke-width="2" x1="50"  y1="50"  x2="700" y2="50"/>
+  <line stroke="black" stroke-width="2" x1="50"  y1="500"  x2="50" y2="50"/>
+
+  <!-- Move down -->
+  <line stroke="black" stroke-width="2" x1="700" y1="50"  x2="700" y2="100"/>
+
+  <!-- Go back to the left -->
+  <line stroke="black" stroke-width="2" x1="700" y1="100" x2="100" y2="100"/>
+
+  <!-- Down again -->
+  <line stroke="black" stroke-width="2" x1="100" y1="100" x2="100" y2="150"/>
+
+  <!-- Zig-zag to the right -->
+  <line stroke="black" stroke-width="2" x1="100" y1="150" x2="650" y2="150"/>
+
+  <!-- Down -->
+  <line stroke="black" stroke-width="2" x1="650" y1="150" x2="650" y2="200"/>
+
+  <!-- Zig-zag to the left -->
+  <line stroke="black" stroke-width="2" x1="650" y1="200" x2="150" y2="200"/>
+
+  <!-- Down -->
+  <line stroke="black" stroke-width="2" x1="150" y1="200" x2="150" y2="250"/>
+
+  <!-- Zig-zag to the right -->
+  <line stroke="black" stroke-width="2" x1="150" y1="250" x2="600" y2="250"/>
+
+  <!-- Down -->
+  <line stroke="black" stroke-width="2" x1="600" y1="250" x2="600" y2="300"/>
+
+  <!-- Zig-zag to the left -->
+  <line stroke="black" stroke-width="2" x1="600" y1="300" x2="200" y2="300"/>
+
+  <!-- Down -->
+  <line stroke="black" stroke-width="2" x1="200" y1="300" x2="200" y2="350"/>
+
+  <!-- Zig-zag to the right -->
+  <line stroke="black" stroke-width="2" x1="200" y1="350" x2="550" y2="350"/>
+
+  <!-- Down -->
+  <line stroke="black" stroke-width="2" x1="550" y1="350" x2="550" y2="400"/>
+
+  <!-- Zig-zag to the left -->
+  <line stroke="black" stroke-width="2" x1="550" y1="400" x2="250" y2="400"/>
+
+  <!-- Down -->
+  <line stroke="black" stroke-width="2" x1="250" y1="400" x2="250" y2="450"/>
+
+  <!-- Zig-zag to the right -->
+  <line stroke="black" stroke-width="2" x1="250" y1="450" x2="500" y2="450"/>
+
+  <!-- Down -->
+  <line stroke="black" stroke-width="2" x1="500" y1="450" x2="500" y2="500"/>
+
+  <!-- Finally back to the left -->
+  <line stroke="black" stroke-width="2" x1="500" y1="500" x2="50" y2="500"/>
+
+</svg>

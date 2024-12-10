@@ -1,5 +1,6 @@
 import Visualization.Components.RobotRepresentation as RobotRepresentation
 from Environment.Components.Station import Station
+from Environment.LevelManager import LevelManager
 
 from PyQt5.QtGui import QPainter, QFont
 from PyQt5.QtCore import Qt
@@ -35,14 +36,14 @@ def initStations(stations, scaleFactor):
 
 class SimulationWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, application, robots, stations, args, walls, circleWalls, arenaSize):
+    def __init__(self, application, args, level_manager:LevelManager):
         super(SimulationWindow, self).__init__()
 
         self.args = args
         self.app = application
         self.setWindowTitle("Simulation")
-        self.arenaWidth = arenaSize[0]
-        self.arenaHeight = arenaSize[1]
+        self.arenaWidth = level_manager.arenaSize[0]
+        self.arenaHeight = level_manager.arenaSize[1]
         self.width = int(self.arenaWidth * args.scale_factor)
         self.height = int(self.arenaHeight * args.scale_factor)
         self.setGeometry(200, 100, self.width, self.height)
@@ -58,10 +59,10 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.delay = 0
         self.selectedCategory = 0
 
-        self.robotRepresentations = initRobots(robots, args.scale_factor, args.mode, self.args)
-        self.stations = stations  # initStations(stations, args.scale_factor)
-        self.walls = walls
-        self.circleWalls = circleWalls
+        self.robotRepresentations = initRobots(level_manager.robots, args.scale_factor, args.mode, self.args)
+        self.stations = level_manager.stations  # initStations(stations, args.scale_factor)
+        self.walls = level_manager.walls
+        self.circleWalls = level_manager.circleWalls
 
         #self.painter = QPainter(self)
 
@@ -294,3 +295,11 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
     def updateTrafficLights(self, proximity):
         self.selectedCategory = np.argmax(proximity)
+
+    def levelChange(self, level_manager:LevelManager):
+        self.setSize(level_manager.arenaSize)
+        self.setWalls(level_manager.walls)
+        self.setRobotRepresentation(level_manager.robots)
+        self.setStations(level_manager.stations)
+        self.setCircleWalls(level_manager.circleWalls)
+        self.resize()

@@ -1,25 +1,38 @@
 <?xml version="1.0"?>
-<svg width="520.99999" height="449.9972" viewBox="0 0 520.99999 449.9972" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" enable-background="new 0 0 623.619 283.46" version="1.1" xml:space="preserve">
+<svg width="480" height="480" viewBox="0 0 480 460" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" enable-background="new 0 0 623.619 283.46" version="1.1" xml:space="preserve">
  <metadata id="metadata27">image/svg+xml</metadata>
 
  <g class="layer">
   <title>Layer 1</title>
-  <circle cx="288.16" cy="31.83" fill="#66b32e" id="goal_2_1_" r="13.99" stroke="#000000" stroke-miterlimit="10"/>
-  <circle cx="476.89" cy="213.62" fill="#66b32e" id="goal_2_1_-3" r="13.99" stroke="#000000" stroke-miterlimit="10"/>
-  <circle cx="290.58" cy="414.27" fill="#66b32e" id="goal_2_1_-6" r="13.99" stroke="#000000" stroke-miterlimit="10"/>
-  <circle cx="91.44" cy="213.44" fill="#66b32e" id="goal_2_1_-7" r="13.99" stroke="#000000" stroke-miterlimit="10" transform="matrix(1 0 0 1 0 0)"/>
-  <circle cx="288.03" cy="62.39" fill="#e52420" id="start_3_1_" r="7.5" stroke="#000000" stroke-miterlimit="10"/>
-  <line fill="none" id="svg_1" stroke="#000000" stroke-width="5" x1="270.5" x2="309.5" y1="12" y2="12"/>
-  <line fill="none" id="svg_3" stroke="#000000" stroke-width="5" x1="310.5" x2="269.5" y1="431" y2="431"/>
-  <line fill="none" id="svg_11" stroke="#000000" stroke-width="5" x1="311.5" x2="497.5" y1="195" y2="193"/>
-  <line fill="none" id="svg_12" stroke="#000000" stroke-width="5" x1="496.5" x2="497.5" y1="193" y2="235"/>
-  <line fill="none" id="svg_13" stroke="#000000" stroke-width="5" x1="309.5" x2="311.5" y1="13" y2="195"/>
-  <line fill="none" id="svg_14" stroke="#000000" stroke-width="5" x1="498.5" x2="309.5" y1="234" y2="236"/>
-  <line fill="none" id="svg_15" stroke="#000000" stroke-width="5" x1="311.5" x2="310.5" y1="235" y2="430"/>
-  <line fill="none" id="svg_16" stroke="#000000" stroke-width="5" x1="269.5" x2="271.5" y1="430" y2="235"/>
-  <line fill="none" id="svg_17" stroke="#000000" stroke-width="5" x1="272.5" x2="68.5" y1="236" y2="237"/>
-  <line fill="none" id="svg_19" stroke="#000000" stroke-width="5" x1="70.5" x2="70.5" y1="234" y2="196"/>
-  <line fill="none" id="svg_20" stroke="#000000" stroke-width="5" x1="69.5" x2="271.5" y1="195" y2="193"/>
-  <line fill="none" id="svg_21" stroke="#000000" stroke-width="5" x1="270.5" x2="270.5" y1="192" y2="12"/>
+  <circle cx="245" cy="30" fill="#66b32e" id="goal_2_1_" r="13.99" stroke="#000000" stroke-miterlimit="10"/>
+  <circle cx="435" cy="223" fill="#66b32e" id="goal_2_1_-3" r="13.99" stroke="#000000" stroke-miterlimit="10"/>
+  <circle cx="245" cy="415" fill="#66b32e" id="goal_2_1_-6" r="13.99" stroke="#000000" stroke-miterlimit="10"/>
+  <circle cx="50" cy="223" fill="#66b32e" id="goal_2_1_-7" r="13.99" stroke="#000000" stroke-miterlimit="10" transform="matrix(1 0 0 1 0 0)"/>
+  <circle cx="245" cy="65" fill="#e52420" id="start_3_1_" r="7.5" stroke="#000000" stroke-miterlimit="10"/>
+  <line stroke="black" stroke-width="2" x1="220" x2="270" y1="10" y2="10"/>
+  <line stroke="black" stroke-width="2" x1="270" x2="270" y1="10" y2="200"/>
+  <line stroke="black" stroke-width="2" x1="270" x2="460" y1="200" y2="200"/>
+  <line stroke="black" stroke-width="2" x1="460" x2="460" y1="200" y2="249"/>
+  <line stroke="black" stroke-width="2" x1="460" x2="270" y1="249" y2="249"/>
+  <line stroke="black" stroke-width="2" x1="270" x2="270" y1="249" y2="440"/>
+  <line stroke="black" stroke-width="2" x1="270" x2="220" y1="440" y2="440"/>
+  <line stroke="black" stroke-width="2" x1="220" x2="220" y1="440" y2="249"/>
+  <line stroke="black" stroke-width="2" x1="220" x2="30" y1="249" y2="249"/>
+  <line stroke="black" stroke-width="2" x1="30" x2="30" y1="249" y2="200"/>
+  <line stroke="black" stroke-width="2" x1="30" x2="220" y1="200" y2="200"/>
+  <line stroke="black" stroke-width="2" x1="220" x2="220" y1="200" y2="10"/>
  </g>
 </svg>
+
+  <!--line stroke="black" stroke-width="2" x1="270" x2="320" y1="10" y2="10"/>
+  <line stroke="black" stroke-width="2" x1="320" x2="320" y1="10" y2="200"/>
+  <line stroke="black" stroke-width="2" x1="320" x2="510" y1="200" y2="200"/>
+  <line stroke="black" stroke-width="2" x1="510" x2="510" y1="200" y2="249"/>
+  <line stroke="black" stroke-width="2" x1="510" x2="320" y1="249" y2="249"/>
+  <line stroke="black" stroke-width="2" x1="320" x2="320" y1="249" y2="440"/>
+  <line stroke="black" stroke-width="2" x1="320" x2="270" y1="440" y2="440"/>
+  <line stroke="black" stroke-width="2" x1="270" x2="270" y1="440" y2="249"/>
+  <line stroke="black" stroke-width="2" x1="270" x2="80" y1="249" y2="249"/>
+  <line stroke="black" stroke-width="2" x1="80" x2="80" y1="249" y2="200"/>
+  <line stroke="black" stroke-width="2" x1="80" x2="270" y1="200" y2="200"/>
+  <line stroke="black" stroke-width="2" x1="270" x2="270" y1="200" y2="10"/-->

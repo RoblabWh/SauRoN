@@ -1,9 +1,8 @@
 import Environment.SVGParser as SVGParser
 import Visualization.EnvironmentWindow as SimulationWindow
-
+from Environment.LevelManager import LevelManager
 import math, random
 import numpy as np
-import time
 
 closedFirst = False
 
@@ -13,7 +12,7 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    def __init__(self, app, args, timeframes, level):
+    def __init__(self, app, args):
         """
         Creates a simulation containing the robots, stations, levels and simulation window
         :param app: PyQt5.QtWidgets.QApplication
@@ -25,99 +24,47 @@ class Simulation:
         global closedFirst
         closedFirst = False
         self.args = args
-        self.levelFiles = args.level_files
+        self.levelManager = LevelManager(args.level_files)
+        self.robots = None
+
         # Skalierungsparameter für Visualisierung
         self.scaleFactor = args.scale_factor
         self.steps = args.steps
         self.hasUI = app is not None
         self.episode = 0
 
-        # Parameter width & length über args
-
         self.simulationWindow = None
-        self.loadLevel(level)
-
-        self.reset(level)
+        self.reset()
 
         if self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, args, self.walls,
-                                                                      self.circleWalls, self.arenaSize)
+            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.args, self.levelManager)
             self.simulationWindow.show()
 
         self.simTime = 0  # s
         self.simTimestep = args.sim_time_step  # s
-        # self.plotterWindow = PlotterWindow(app)
 
-    def reset(self, level):
+    def reset(self):
         """
         Resets the simulation after each epoch
         :param level: int - defines the reset level
         """
-        if self.levelID != level:
-            self.loadLevel(level)
-            levelChanged = True
-        else:
-            levelChanged = False
 
-        for i, s in enumerate(self.stations):
-            s.setPos(self.level[2][i])
+        self.levelManager.load_level(self.args)
+        self.robots = self.levelManager.robots
 
-        random_pos = random.sample(self.level[0], k=len(self.level[0]))
-        random.shuffle(self.stations)
-        for i, station in enumerate(self.stations):
-            station.setColor(i)
+        # Resetting each Agent's position and orientation and randomize Stations
+        rng_robot_positions = self.levelManager.get_randomized_robot_positions()
+        rng_stations = self.levelManager.randomize_stations()
         for i, r in enumerate(self.robots):
-            # r.reset(self.stations, self.level[level][0][i], self.level[level][1][i]+(random.uniform(0, math.pi)*self.noiseStrength[level]), self.level[level][3])
-            r.reset(self.stations, random_pos[i], self.level[1][i] + (random.uniform(0, math.pi)), self.level[3], goalStation=self.stations[i])
+            r.reset(self.levelManager.stations, rng_robot_positions[i], random.uniform(0, math.pi), self.levelManager.get_walls(), goalStation=rng_stations[i])
 
-        #print("Resetting the simulation ", end='')
+        # Resetting each Agent's Lidar
         for robot in self.robots:
-            #print('.', end='')
             robot.resetLidar(self.robots)
-        #print("")
 
-        if self.hasUI and self.simulationWindow != None:
-            if levelChanged:
-                self.simulationWindow.setSize(self.arenaSize)
-                self.simulationWindow.setWalls(self.level[3])
-                self.simulationWindow.setRobotRepresentation(self.robots)
-                self.simulationWindow.setStations(self.stations)
-                self.simulationWindow.setCircleWalls(self.circleWalls)
-                self.simulationWindow.resize()
-
-    def isFarEnoughApart(self, stationPositions, randPos, minDist):
-        """
-        Checks whether random placed stations are far enough apart so the stations don't overlap
-        and there is enough space for the robots to pass between them
-
-        :param stationPositions: (float, float) random X, random Y in the limits of the width and height of the ai-arena
-        :param randPos: (float, float) another random X, random Y in the limits of the width and height of the ai-arena to check whether
-        that position is far enough apart from the first one
-        :param minDist: the minimum distance between the two stations
-        :return: returns True if the distance between the two positions is greater than the minDist
-
-        """
-        for pos in stationPositions:
-            dist = math.sqrt((pos[0] - randPos[0]) ** 2 + (pos[1] - randPos[1]) ** 2)
-            if (dist < minDist):
-                return False
-        return True
-
-    def getGoalWidth(self):
-        """
-        only for rectangular Stations
-        :return: float station width in meter
-        """
-        goalWidth = self.pickUp.getWidth()
-        return goalWidth
-
-    def getGoalLength(self):
-        """
-        only for rectangular Stations
-        :return: float station length in meter
-        """
-        goalLength = self.pickUp.getLength()
-        return goalLength
+        # Reprint the level if it has changed and the simulation window is open
+        if self.hasUI and self.simulationWindow is not None:
+            self.simulationWindow.levelChange(self.levelManager)
 
     def update(self, robotsTarVels, stepsLeft, activations, proximity):
         """
@@ -178,7 +125,7 @@ class Simulation:
                 robotsTerminations.append((None, None, None))
 
         if self.hasUI:
-            if self.simulationWindow != None:
+            if self.simulationWindow is not None:
                 for i, robot in enumerate(self.robots):
                     activationsR = activations[i] if activations is not None else None
                     self.simulationWindow.updateRobot(robot, i, activationsR)
@@ -187,44 +134,27 @@ class Simulation:
                 self.simulationWindow.updateInfotext(self.steps - stepsLeft, self.episode)
         return robotsTerminations
 
-    def showWindow(self, app):
-        if not self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.robots, self.stations, self.args,
-                                                                      self.walls, self.circleWalls, self.arenaSize)
-            self.simulationWindow.show()
-            self.hasUI = True
-
-    def closeWindow(self):
-        if self.hasUI:
-            self.simulationWindow.close()
-            self.simulationWindow = None
-            self.hasUI = False
-
     def getCurrentNumberOfRobots(self):
         return len(self.robots)
-
-    def loadLevel(self, levelID):
-        # print("LevelID: ", levelID)
-        # print("Loading ", self.levelFiles[levelID])
-        selectedLevel = SVGParser.SVGLevelParser(self.levelFiles[levelID], self.args)
-        self.robots = selectedLevel.getRobots()
-        if self.args.manually:
-            self.robots = self.robots[0]
-
-        self.stations = selectedLevel.getStations()
-        self.walls = selectedLevel.getWalls()
-        self.circleWalls = selectedLevel.getCircleWalls()
-        self.level = (
-        selectedLevel.getRobsPos(), selectedLevel.getRobsOrient(), selectedLevel.getStatsPos(), self.walls,
-        self.circleWalls)
-        self.levelID = levelID
-        self.arenaSize = selectedLevel.getArenaSize()
-
-    def getLevelName(self):
-        levelNameSVG = self.levelFiles[self.levelID]
-        levelName = levelNameSVG.split('.', 1)[0]
-        return levelName
 
     def updateTrainingCounter(self, counter):
         if self.hasUI:
             self.simulationWindow.updateTrainingInfotext(counter)
+
+    # def isFarEnoughApart(self, stationPositions, randPos, minDist):
+    #     """
+    #     Checks whether random placed stations are far enough apart so the stations don't overlap
+    #     and there is enough space for the robots to pass between them
+    #
+    #     :param stationPositions: (float, float) random X, random Y in the limits of the width and height of the ai-arena
+    #     :param randPos: (float, float) another random X, random Y in the limits of the width and height of the ai-arena to check whether
+    #     that position is far enough apart from the first one
+    #     :param minDist: the minimum distance between the two stations
+    #     :return: returns True if the distance between the two positions is greater than the minDist
+    #
+    #     """
+    #     for pos in stationPositions:
+    #         dist = math.sqrt((pos[0] - randPos[0]) ** 2 + (pos[1] - randPos[1]) ** 2)
+    #         if (dist < minDist):
+    #             return False
+    #     return True

@@ -51,9 +51,9 @@ class Robot:
         self.station = station
 
         # Variables regarding the state
-        self.time_steps = args.time_frames #4
+        self.time_frames = args.time_frames #4
         self.state_raw = []
-        self.stateLidar = []
+        self.robot_states = []
         self.netOutput = (0,0)
         self.distances = []
         self.lidarHits = []
@@ -92,8 +92,8 @@ class Robot:
         #self.maxLinearVelocityFact = 1/self.maxLinearVelocity
         #self.maxAngularVelocityFact = 1/self.maxAngularVelocity
         # Maximum distance in laserscan is 20 meters
-        self.maxDistFact = 1/20
-        self.maxDistSim = 22
+        self.maxDistFact = 1/10
+        #self.maxDistSim = 22
 
         #Pie Slice (chassy for better lidar detection as used with real robots)
         self.hasPieSlice = args.has_pie_slice
@@ -195,10 +195,10 @@ class Robot:
 
         frame = [posX, posY, directionX, directionY, linVel, angVel, self.goalX, self.goalY, goalDist, orientation]
 
-        for _ in range(self.time_steps):
+        for _ in range(self.time_frames):
             self.push_frame(frame)
 
-        self.stateLidar = []
+        self.robot_states = []
 
         self.stepsAlive = 0
         self.distances = []
@@ -225,7 +225,7 @@ class Robot:
                 if robot is not self:
                     self.robotsPieSliceWalls += robot.getPieSliceWalls()
 
-        for _ in range(self.time_steps):
+        for _ in range(self.time_frames):
             self.lidarReading(robots, self.args.steps, self.args.steps)
 
     def denormdata(self, data, limits):
@@ -250,7 +250,7 @@ class Robot:
         :param frame: list -
             frame that should be added to the state
         """
-        if len(self.state_raw) >= self.time_steps:
+        if len(self.state_raw) >= self.time_frames:
             self.state_raw.pop(0)
             self.state_raw.append(frame)
         else:
@@ -272,8 +272,9 @@ class Robot:
         goalX, goalY = self.goalX, self.goalY
 
         if not self.manuell:
-            linVel, angVel = self.computeNextVelocityContinuous(dt, self.getLinearVelocity(), self.getAngularVelocity(),
-                                                                tarLinVel, tarAngVel)
+            # linVel, angVel = self.computeNextVelocityContinuous(dt, self.getLinearVelocity(), self.getAngularVelocity(),
+            #                                                     tarLinVel, tarAngVel)
+            linVel, angVel = self.computeNextVelocity(tarLinVel, tarAngVel)
         else:
             linVel = self.linTast
             angVel = self.angTast
@@ -352,7 +353,7 @@ class Robot:
         self.posSensor = points[0]
         self.pieSlicePoints = points
 
-    def lidarReading(self, robots, stepsLeft, steps):
+    def lidarReading(self, robots, steps_left, steps):
         """
         Creates a state with a virtual 2D laser scan
 
@@ -364,7 +365,7 @@ class Robot:
 
         :param robots: list of Robot.Robot objects -
             the positions of the other robots are needed for the laser scan
-        :param stepsLeft: remaining steps of current epoch
+        :param steps_left: remaining steps of current epoch
         :param steps: number of steps in one epoch
         """
 
@@ -400,9 +401,8 @@ class Robot:
 
         circlesPositions = np.array([circleX, circleY])
 
-        #rayCol = FastCollisionRay(position, self.args.number_of_rays, dir, self.radius, self.fieldOfView)
         self.rayCol.new_scan(position, dir)
-        distances, lidarHits = (self.rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
+        distances, lidar_hits = (self.rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
 
         circleX = [r[0] for r in collidorCircleAllForTerminations]
         circleY = [r[1] for r in collidorCircleAllForTerminations]
@@ -410,12 +410,13 @@ class Robot:
         circlesPositionsAll = np.array([circleX, circleY])
         self.collisionDistances, self.collisionDistancesRobots = self.rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colliderLines, circlesPositionsAll, circleR)
 
-        self.lidarHits = [lidarHits]
+        self.lidarHits = lidar_hits
         self.distances = [distances]
 
-        # calculate distance
-        distance = np.linalg.norm(
+        # calculate distance to goal
+        distance_to_goal = np.linalg.norm(
             np.array([self.getPosX(), self.getPosY()]) - np.array([self.station.posX, self.station.posY]))
+        distance_to_goal_norm = distance_to_goal * self.maxDistFact
 
         # calculate the angle between the robot orientation and the target
         orientation_vec = np.array([self.getDirectionX(), self.getDirectionY()])
@@ -436,33 +437,71 @@ class Robot:
         noise = np.random.uniform(low=-0.04, high=0.04, size=distances.shape)
         distances = distances + noise
         laser = distances * self.maxDistFact
-        laser = np.where(laser > 1, 1, laser)
+        # laser = np.where(laser > 1, 1, laser)
 
-        # Convert 1D scan to 2D Scan # TODO DEPRECATED
-        # if self.args.input_style == "image":
-        #     laser = scan1DTo2D(laser, img_size=self.args.image_size)
+        current_timestep = (steps - steps_left) / steps
 
-        currentTimestep = (steps - stepsLeft)/steps
+        robot_state = [laser,                                                       # 2D Laser Scan
+                       np.asarray(orientation),                                     # Orientation to Goal
+                       np.expand_dims(np.asarray(distance_to_goal_norm), axis=0),   # Distance to Goal
+                       np.array([self.getLinearVelocityNorm(),                      # Linear Velocity
+                                 self.getAngularVelocityNorm()]),                   # Angular Velocity
+                       current_timestep                                             # Current Timestep
+                       ]
 
-        frame_lidar = [laser, np.asarray(orientation), np.expand_dims(np.asarray(distance/self.maxDistSim), axis=0), np.array([self.getLinearVelocityNorm(), self.getAngularVelocityNorm()]), currentTimestep]
-
-        if len(self.stateLidar) >= self.time_steps:
-            self.stateLidar.pop(0)
-            self.stateLidar.append(frame_lidar)
+        if len(self.robot_states) >= self.time_frames:
+            self.robot_states.pop(0)
+            self.robot_states.append(robot_state)
         else:
-            self.stateLidar.append(frame_lidar)
+            self.robot_states.append(robot_state)
 
-    def get_state_lidar(self, reversed = False):
-        tmp_state = copy.deepcopy(self.stateLidar)
-        if reversed:
-             tmp_state.reverse()
-        return tmp_state
+    def get_robot_states(self, reverse=True):
+        """
+        Returns the Robot States.
+        :param reverse: (reverse = false : current state in last place and the oldest at Index 0)
+        :return: list of robot states
+        """
         # tmp_state = copy.deepcopy(self.stateLidar)
         # zipstate = list(zip(*tmp_state))
         # states = []
         # for state in zipstate:
         #     states.append(np.array(state))
         # return states
+        robot_states = copy.deepcopy(self.robot_states)
+        if reverse:
+             robot_states.reverse()
+        return robot_states
+
+
+    def discretize(self, value, bin_size):
+        '''
+        Discretizes a value to a given bin size
+        :param value: float - value to be discretized
+        :param bin_size: float - size of the bin
+        '''
+        value = np.clip(value, -1, 1)
+        bin_value = round(value / bin_size) * bin_size
+        return bin_value
+
+    def computeNextVelocity(self, tarLinVel, tarAngVel):
+        """
+        :param tarLinVel: float/ int - target linear velocity
+        :param tarAngVel: float/ int - target angular velocity
+        :return: tuple (float - linear velocity, float - angular velocity)
+        """
+
+        self.netOutput = (tarLinVel, tarAngVel)
+
+        assert tarLinVel >= -1 and tarLinVel <= 1, "velocity received from neural net is out of bounds. Fix your code!"
+        assert tarAngVel >= -1 and tarAngVel <= 1, "velocity received from neural net is out of bounds. Fix your code!"
+
+        # Map the Velocities to a range of 40 values between -1 and 1
+        norm_linvel = self.minLinearVelocity + ((tarLinVel + 1) / 2) * (self.maxLinearVelocity - self.minLinearVelocity)
+        norm_angvel = self.minAngularVelocity + ((tarAngVel + 1) / 2) * (self.maxAngularVelocity - self.minAngularVelocity)
+        lin_vel = self.discretize(norm_linvel, 0.005)
+        ang_vel = self.discretize(norm_angvel, 0.0555)
+
+        return np.around(lin_vel, decimals=3), np.around(ang_vel, decimals=3)
 
     def computeNextVelocityContinuous(self, dt, linVel, angVel, tarLinVel, tarAngVel):
         """
@@ -519,7 +558,6 @@ class Robot:
         # return linVel, angVel
         # maybe ändern
 
-
     def directionVectorFromAngle(self, direction):
         """
         calculates a vector of length 1 based on the direction in radians
@@ -564,34 +602,34 @@ class Robot:
                          (self.getPosY() - self.getGoalY()) ** 2) < r
 
     def getPosX(self):
-        return self.state_raw[self.time_steps - 1][0]
+        return self.state_raw[self.time_frames - 1][0]
 
     def getPosY(self):
-        return self.state_raw[self.time_steps - 1][1]
+        return self.state_raw[self.time_frames - 1][1]
 
     def getLastPosX(self):
-        return self.state_raw[self.time_steps - 2][0]
+        return self.state_raw[self.time_frames - 2][0]
 
     def getLastPosY(self):
-        return self.state_raw[self.time_steps - 2][1]
+        return self.state_raw[self.time_frames - 2][1]
 
     def getDirectionX(self):
-        return self.state_raw[self.time_steps - 1][2]
+        return self.state_raw[self.time_frames - 1][2]
 
     def getDirectionY(self):
-        return self.state_raw[self.time_steps - 1][3]
+        return self.state_raw[self.time_frames - 1][3]
 
     def getLastDirectionX(self):
-        return self.state_raw[self.time_steps - 2][2]
+        return self.state_raw[self.time_frames - 2][2]
 
     def getLastDirectionY(self):
-        return self.state_raw[self.time_steps - 2][3]
+        return self.state_raw[self.time_frames - 2][3]
 
     def getLinearVelocity(self):
-        return np.around(self.state_raw[self.time_steps - 1][4], decimals=5)
+        return np.around(self.state_raw[self.time_frames - 1][4], decimals=5)
 
     def getAngularVelocity(self):
-        return np.around(self.state_raw[self.time_steps - 1][5], decimals=5)
+        return np.around(self.state_raw[self.time_frames - 1][5], decimals=5)
 
     def getLinearVelocityNorm(self):
         return np.around((self.getLinearVelocity() - ((self.minLinearVelocity + self.maxLinearVelocity) * 0.5)) / (
@@ -602,10 +640,10 @@ class Robot:
                 (self.maxAngularVelocity - self.minAngularVelocity) * 0.5), decimals=5)
 
     def getGoalX(self):
-        return self.state_raw[self.time_steps - 1][6]
+        return self.state_raw[self.time_frames - 1][6]
 
     def getGoalY(self):
-        return self.state_raw[self.time_steps - 1][7]
+        return self.state_raw[self.time_frames - 1][7]
 
     def getVelocity(self):
         return self.getLinearVelocity(), self.getAngularVelocity()
@@ -628,8 +666,8 @@ class Robot:
         :return: Current forward Dir in Range of 0 to 2Pi
         """
         if not last:
-            return self.state_raw[self.time_steps - 1][9]
-        return self.state_raw[self.time_steps - 2][9]
+            return self.state_raw[self.time_frames - 1][9]
+        return self.state_raw[self.time_frames - 2][9]
 
     def setGoal(self, goal):
         goalX, goalY = goal

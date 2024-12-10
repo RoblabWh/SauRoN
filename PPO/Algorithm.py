@@ -31,7 +31,7 @@ class Actor(nn.Module):
             self.Inputspace = SmallInput(scan_size)
 
         # Mu
-        self.mu = nn.Linear(in_features=128, out_features=2)
+        self.mu = nn.Linear(in_features=self.Inputspace.out_features, out_features=2)
         initialize_output_weights(self.mu, 'actor')
         # Logstd
         self.log_std = nn.Parameter(torch.zeros(2, ))
@@ -63,7 +63,7 @@ class Critic(nn.Module):
             self.Inputspace = SmallInput(scan_size)
 
         # Value
-        self.value = nn.Linear(in_features=128, out_features=1)
+        self.value = nn.Linear(in_features=self.Inputspace.out_features, out_features=1)
         initialize_output_weights(self.value, 'critic')
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
@@ -257,17 +257,17 @@ class PPO:
         gae = 0
 
         for i in reversed(range(len(rewards))):
-            delta = rewards[i] - values[i]
-            if masks[i] == 1:
-                delta = delta + self.gamma * values[i + 1]
+            delta = rewards[i] + self.gamma * values[i + 1] * masks[i] - values[i]
             gae = delta + self.gamma * self._lambda * masks[i] * gae
             advantages.insert(0, gae)
             returns.insert(0, gae + values[i])
 
         advantages = torch.FloatTensor(advantages).to(device)
-        norm_adv = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
+        norm_adv = (advantages - advantages.mean()) / (advantages.std() + 1e-10) if advantages.numel() > 1 else advantages
 
         returns = torch.FloatTensor(returns).to(device)
+
+        assert not torch.isnan(norm_adv).any(), f"Advantages are NaN: {norm_adv}"
 
         return norm_adv, returns
 
@@ -288,7 +288,7 @@ class PPO:
     #
     #     return advantages, returns
 
-    def update(self, memory, batches, next_obs):
+    def update(self, memory, batches):
         """
         This function implements the update step of the Proximal Policy Optimization (PPO) algorithm for a swarm of
         robots. It takes in the memory buffer containing the experiences of the swarm, as well as the number of batches
@@ -315,7 +315,10 @@ class PPO:
         if batch_size == 1:
             raise ValueError("Batch size must be greater than 1.")
 
-        states, actions, old_logprobs, rewards, masks = memory.to_tensor()
+        states, next_states, actions, old_logprobs, rewards, dones = memory.to_tensor()
+
+        self.running_reward_std.update(torch.cat(rewards).detach().cpu().numpy())
+        rewards = [reward / self.running_reward_std.get_std() for reward in rewards]
 
         # Advantages
         with torch.no_grad():
@@ -323,12 +326,20 @@ class PPO:
             returns = []
             for i in range(len(states)):
                 _, values_, _ = self.policy.evaluate(states[i], actions[i])
-                if masks[i][-1] == 1:
-                    laser, orientation, distance, velocity = next_obs
+                if dones[i][-1] == 1:
+                    laser, orientation, distance, velocity = tuple(obs[-1].unsqueeze(0) for obs in next_states[i])
                     bootstrapped_value = self.policy.critic(laser.to(self.device), orientation.to(self.device), distance.to(self.device), velocity.to(self.device)).detach()
                     # TODO hier nochmal guckne next_obs ist wahrscheinlich quatsch
-                    values_ = torch.cat((values_, bootstrapped_value[0]), dim=0)
-                adv, ret = self.get_advantages(values_.detach(), masks[i], rewards[i].detach())
+                    if values_.dim() != bootstrapped_value.squeeze(0).dim():
+                        values_ = values_.unsqueeze(0)
+                    if values_.dim() == 0:
+                        print("wtf")
+                    values_ = torch.cat((values_, bootstrapped_value.squeeze(0)), dim=0)
+                else:
+                    if values_.size() == torch.Size([]):
+                        values_ = values_.unsqueeze(0)
+                    values_ = torch.cat((values_, torch.tensor([0.0]).to(device)), dim=0)
+                adv, ret = self.get_advantages(values_.detach(), dones[i], rewards[i].detach())
                 advantages.append(adv)
                 returns.append(ret)
 
@@ -393,6 +404,7 @@ class PPO:
                     print(returns)
                     print(values)
                 assert not torch.isnan(actor_loss).any(), f"Actor loss is NaN: {actor_loss}"
+                assert not torch.isnan(critic_loss).any(), f"Critic loss is NaN: {critic_loss}"
                 assert not torch.isinf(critic_loss).any()
                 assert not torch.isinf(actor_loss).any()
                 # Backward gradients
