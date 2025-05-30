@@ -42,6 +42,7 @@ class SmallInput(nn.Module):
         self.lidar_conv3 = nn.Conv1d(in_channels=layers_dict[2]['in_channels'], out_channels=layers_dict[2]['out_channels'],
                                         kernel_size=layers_dict[2]['kernel_size'], stride=layers_dict[2]['stride'],
                                         padding=layers_dict[2]['padding'], dilation=layers_dict[2]['dilation'])
+        initialize_hidden_weights(self.lidar_conv3)
 
         ori_out_features = 8
         self.ori_dense = nn.Linear(in_features=2, out_features=ori_out_features)

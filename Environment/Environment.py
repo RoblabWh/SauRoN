@@ -87,11 +87,19 @@ class Environment:
         have not been used up.
         :return: returns True if every robot has finished or the steps have run out
         """
-        robot_done = False
-        for robot in self.simulation.robots:
-            if not robot.isActive():
-                robot_done = True
-                break
+        robot_done = True
+        if self.args.mode == 'train':
+            robot_done = False
+            for robot in self.simulation.robots:
+                if not robot.isActive():
+                    robot_done = True
+                    break
+        elif self.args.mode == 'test':
+            for robot in self.simulation.robots:
+                if robot.isActive():
+                    robot_done = False
+                    break
+
         return self.steps_left <= 0 or robot_done
 
     def update_level_manager(self, goals_reached):

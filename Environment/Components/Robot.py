@@ -1,7 +1,9 @@
+import warnings
+
 from Environment.Components.Border import ColliderLine
 
 import math
-from pynput.keyboard import Listener
+#from pynput.keyboard import Listener
 import copy
 import numpy as np
 from utils import scan1DTo2D, CircularBuffer
@@ -131,10 +133,12 @@ class Robot:
 
         self.manuell = args.manually
         if self.manuell:
-            self.listener = Listener(on_press=self.on_press, on_release=self.on_release)
-            self.listener.start()
-            self.linTast = 0
-            self.angTast = 0
+            print("Robot is in manual mode. Use the arrow keys to control the robot.")
+            warnings.warn("Manual mode is not implemented yet. The robot will not move in manual mode.", UserWarning)
+            # self.listener = Listener(on_press=self.on_press, on_release=self.on_release)
+            # self.listener.start()
+            # self.linTast = 0
+            # self.angTast = 0
 
     def reset(self, allStations, pos = None, orientation = None, walls = None, goalStation = None):
         """

@@ -116,102 +116,88 @@ class BigInput(nn.Module):
         """
         super(BigInput, self).__init__()
 
-        # Lidar Convolutional Layers
-        self.lidar_conv1 = nn.Conv1d(in_channels=4, out_channels=32, kernel_size=3, stride=1)
-        initialize_hidden_weights(self.lidar_conv1)
-        self.lidar_bn1 = nn.BatchNorm1d(32)
-        in_f = self.get_in_features(h_in=scan_size, kernel_size=3, stride=1)
-
-        self.lidar_conv2 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
-        initialize_hidden_weights(self.lidar_conv2)
-        self.lidar_bn2 = nn.BatchNorm1d(64)
-        in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
-
-        self.lidar_conv3 = nn.Conv1d(in_channels=64, out_channels=128, kernel_size=3, stride=1)
-        initialize_hidden_weights(self.lidar_conv3)
-        self.lidar_bn3 = nn.BatchNorm1d(128)
-        in_f = self.get_in_features(h_in=in_f, kernel_size=3, stride=1)
-
-        features_scan = int(in_f) * 128
-
+        self.time_steps = 4  # TODO make this dynamic
         self.flatten = nn.Flatten()
+        self.out_features = 32
 
-        ori_out_features = 16
-        dist_out_features = 16
-        vel_out_features = 16
+        layers_dict = [
+            {'padding': 0, 'dilation': 1, 'kernel_size': 16, 'stride': 3, 'in_channels': self.time_steps,
+             'out_channels': 32},
+            {'padding': 0, 'dilation': 1, 'kernel_size': 8, 'stride': 2, 'in_channels': 32, 'out_channels': 64},
+            {'padding': 0, 'dilation': 1, 'kernel_size': 4, 'stride': 2, 'in_channels': 64, 'out_channels': 128},
+        ]
 
-        # Orientation Dense Layers
-        self.ori_dense1 = nn.Linear(in_features=2, out_features=8)
-        initialize_hidden_weights(self.ori_dense1)
-        self.ori_dense2 = nn.Linear(in_features=8, out_features=ori_out_features)
-        initialize_hidden_weights(self.ori_dense2)
+        in_f = self.get_in_features(h_in=scan_size, layers_dict=layers_dict)
+        laser_features = (int(in_f)) * layers_dict[-1]['out_channels']
 
-        # Distance Dense Layers
-        self.dist_dense1 = nn.Linear(in_features=1, out_features=8)
-        initialize_hidden_weights(self.dist_dense1)
-        self.dist_dense2 = nn.Linear(in_features=8, out_features=dist_out_features)
-        initialize_hidden_weights(self.dist_dense2)
+        self.lidar_conv1 = nn.Conv1d(in_channels=layers_dict[0]['in_channels'],
+                                     out_channels=layers_dict[0]['out_channels'],
+                                     kernel_size=layers_dict[0]['kernel_size'], stride=layers_dict[0]['stride'],
+                                     padding=layers_dict[0]['padding'], dilation=layers_dict[0]['dilation'])
+        initialize_hidden_weights(self.lidar_conv1)
+        self.lidar_conv2 = nn.Conv1d(in_channels=layers_dict[1]['in_channels'],
+                                     out_channels=layers_dict[1]['out_channels'],
+                                     kernel_size=layers_dict[1]['kernel_size'], stride=layers_dict[1]['stride'],
+                                     padding=layers_dict[1]['padding'], dilation=layers_dict[1]['dilation'])
+        initialize_hidden_weights(self.lidar_conv2)
+        self.lidar_conv3 = nn.Conv1d(in_channels=layers_dict[2]['in_channels'],
+                                     out_channels=layers_dict[2]['out_channels'],
+                                     kernel_size=layers_dict[2]['kernel_size'], stride=layers_dict[2]['stride'],
+                                     padding=layers_dict[2]['padding'], dilation=layers_dict[2]['dilation'])
+        initialize_hidden_weights(self.lidar_conv3)
 
-        # Velocity Dense Layers
-        self.vel_dense1 = nn.Linear(in_features=2, out_features=8)
-        initialize_hidden_weights(self.vel_dense1)
-        self.vel_dense2 = nn.Linear(in_features=8, out_features=vel_out_features)
-        initialize_hidden_weights(self.vel_dense2)
 
-        # Lidar Flattening Dense Layers
-        self.lidar_flat1 = nn.Linear(in_features=features_scan, out_features=512)
-        initialize_hidden_weights(self.lidar_flat1)
-        self.lidar_flat2 = nn.Linear(in_features=512, out_features=256)
-        initialize_hidden_weights(self.lidar_flat2)
-        self.lidar_flat3 = nn.Linear(in_features=256, out_features=128)
-        initialize_hidden_weights(self.lidar_flat3)
+        ori_out_features = 8
+        self.ori_dense = nn.Linear(in_features=2, out_features=ori_out_features)
+        initialize_hidden_weights(self.ori_dense)
 
-        # Integration Layers
-        input_features = 128 + (ori_out_features + dist_out_features + vel_out_features) * 4
-        self.input_dense1 = nn.Linear(in_features=input_features, out_features=256)
-        initialize_hidden_weights(self.input_dense1)
-        self.input_dense2 = nn.Linear(in_features=256, out_features=128)
+        dist_out_features = 4
+        self.dist_dense = nn.Linear(in_features=1, out_features=dist_out_features)
+        initialize_hidden_weights(self.dist_dense)
+
+        vel_out_features = 4
+        self.vel_dense = nn.Linear(in_features=2, out_features=vel_out_features)
+        initialize_hidden_weights(self.vel_dense)
+
+        lidar_out_features = 8
+        self.lidar_flat = nn.Linear(in_features=laser_features, out_features=lidar_out_features)
+        initialize_hidden_weights(self.lidar_flat)
+
+        input_features = lidar_out_features + (
+                    ori_out_features + dist_out_features + vel_out_features) * self.time_steps
+
+        self.input_dense = nn.Linear(in_features=input_features, out_features=128)
+        initialize_hidden_weights(self.input_dense)
+        self.input_dense2 = nn.Linear(in_features=128, out_features=self.out_features)
         initialize_hidden_weights(self.input_dense2)
 
-        self.dropout = nn.Dropout(p=0.5)  # Adding dropout for regularization
-
-    def get_in_features(self, h_in, padding=0, dilation=1, kernel_size=0, stride=1):
-        return (((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1)
+    def get_in_features(self, h_in, layers_dict):
+        for layer in layers_dict:
+            padding = layer['padding']
+            dilation = layer['dilation']
+            kernel_size = layer['kernel_size']
+            stride = layer['stride']
+            h_in = ((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride) + 1
+        return h_in
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
-        # Lidar Convolutional Layers
         laser = F.relu(self.lidar_conv1(laser))
         laser = F.relu(self.lidar_conv2(laser))
         laser = F.relu(self.lidar_conv3(laser))
 
         laser_flat = self.flatten(laser)
 
-        # Orientation Dense Layers
-        orientation_to_goal = F.relu(self.ori_dense1(orientation_to_goal))
-        orientation_to_goal = F.relu(self.ori_dense2(orientation_to_goal))
+        orientation_to_goal = F.relu(self.ori_dense(orientation_to_goal))
+        distance_to_goal = F.relu(self.dist_dense(distance_to_goal))
+        velocity = F.relu(self.vel_dense(velocity))
+        laser_flat = F.relu(self.lidar_flat(laser_flat))
 
-        # Distance Dense Layers
-        distance_to_goal = F.relu(self.dist_dense1(distance_to_goal))
-        distance_to_goal = F.relu(self.dist_dense2(distance_to_goal))
-
-        # Velocity Dense Layers
-        velocity = F.relu(self.vel_dense1(velocity))
-        velocity = F.relu(self.vel_dense2(velocity))
-
-        # Lidar Flattening Dense Layers
-        laser_flat = F.relu(self.lidar_flat1(laser_flat))
-        laser_flat = F.relu(self.lidar_flat2(laser_flat))
-        laser_flat = F.relu(self.lidar_flat3(laser_flat))
-
-        # Flatten Orientation, Distance, and Velocity
         orientation_flat = self.flatten(orientation_to_goal)
         distance_flat = self.flatten(distance_to_goal)
         velocity_flat = self.flatten(velocity)
 
-        # Concatenate all features
         concated_input = torch.cat((laser_flat, orientation_flat, distance_flat, velocity_flat), dim=1)
-        input_dense = F.relu(self.input_dense1(concated_input))
-        input_dense = self.dropout(input_dense) # Dropout layer
+        input_dense = F.relu(self.input_dense(concated_input))
         input_dense = F.relu(self.input_dense2(input_dense))
 
         return input_dense

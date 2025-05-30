@@ -182,13 +182,13 @@ class PPO:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # Folder the models are stored in
-        if not restore:
-            if os.path.isfile(ckpt):
-                raise ValueError("Model path must be a directory, not a file")
-            if not os.path.exists(ckpt):
-                print(f"Creating model directory under {os.path.abspath(ckpt)}")
-                os.makedirs(ckpt)
         self.model_path = Path(ckpt)
+        if not restore:
+            if os.path.isfile(self.model_path.parent):
+                raise ValueError("Model path must be a directory, not a file")
+            if not os.path.exists(self.model_path.parent):
+                print(f"Creating model directory under {self.model_path.parent}")
+                os.makedirs(self.model_path.parent)
 
         # Current Policy
         self.policy = ActorCritic(scan_size, inputspace, logger).to(device)

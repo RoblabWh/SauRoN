@@ -1,4 +1,4 @@
-import Environment.SVGParser as SVGParser
+#import Environment.SVGParser as SVGParser
 import Visualization.EnvironmentWindow as SimulationWindow
 from Environment.LevelManager import LevelManager
 import math, random
