@@ -25,10 +25,13 @@ class Actor(nn.Module):
     """
     def __init__(self, scan_size, inputspace):
         super(Actor, self).__init__()
-        if inputspace == 'big':
-            self.Inputspace = BigInput(scan_size)
-        elif inputspace == 'small':
-            self.Inputspace = SmallInput(scan_size)
+        if isinstance(inputspace, str):
+            if inputspace == 'big':
+                self.Inputspace = BigInput(scan_size)
+            elif inputspace == 'small':
+                self.Inputspace = SmallInput(scan_size)
+        else:
+            self.Inputspace = inputspace(scan_size)
 
         # Mu
         self.mu = nn.Linear(in_features=self.Inputspace.out_features, out_features=2)
@@ -57,10 +60,13 @@ class Critic(nn.Module):
     """
     def __init__(self, scan_size, inputspace):
         super(Critic, self).__init__()
-        if inputspace == 'big':
-            self.Inputspace = BigInput(scan_size)
-        elif inputspace == 'small':
-            self.Inputspace = SmallInput(scan_size)
+        if isinstance(inputspace, str):
+            if inputspace == 'big':
+                self.Inputspace = BigInput(scan_size)
+            elif inputspace == 'small':
+                self.Inputspace = SmallInput(scan_size)
+        else:
+            self.Inputspace = inputspace(scan_size)
 
         # Value
         self.value = nn.Linear(in_features=self.Inputspace.out_features, out_features=1)
@@ -82,7 +88,6 @@ class ActorCritic(nn.Module):
     """
     def __init__(self, scan_size, inputspace, logger):
         super(ActorCritic, self).__init__()
-        action_dim = 2
         self.actor_cnt = 0
         self.critic_cnt = 0
         self.logger = logger

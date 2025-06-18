@@ -173,6 +173,8 @@ def timeit(f):
 
 # check if arguments are valid
 def check_args(args):
+    import torch.nn as nn
+
     assert args.image_size > 0, "Image size must be positive"
     assert args.batches > 0, "Batches must be positive"
     assert args.lr > 0, "Learning rate must be positive"
@@ -183,7 +185,7 @@ def check_args(args):
     assert args.update_experience > 0, "Update experience must be positive"
     assert args.update_experience > args.batches, "Update experience must be greater than batch size"
     assert args.visualization == "none" or args.visualization == "single" or args.visualization == "all", "Visualization must be none, single or all"
-    assert args.inputspace == "big" or args.inputspace == "small", "Input space must be big or small"
+    assert args.inputspace == "big" or args.inputspace == "small" or hasattr(args.inputspace, '__class__') and hasattr(args.inputspace, 'get_in_features') and hasattr(args.inputspace, 'forward'), "Input space must be big or small"
     assert os.path.exists(args.ckpt_folder), "Checkpoint folder does not exist."
 
 class Logger(object):
