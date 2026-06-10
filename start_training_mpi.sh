@@ -58,10 +58,8 @@ case $number in
 esac
 
 
-cd ~/Dokumente/SauRoN/
+cd "$(dirname "$0")"
 mkdir ./models/$number
 echo "$args" > ./models/$number/args.txt
-source "/home/nex/anaconda3/etc/profile.d/conda.sh"
-export PATH="/home/nex/anaconda3/bin:$PATH"
-conda activate sauron
-mpirun -n 6 python main.py $args
+uv sync --extra mpi
+mpirun -n 6 ./.venv/bin/python main.py $args

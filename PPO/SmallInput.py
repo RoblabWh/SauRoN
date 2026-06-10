@@ -20,7 +20,7 @@ class SmallInput(nn.Module):
 
         self.time_steps = 4 #TODO make this dynamic
         self.flatten = nn.Flatten()
-        self.out_features = 32
+        self.out_features = 128
 
         layers_dict = [
             {'padding': 0, 'dilation': 1, 'kernel_size': 8, 'stride': 3, 'in_channels': self.time_steps, 'out_channels': 16},
@@ -56,15 +56,17 @@ class SmallInput(nn.Module):
         self.vel_dense = nn.Linear(in_features=2, out_features=vel_out_features)
         initialize_hidden_weights(self.vel_dense)
 
-        lidar_out_features = 8
+        # the lidar carries the obstacle geometry -- it must not be squeezed through
+        # fewer features than the trivial proprioceptive inputs (was 8 vs. their 64)
+        lidar_out_features = 128
         self.lidar_flat = nn.Linear(in_features=laser_features, out_features=lidar_out_features)
         initialize_hidden_weights(self.lidar_flat)
 
         input_features = lidar_out_features + (ori_out_features + dist_out_features + vel_out_features) * self.time_steps
 
-        self.input_dense = nn.Linear(in_features=input_features, out_features=64)
+        self.input_dense = nn.Linear(in_features=input_features, out_features=128)
         initialize_hidden_weights(self.input_dense)
-        self.input_dense2 = nn.Linear(in_features=64, out_features=self.out_features)
+        self.input_dense2 = nn.Linear(in_features=128, out_features=self.out_features)
         initialize_hidden_weights(self.input_dense2)
 
     def get_in_features(self, h_in, layers_dict):

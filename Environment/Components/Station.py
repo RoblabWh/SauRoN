@@ -24,7 +24,7 @@ class Station:
     def paint(self, painter):
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
         painter.setBrush(QBrush(self.fillColor, self.brushStyle))
-        painter.drawEllipse((self.posX-self.radius) * self.scaleFactor, (self.posY-self.radius) * self.scaleFactor, self.radius*2 * self.scaleFactor, self.radius*2 * self.scaleFactor)
+        painter.drawEllipse(int((self.posX-self.radius) * self.scaleFactor), int((self.posY-self.radius) * self.scaleFactor), int(self.radius*2 * self.scaleFactor), int(self.radius*2 * self.scaleFactor))
         # painter.drawRect(self.posX * self.scaleFactor, self.posY * self.scaleFactor, self.width * self.scaleFactor, self.length * self.scaleFactor)
 
     def setPos(self, pos):

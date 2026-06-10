@@ -2,6 +2,8 @@
 __pycache__
 __init__.py
 venv
+.venv/
+runs/
 scans
 models
 old_models

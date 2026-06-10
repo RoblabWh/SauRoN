@@ -6,7 +6,6 @@ from PIL import Image
 import os
 import time
 from collections import deque
-import pickle
 
 
 def initialize_output_weights(m, out_type):
@@ -185,7 +184,7 @@ def check_args(args):
     assert args.update_experience > 0, "Update experience must be positive"
     assert args.update_experience > args.batches, "Update experience must be greater than batch size"
     assert args.visualization == "none" or args.visualization == "single" or args.visualization == "all", "Visualization must be none, single or all"
-    assert args.inputspace == "big" or args.inputspace == "small" or hasattr(args.inputspace, '__class__') and hasattr(args.inputspace, 'get_in_features') and hasattr(args.inputspace, 'forward'), "Input space must be big or small"
+    assert args.inputspace == "big" or args.inputspace == "small" or args.inputspace == "legacy" or hasattr(args.inputspace, '__class__') and hasattr(args.inputspace, 'get_in_features') and hasattr(args.inputspace, 'forward'), "Input space must be big, small or legacy"
     assert os.path.exists(args.ckpt_folder), "Checkpoint folder does not exist."
 
 class Logger(object):

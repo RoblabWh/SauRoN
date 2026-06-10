@@ -8,6 +8,7 @@ from utils import initialize_output_weights, RunningMeanStd
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 from PPO.BigInput import BigInput
 from PPO.SmallInput import SmallInput
+from PPO.LegacyBigInput import LegacyBigInput
 
 from utils import statesToObservationsTensor, normalize
 
@@ -30,22 +31,24 @@ class Actor(nn.Module):
                 self.Inputspace = BigInput(scan_size)
             elif inputspace == 'small':
                 self.Inputspace = SmallInput(scan_size)
+            elif inputspace == 'legacy':
+                self.Inputspace = LegacyBigInput(scan_size)
         else:
             self.Inputspace = inputspace(scan_size)
 
         # Mu
         self.mu = nn.Linear(in_features=self.Inputspace.out_features, out_features=2)
         initialize_output_weights(self.mu, 'actor')
-        # Logstd
-        self.log_std = nn.Parameter(torch.zeros(2, ))
+        # Logstd (init -0.5 -> std ~0.6, reduces boundary saturation of the [-1, 1] action space)
+        self.log_std = nn.Parameter(torch.full((2,), -0.5))
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
-        x = self.Inputspace(laser.to(device), orientation_to_goal.to(device), distance_to_goal.to(device), velocity.to(device))
+        x = self.Inputspace(laser, orientation_to_goal, distance_to_goal, velocity)
         mu = torch.tanh(self.mu(x))
         std = torch.exp(self.log_std)
         var = torch.pow(std, 2)
 
-        return mu.to('cpu'), var.to('cpu')
+        return mu, var
 
 
 class Critic(nn.Module):
@@ -65,6 +68,8 @@ class Critic(nn.Module):
                 self.Inputspace = BigInput(scan_size)
             elif inputspace == 'small':
                 self.Inputspace = SmallInput(scan_size)
+            elif inputspace == 'legacy':
+                self.Inputspace = LegacyBigInput(scan_size)
         else:
             self.Inputspace = inputspace(scan_size)
 
@@ -107,7 +112,7 @@ class ActorCritic(nn.Module):
         :return: A tuple of the sampled action and the log probability of that action.
         """
         with torch.no_grad():
-            laser, orientation, distance, velocity = states
+            laser, orientation, distance, velocity = (s.to(self.device) for s in states)
             # TODO: check if normalization of states is necessary
             # was suggested in: Implementation_Matters in Deep RL: A Case Study on PPO and TRPO
             action_mean, action_var = self.actor(laser, orientation, distance, velocity)
@@ -115,13 +120,15 @@ class ActorCritic(nn.Module):
             cov_mat = torch.diag(action_var)
             dist = MultivariateNormal(action_mean, cov_mat)
             ## logging of actions
-            self.logger.add_actor_output(action_mean.mean(0)[0].item(), action_mean.mean(0)[1].item(), action_var[0].item(), action_var[1].item())
+            if self.logger is not None:
+                self.logger.add_actor_output(action_mean.mean(0)[0].item(), action_mean.mean(0)[1].item(), action_var[0].item(), action_var[1].item())
 
+            # the unclipped sample and its log-prob are returned (and stored);
+            # the copy sent to the environment is clipped by the caller
             action = dist.sample()
-            action = torch.clip(action, -1, 1)
             action_logprob = dist.log_prob(action)
 
-            return action, action_logprob
+            return action.cpu(), action_logprob.cpu()
 
     def act_certain(self, states):
         """
@@ -131,10 +138,10 @@ class ActorCritic(nn.Module):
         :return: The action from the actor's distribution.
         """
         with torch.no_grad():
-            laser, orientation, distance, velocity = states
+            laser, orientation, distance, velocity = (s.to(self.device) for s in states)
             action, _ = self.actor(laser, orientation, distance, velocity)
 
-        return action
+        return action.cpu()
 
     def evaluate(self, state, action):
         """
@@ -151,12 +158,12 @@ class ActorCritic(nn.Module):
 
         action_mean, action_var = self.actor(laser, orientation, distance, velocity)
 
-        cov_mat = torch.diag(action_var.to(device))
-        dist = MultivariateNormal(action_mean.to(device), cov_mat)
+        cov_mat = torch.diag(action_var)
+        dist = MultivariateNormal(action_mean, cov_mat)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
 
-        return action_logprobs, torch.squeeze(state_value), dist_entropy
+        return action_logprobs, state_value.squeeze(-1), dist_entropy
 
 
 class PPO:
@@ -184,6 +191,7 @@ class PPO:
         self._lambda = _lambda
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
+        self.logger = logger
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # Folder the models are stored in
@@ -216,7 +224,7 @@ class PPO:
 
     def load_model(self, path):
         try:
-            self.policy.load_state_dict(torch.load(path, map_location=lambda storage, loc: storage))
+            self.policy.load_state_dict(torch.load(path, map_location="cpu", weights_only=True))
             return True
         except FileNotFoundError:
             warnings.warn(f"Could not restore model from {path}. Falling back to train mode.")
@@ -250,31 +258,29 @@ class PPO:
 
     def get_advantages(self, values, masks, rewards):
         """
-        Computes the advantages of the given rewards and values.
+        Computes the raw GAE advantages and returns of one episode segment on the CPU.
+        Normalization happens once over the whole batch in update().
 
-        :param values: The values of the states.
-        :param masks: The masks of the states.
+        :param values: The values of the states (length T+1, incl. bootstrap value).
+        :param masks: The masks of the states (1 = not terminal).
         :param rewards: The rewards of the states.
-        :return: The advantages of the states.
+        :return: The advantages and returns of the states.
         """
-        advantages = []
-        returns = []
-        gae = 0
+        values = values.tolist()
+        masks = masks.tolist()
+        rewards = rewards.tolist()
+
+        advantages = [0.0] * len(rewards)
+        returns = [0.0] * len(rewards)
+        gae = 0.0
 
         for i in reversed(range(len(rewards))):
             delta = rewards[i] + self.gamma * values[i + 1] * masks[i] - values[i]
             gae = delta + self.gamma * self._lambda * masks[i] * gae
-            advantages.insert(0, gae)
-            returns.insert(0, gae + values[i])
+            advantages[i] = gae
+            returns[i] = gae + values[i]
 
-        advantages = torch.FloatTensor(advantages).to(device)
-        norm_adv = (advantages - advantages.mean()) / (advantages.std() + 1e-10) if advantages.numel() > 1 else advantages
-
-        returns = torch.FloatTensor(returns).to(device)
-
-        assert not torch.isnan(norm_adv).any(), f"Advantages are NaN: {norm_adv}"
-
-        return norm_adv, returns
+        return torch.tensor(advantages, dtype=torch.float32), torch.tensor(returns, dtype=torch.float32)
 
     # def get_advantages_returns(self, states, actions, masks, rewards):
     #     # Advantages
@@ -309,47 +315,50 @@ class PPO:
         :param batch_size: The size of batches.
         """
 
-        memory.unroll_last_episode(0)
+        # Archive the in-flight partial episode but keep collecting with the same
+        # robot count afterwards (passing 0 here silently dropped all experience
+        # gathered between a mid-episode update and the next reset).
+        memory.unroll_last_episode(memory.num_agents)
 
         batch_size = len(memory)
-        mini_batch_size = int(batch_size / batches)
+        mini_batch_size = max(1, int(batch_size / batches))
 
-        if batch_size > len(memory):
-            warnings.warn("Batch size is larger than memory capacity. Setting batch size to memory capacity.")
-            batch_size = len(memory)
         if batch_size == 1:
             raise ValueError("Batch size must be greater than 1.")
 
-        states, next_states, actions, old_logprobs, rewards, dones = memory.to_tensor()
+        # All tensors stay on the CPU here; only minibatches are moved to the GPU below.
+        # masks hold not-done flags (1 = not terminal), next_obs is one bootstrap
+        # observation per segment.
+        states, next_obs, actions, old_logprobs, rewards, masks = memory.to_tensor()
 
-        self.running_reward_std.update(torch.cat(rewards).detach().cpu().numpy())
+        self.running_reward_std.update(torch.cat(rewards).numpy())
         rewards = [reward / self.running_reward_std.get_std() for reward in rewards]
 
-        # Advantages
+        # Advantages (per episode segment, raw GAE)
         with torch.no_grad():
             advantages = []
             returns = []
             for i in range(len(states)):
-                _, values_, _ = self.policy.evaluate(states[i], actions[i])
-                if dones[i][-1] == 1:
-                    laser, orientation, distance, velocity = tuple(obs[-1].unsqueeze(0) for obs in next_states[i])
-                    bootstrapped_value = self.policy.critic(laser.to(self.device), orientation.to(self.device), distance.to(self.device), velocity.to(self.device)).detach()
-                    # TODO hier nochmal guckne next_obs ist wahrscheinlich quatsch
-                    if values_.dim() != bootstrapped_value.squeeze(0).dim():
-                        values_ = values_.unsqueeze(0)
-                    if values_.dim() == 0:
-                        print("wtf")
-                    values_ = torch.cat((values_, bootstrapped_value.squeeze(0)), dim=0)
+                chunk = tuple(s.to(self.device) for s in states[i])
+                values_ = self.policy.critic(*chunk).reshape(-1).cpu()
+                if masks[i][-1] == 1:
+                    # segment was truncated, bootstrap from the value of the last next-observation
+                    boot_obs = tuple(torch.as_tensor(np.asarray(o), dtype=torch.float32).to(self.device) for o in next_obs[i])
+                    bootstrapped_value = self.policy.critic(*boot_obs).reshape(-1).cpu()
                 else:
-                    if values_.size() == torch.Size([]):
-                        values_ = values_.unsqueeze(0)
-                    values_ = torch.cat((values_, torch.tensor([0.0]).to(device)), dim=0)
-                adv, ret = self.get_advantages(values_.detach(), dones[i], rewards[i].detach())
+                    bootstrapped_value = torch.zeros(1)
+                values_ = torch.cat((values_, bootstrapped_value), dim=0)
+                adv, ret = self.get_advantages(values_, masks[i], rewards[i])
                 advantages.append(adv)
                 returns.append(ret)
 
         # Merge all agent states, actions, rewards etc.
         advantages = torch.cat(advantages)
+        # Normalize advantages once over the whole batch (per-segment normalization
+        # destroys the relative quality of episodes against each other).
+        if advantages.numel() > 1:
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        assert not torch.isnan(advantages).any(), f"Advantages are NaN: {advantages}"
         returns = torch.cat(returns)
         actions = torch.cat(actions)
         old_logprobs = torch.cat(old_logprobs)
@@ -358,31 +367,20 @@ class PPO:
             states_ += (torch.cat([states[k][i] for k in range(len(states))]),)
         states = states_
 
-        # Logger
-        log_values = []
-        #TODO logger?
-        #logger.add_reward([np.array(rewards.detach().cpu()).mean()])
-
-        # Normalize rewards by running reward
-        # self.running_reward_std.update(np.array(rewards))
-        # rewards = np.clip(np.array(rewards) / self.running_reward_std.get_std(), -10, 10)
-        # rewards = torch.tensor(rewards).type(torch.float32)
-
-        # Save current weights if the mean reward is higher than the best reward so far
-        # TODO FIX LOGGER
-        # if logger.better_reward():
-        #     print("Saving best weights with reward {}".format(logger.reward_best))
-        #     torch.save(self.policy.state_dict(), 'best.pth')
+        # Small per-transition tensors can live on the GPU for the whole update
+        advantages = advantages.to(self.device)
+        returns = returns.to(self.device)
+        actions = actions.to(self.device)
+        old_logprobs = old_logprobs.to(self.device)
 
         # Train policy for K epochs: sampling and updating
         for _ in range(self.K_epochs):
             # Random sampling and no repetition. 'False' indicates that training will continue even if the number of samples in the last time is less than mini_batch_size
             for index in BatchSampler(SubsetRandomSampler(range(batch_size)), mini_batch_size, False):
                 # Evaluate old actions and values using current policy
-                batch_states = (states[0][index], states[1][index], states[2][index], states[3][index])
+                batch_states = tuple(s[index].to(self.device) for s in states)
                 batch_actions = actions[index]
                 logprobs, values, dist_entropy = self.policy.evaluate(batch_states, batch_actions)
-                log_values.append(values.detach().mean().item())
                 # Importance ratio: p/q
                 ratios = torch.exp(logprobs - old_logprobs[index].detach())
 
@@ -394,27 +392,20 @@ class PPO:
 
                 # TODO CLIP VALUE LOSS ? Probably not necessary as according to:
                 # https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/
-                critic_loss = self.MSE_loss(returns[index].squeeze(), values)
-                # Total loss
-                # loss = actor_loss + critic_loss
-                # self.logger.add_loss(loss.detach().mean().item(), entropy=entropy.detach().mean().item(), critic_loss=critic_loss.detach().mean().item(), actor_loss=actor_loss.detach().mean().item())
+                critic_loss = self.MSE_loss(returns[index], values)
+
+                if self.logger is not None:
+                    self.logger.add_loss((actor_loss + critic_loss).item(), entropy=entropy.mean().item(),
+                                         critic_loss=critic_loss.item(), actor_loss=actor_loss.item())
 
                 # Sanity checks
-                if torch.isnan(actor_loss).any():
-                    print(entropy.mean())
-                    print(returns)
-                    print(values)
-                if torch.isnan(critic_loss).any():
-                    print(entropy.mean())
-                    print(returns)
-                    print(values)
                 assert not torch.isnan(actor_loss).any(), f"Actor loss is NaN: {actor_loss}"
                 assert not torch.isnan(critic_loss).any(), f"Critic loss is NaN: {critic_loss}"
                 assert not torch.isinf(critic_loss).any()
                 assert not torch.isinf(actor_loss).any()
                 # Backward gradients
                 self.optimizer_a.zero_grad()
-                actor_loss.backward(retain_graph=True)
+                actor_loss.backward()
                 # Global gradient norm clipping https://vitalab.github.io/article/2020/01/14/Implementation_Matters.html
                 torch.nn.utils.clip_grad_norm_(self.policy.actor.parameters(), max_norm=0.5)
                 self.optimizer_a.step()
@@ -424,10 +415,6 @@ class PPO:
                 # Global gradient norm clipping https://vitalab.github.io/article/2020/01/14/Implementation_Matters.html
                 torch.nn.utils.clip_grad_norm_(self.policy.critic.parameters(), max_norm=0.5)
                 self.optimizer_c.step()
-                # # Global gradient norm clipping https://vitalab.github.io/article/2020/01/14/Implementation_Matters.html
-                # torch.nn.utils.clip_grad_norm_(self.policy.ac.parameters(), max_norm=0.5)
-
-        #logger.add_value([np.array(log_values).mean()])
 
         # Clear memory
         memory.clear_memory()

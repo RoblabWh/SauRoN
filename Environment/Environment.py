@@ -68,39 +68,17 @@ class Environment:
 
     def is_done(self):
         """
-        Checks whether all robots are done (either crashed with a wall, crashed with another robot, reached their goal or
-        the steps have run out) so the simulation continues as long as at least one robot is still active or the steps
-        have not been used up.
+        Checks whether all robots are done (either crashed with a wall, crashed with another robot, reached their goal)
+        or the steps have run out, so the simulation continues as long as at least one robot is still active.
         :return: returns True if every robot has finished or the steps have run out
         """
+        robots_done = True
+        for robot in self.simulation.robots:
+            if robot.isActive():
+                robots_done = False
+                break
 
-        # robotsDone = True
-        # for robot in self.simulation.robots:
-        #     if robot.isActive():
-        #         robotsDone = False
-        #         break
-        # return self.steps_left <= 0 or robotsDone
-
-        """
-        Checks whether at least one robot is done (either crashed with a wall, crashed with another robot, reached their goal or
-        the steps have run out) so the simulation continues as long as at least one robot is still active or the steps
-        have not been used up.
-        :return: returns True if every robot has finished or the steps have run out
-        """
-        robot_done = True
-        if self.args.mode == 'train':
-            robot_done = False
-            for robot in self.simulation.robots:
-                if not robot.isActive():
-                    robot_done = True
-                    break
-        elif self.args.mode == 'test':
-            for robot in self.simulation.robots:
-                if robot.isActive():
-                    robot_done = False
-                    break
-
-        return self.steps_left <= 0 or robot_done
+        return self.steps_left <= 0 or robots_done
 
     def update_level_manager(self, goals_reached):
         """
@@ -176,7 +154,10 @@ class Environment:
 
         reward = self.reward_func(robot, distance_new, distance_old, reachedPickup, collision, runOutOfTime)
 
-        return [next_state, reward, not robot.isActive(), reachedPickup]
+        # Only collision and arrival are true terminal states. Running out of time is a
+        # truncation of the episode, not part of the task -- the transition is stored as
+        # not-done so the value of the successor state gets bootstrapped.
+        return [next_state, reward, collision or reachedPickup, reachedPickup]
 
 
     def createReward(self, robot, dist_new, dist_old, reachedPickup, collision, runOutOfTime):
@@ -192,33 +173,27 @@ class Environment:
         :return: returns the result of the fitness function
         """
 
-        living_factor = self.steps_left / self.steps
         reward = {}
         r_arrival = 10 # reward for reaching the goal
         r_collision = -10 # Robot crashed with a wall or another robot
-        r_run_out_of_time = -5 # Robot has run out of time
-        r_stop = -0.01 # Robot stood still
-        w_g = 0.1
-        w_d = 15
-        w_gn = 0
+        w_d = 2.5 # weight for the progress towards the goal (max speed ~0.04 m/step -> ~0.1/step)
         w_w = -0.1
-        w_p = 0.1
-        a_p = 0.045 # weight for the angle, always positive
 
         if reachedPickup:
             reward['arrival'] = r_arrival
-        elif runOutOfTime:
-            reward['out_of_time'] = r_run_out_of_time
         elif collision:
-            reward['collision'] = r_collision #* living_factor
+            reward['collision'] = r_collision
         else:
-            # Distance Reward
-            if dist_old > dist_new:
-                reward['dist'] = w_g #w_g * (dist_old - dist_new)
-            else:
-                reward['dist'] = w_gn #w_gn * (dist_old - dist_new)
+            # Progress reward: proportional to the actual progress and symmetric, so
+            # retreating costs what approaching earns (potential-based shaping). The
+            # previous binary +0.1 made the agent indifferent between arriving and
+            # creeping towards the goal forever. Running out of time is intentionally
+            # not punished: the time limit is a training artifact the agent cannot
+            # observe, not part of the task.
+            reward['dist'] = w_d * (dist_old - dist_new)
 
-            if np.min(robot.get_robot_states()[0][0]) < 0.03:
+            # Minimal distance to obstacle (pre-noise lidar reading)
+            if np.min(robot.distances[0]) * robot.maxDistFact < 0.03:
                 reward['wall'] = w_w
 
             # Protect engine Reward

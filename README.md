@@ -16,11 +16,27 @@ Clone the repository:
 git clone git@github.com:RoblabWh/SauRoN.git
 ```
 
-Install Anaconda on your system:
+Install [uv](https://docs.astral.sh/uv/) on your system:
 
-[Installation Guide](https://docs.anaconda.com/anaconda/install/linux/)
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-Run the `install_conda_env.sh` script to create your anaconda environment with it. Now you should be ready to run your simulation.
+Then create the environment (uv downloads a matching Python and all dependencies, including PyTorch with CUDA 12.8 support):
+
+```
+uv sync
+```
+
+For MPI-based multi-environment training you additionally need a system MPI implementation (e.g. `sudo apt install libopenmpi-dev`) and the optional extra:
+
+```
+uv sync --extra mpi
+```
+
+The pretrained model under `./pretrained` is stored with Git LFS — run `git lfs install && git lfs pull` to fetch it.
+
+Now you should be ready to run your simulation.
 
 ## Levels
 
@@ -34,24 +50,24 @@ There are some levels provided as svg Files. Red dots mark possible agent positi
 
 The training can be started either using MPI for Multi Environment or without MPI to only train on a single level.
 
-From your conda-environment run `main.py` with desired arguments:
+Run `main.py` via uv with desired arguments:
 
 - `--mode` choose either `train` or `test` for Training or running a trained model
 - `--ckpt_folder` Checkpoint Folder for the loaded and new models. Default : `./models`
 
 There are several other options for the hyperparameters, vizualization and robot settings you can look up in the `main.py`.
 
-There is a trained network provided under `./models`. If the installation was successful the following command should run a pretrained network:
- 
-```python main.py --ckpt_folder ./pretrained --model batch_8 --mode test --level_files 'kreuzung.svg'```
+There is a trained network provided under `./pretrained`. It was trained with an older version of the 'big' input space, which is preserved as `--inputspace legacy`. Note that the `small` and `big` input spaces were widened (the lidar embedding and trunk grew from 8/32 to 128/128 features), so checkpoints trained with the previous `small`/`big` networks are no longer loadable — only the `legacy` pretrained model is kept compatible. If the installation was successful the following command should run the pretrained network:
+
+```uv run main.py --ckpt_folder ./pretrained --model_name batch_8 --mode test --inputspace legacy --level_files 'kreuzung.svg'```
 
 To train run:
 
-```python main.py --mode train```
+```uv run main.py --mode train```
 
-To train with MPI:
+To train with MPI (requires `uv sync --extra mpi`, see Installation):
 
-```mpirun -n N_PROC python main.py --mode train```
+```mpirun -n N_PROC ./.venv/bin/python main.py --mode train```
 
 
 ## Params

@@ -216,6 +216,14 @@ class Robot:
         direction = (self.getDirectionAngle() + 2 * math.pi) % (2 * math.pi)
         self.rayCol = FastCollisionRay([posX, posY], self.args.number_of_rays, direction, self.radius, self.fieldOfView)
 
+        # the wall colliders are static within an episode -- marshal them into numpy
+        # arrays once instead of per robot per step in lidarReading
+        self._staticColliderLines = self.walls + self.collidorStationsWalls
+        self._colStart = np.array([cl.getStart() for cl in self._staticColliderLines], dtype=np.float64).T.reshape(2, -1)
+        self._colEnd = np.array([cl.getEnd() for cl in self._staticColliderLines], dtype=np.float64).T.reshape(2, -1)
+        segLenSq = (self._colStart[0] - self._colEnd[0]) ** 2 + (self._colStart[1] - self._colEnd[1]) ** 2
+        self._segLenSqInv = 1.0 / np.maximum(segLenSq, 1e-12)
+
         if self.hasPieSlice:
             self.posSensor = [posX + self.offsetSensorDist * directionX, posY + self.offsetSensorDist * directionY]
             self.calculatePieSlice((directionX,directionY))
@@ -375,7 +383,19 @@ class Robot:
 
         dir = (self.getDirectionAngle() - (self.fieldOfView / 2)) % (2 * math.pi)
 
-        colliderLines = self.walls + self.collidorStationsWalls + self.robotsPieSliceWalls
+        # static wall arrays are cached in reset(); only the pie-slice walls of other
+        # robots change per step (and only exist when has_pie_slice is enabled)
+        if self.robotsPieSliceWalls:
+            colliderLines = self._staticColliderLines + self.robotsPieSliceWalls
+            colLinesStartPoints = np.array([cl.getStart() for cl in colliderLines], dtype=np.float64).T.reshape(2, -1)
+            colLinesEndPoints = np.array([cl.getEnd() for cl in colliderLines], dtype=np.float64).T.reshape(2, -1)
+            segLenSq = (colLinesStartPoints[0] - colLinesEndPoints[0]) ** 2 + (colLinesStartPoints[1] - colLinesEndPoints[1]) ** 2
+            segLenSqInv = 1.0 / np.maximum(segLenSq, 1e-12)
+        else:
+            colLinesStartPoints = self._colStart
+            colLinesEndPoints = self._colEnd
+            segLenSqInv = self._segLenSqInv
+
         collidorCirclePosWithoutRobots = [(wall.getPosX(), wall.getPosY(), wall.getRadius()) for wall in self.circleWalls]
         collidorCirclePosOnlyRobots = []
 
@@ -385,10 +405,6 @@ class Robot:
 
         if self.args.collide_other_targets:
             collidorCirclePosWithoutRobots += self.collidorStationsCircles
-
-        colLinesStartPoints = np.swapaxes(np.array([cl.getStart() for cl in colliderLines]), 0, 1)  # [[x,x,x,x],[y,y,y,y]]
-        colLinesEndPoints = np.swapaxes(np.array([cl.getEnd() for cl in colliderLines]), 0, 1)
-        normals = np.swapaxes(np.array([cl.getN() for cl in colliderLines]), 0, 1)
 
         collidorCircleAllForTerminations = collidorCirclePosWithoutRobots + collidorCirclePosOnlyRobots
 
@@ -406,13 +422,13 @@ class Robot:
         circlesPositions = np.array([circleX, circleY])
 
         self.rayCol.new_scan(position, dir)
-        distances, lidar_hits = (self.rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, normals, circlesPositions, circleR, self.offsetSensorDist))
+        distances, lidar_hits = (self.rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, circlesPositions, circleR, 1 / self.maxDistFact))
 
         circleX = [r[0] for r in collidorCircleAllForTerminations]
         circleY = [r[1] for r in collidorCircleAllForTerminations]
         circleR = [r[2] for r in collidorCircleAllForTerminations]
         circlesPositionsAll = np.array([circleX, circleY])
-        self.collisionDistances, self.collisionDistancesRobots = self.rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colliderLines, circlesPositionsAll, circleR)
+        self.collisionDistances, self.collisionDistancesRobots = self.rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colLinesStartPoints, colLinesEndPoints, segLenSqInv, circlesPositionsAll, circleR)
 
         self.lidarHits = lidar_hits
         self.distances = [distances]
@@ -425,10 +441,11 @@ class Robot:
         # calculate the angle between the robot orientation and the target
         orientation_vec = np.array([self.getDirectionX(), self.getDirectionY()])
         target_vec = np.array([self.station.posX - self.getPosX(), self.station.posY - self.getPosY()])
-        angle = np.arctan2(np.linalg.norm(np.cross(orientation_vec, target_vec)), np.dot(orientation_vec, target_vec))
+        cross = orientation_vec[0] * target_vec[1] - orientation_vec[1] * target_vec[0]
+        angle = np.arctan2(abs(cross), np.dot(orientation_vec, target_vec))
 
         # determine the sign of angle
-        if np.cross(target_vec, orientation_vec) > 0:
+        if -cross > 0:
             angle = -angle
 
         self.angularDeviation = angle
@@ -440,17 +457,14 @@ class Robot:
 
         noise = np.random.uniform(low=-0.04, high=0.04, size=distances.shape)
         distances = distances + noise
-        laser = distances * self.maxDistFact
-        # laser = np.where(laser > 1, 1, laser)
-
-        current_timestep = (steps - steps_left) / steps
+        # bounded observation: sensor range caps at 1, noise cannot push it outside [0, 1]
+        laser = np.clip(distances * self.maxDistFact, 0, 1)
 
         robot_state = [laser,                                                       # 2D Laser Scan
                        np.asarray(orientation),                                     # Orientation to Goal
                        np.expand_dims(np.asarray(distance_to_goal_norm), axis=0),   # Distance to Goal
                        np.array([self.getLinearVelocityNorm(),                      # Linear Velocity
                                  self.getAngularVelocityNorm()]),                   # Angular Velocity
-                       current_timestep                                             # Current Timestep
                        ]
 
         if len(self.robot_states) >= self.time_frames:
@@ -465,13 +479,10 @@ class Robot:
         :param reverse: (reverse = false : current state in last place and the oldest at Index 0)
         :return: list of robot states
         """
-        # tmp_state = copy.deepcopy(self.stateLidar)
-        # zipstate = list(zip(*tmp_state))
-        # states = []
-        # for state in zipstate:
-        #     states.append(np.array(state))
-        # return states
-        robot_states = copy.deepcopy(self.robot_states)
+        # shallow copy is enough: every frame is a freshly built list of arrays
+        # (see lidarReading) and consumers never mutate them; the previous deepcopy
+        # of 4x1081 floats per robot per step was a simulation hotspot
+        robot_states = list(self.robot_states)
         if reverse:
              robot_states.reverse()
         return robot_states
@@ -709,143 +720,105 @@ class FastCollisionRay:
         (and distances to those intersections)
 
         :param rayOrigin: (x,y) position of the robot
-        :param rayCount: number of rays
-        :param startAngle: float - usually the orientation of the robot added by some amount to prevent edge problems
-        during the feature detection in the convolutional layers of the neural net.
+        :param numberOfRays: number of rays
+        :param startAngle: float - the angle of the first ray (orientation - fov/2)
         :param radius: the radius of the robot itself
+        :param fov: field of view in radians, covered inclusively from the first to the last ray
         """
         self.rayOrigin = rayOrigin
         self.numberOfRays = numberOfRays
-
-        self.stepSize = fov / numberOfRays
-        self.rayOrigin = rayOrigin
-        steps = np.arange(startAngle, (startAngle + self.stepSize * self.numberOfRays) - (self.stepSize / 2), self.stepSize)
-        self.rayDirX = np.cos(steps)
-        self.rayDirY = np.sin(steps)
-        # self.rayOrigin = rayOrigin
-        # steps = np.array([startAngle+ i * self.stepSize for i in range(self.numberOfRays)])
-        # self.rayDirX = np.array([math.cos(step) for step in steps])
-        # self.rayDirY = np.array([math.sin(step) for step in steps])
-        # self.ownRadius = radius
+        # inclusive spacing: 1081 rays over 270 degrees -> exactly 0.25 degrees per step
+        self.stepSize = fov / max(numberOfRays - 1, 1)
+        self._raySteps = self.stepSize * np.arange(numberOfRays)
+        self.new_scan(rayOrigin, startAngle)
 
     def new_scan(self, rayOrigin, startAngle):
         self.rayOrigin = rayOrigin
-        steps = np.arange(startAngle, (startAngle + self.stepSize * self.numberOfRays) - (self.stepSize / 2), self.stepSize)
+        steps = startAngle + self._raySteps
         self.rayDirX = np.cos(steps)
         self.rayDirY = np.sin(steps)
-        # self.rayOrigin = rayOrigin
-        # steps = np.array([startAngle+ i * self.stepSize for i in range(self.numberOfRays)])
-        # self.rayDirX = np.array([math.cos(step) for step in steps])
-        # self.rayDirY = np.array([math.sin(step) for step in steps])
 
-    def lineRayIntersectionPoint(self, points1, points2, normals, pointsRobots, radius, sensorOffset):
+    def lineRayIntersectionPoint(self, points1, points2, pointsRobots, radius, maxRange):
+        """
+        Intersects all rays with all wall segments and robot circles. Walls are solid from
+        both sides (the previous normal-based back-face culling made walls one-way
+        transparent depending on the drawing direction in the level file).
+
+        :param points1: starting points of collision lines - [[x1..xn], [y1..yn]]
+        :param points2: ending points of collision lines - [[x1..xn], [y1..yn]]
+        :param pointsRobots: positions of all robot colliders - np.array [[x0..xn], [y0..yn]]
+        :param radius: radii of the robot colliders
+        :param maxRange: sensor range; rays that hit nothing report this distance
+        :return: [distances per ray, collision points per ray]
         """
 
-        :param points1: List of starting points of collision lines - points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
-        :param points2: List of ending points of collision lines - points[[x1,x2,x3...xn],[y1,y2,y3...yn]]
-        :param pointsRobots: List of all robots positions which can be a collider as an np.array[[x0, x2, x3..xn], [y0, y2, y3..yn]]
-        :return:
-        """
+        ox = self.rayOrigin[0]
+        oy = self.rayOrigin[1]
+        dx = self.rayDirX  # (R,) unit directions
+        dy = self.rayDirY
 
-        x1 = self.rayOrigin[0] #originX
-        y1 = self.rayOrigin[1] #originY
-        x2Vswap = np.tile(self.rayDirX, (len(points1[0]), 1))
-        x2V = np.swapaxes(x2Vswap, 0, 1)  # directionX
-        y2Vswap = np.tile(self.rayDirY, (len(points1[0]), 1))
-        y2V = np.swapaxes(y2Vswap, 0, 1) #directionY
-        x2 = x2V+x1
-        y2 = y2V+y1
+        sx = points1[0] - points2[0]  # (W,) segment start - end
+        sy = points1[1] - points2[1]
+        rx = ox - points1[0]  # (W,) origin - segment start
+        ry = oy - points1[1]
 
-        nX = np.tile(normals[0], (len(self.rayDirX), 1))
-        nY = np.tile(normals[1], (len(self.rayDirX), 1))
+        # line-line intersection: ray = origin + t1 * dir, segment = start + t2 * (end - start)
+        # det only depends on ray dir and segment dir; the t1 numerator only on origin and segment
+        det = np.outer(dy, sx) - np.outer(dx, sy)        # (R, W)
+        t1_num = rx * sy - ry * sx                       # (W,)
+        t2_num = np.outer(dx, ry) - np.outer(dy, rx)     # (R, W)
 
-        skalarProd = nX * x2V + nY * y2V
+        with np.errstate(divide='ignore', invalid='ignore'):
+            inv = 1.0 / det
+            t1 = t1_num * inv
+            t2 = t2_num * inv
 
-        x3 = np.tile(points1[0], (len(self.rayDirX), 1)) #lineStartXArray
-        y3 = np.tile(points1[1], (len(self.rayDirX), 1)) #lineStartYArray
-        x4 = np.tile(points2[0], (len(self.rayDirX), 1)) #lineEndXArray
-        y4 = np.tile(points2[1], (len(self.rayDirX), 1)) #lineEndYArray
+        # small tolerance on the segment ends so rays cannot slip through the seam
+        # where two walls share a corner
+        eps = 1e-9
+        valid = (t2 >= -eps) & (t2 <= 1 + eps) & (t1 >= 0) & np.isfinite(t1)
+        t1 = np.where(valid, t1, maxRange)
+        t1NearestHit = np.amin(t1, axis=1) if t1.shape[1] > 0 else np.full(len(dx), float(maxRange))
+        t1NearestHit = np.minimum(t1NearestHit, maxRange)
 
-        # Ersten den denominator berechnen, da er für t1 und t2 gleich ist.
-        denominator = np.where(skalarProd<0, 1.0 / ((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4)), -1)
-
-        t1=np.where(skalarProd<0, ((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))*denominator,-1) #Faktor des Laserstrahls vom Roboter bis zum Schnittpunkt
-        t2=np.where(skalarProd<0,((x2-x1)*(y1-y3)-(y2-y1)*(x1-x3))*denominator, -1) #Faktor vom Startpunkt des Geradenabschnitts bis zum Schnittpunkt
-
-        # Liegt der Schnitt bei einem t2<0 oder t2>1 ist der Schnitt nicht auf dem Geradenabschnitt
-        # Liegt der Schnitt bei einem t1<0 ist der Schnitt in negativer Richtung des Lichtstrahls
-        # der kleinste t1 Faktor pro Strahl wird ausgewählt (das ist der Schnittpunkt, der am nächsten liegt)
-        t1 = np.where((t2<0) | (t2>1), -1, t1)
-        t1 = np.where(t1>=0, t1, 2048)
-        t1NearestHit = np.amin(t1, axis=1)
-
-        collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
-
-        # prüfen, für jedes Segement zwischen Robot-Origin und Collision Point prüfen, ob ein anderer Roboter dazwischen ist.
-        # Dafür benötigt: Mittelpunkte aller Roboter und Linie (also Start und Ziel)
-
+        # circle colliders (other robots): ray dirs are unit vectors, so the quadratic
+        # has a = 1 and the roots are directly comparable with the segment t's
         if len(pointsRobots[0]) > 0:
-            qX = np.tile(pointsRobots[0], (len(collisionPoints[0]), 1))
-            qY = np.tile(pointsRobots[1], (len(collisionPoints[0]), 1))
+            qx = ox - np.asarray(pointsRobots[0])[:, None]   # (C, 1)
+            qy = oy - np.asarray(pointsRobots[1])[:, None]
+            r = np.asarray(radius, dtype=np.float64)[:, None]
 
-            radii = np.tile(radius, (len(collisionPoints[0]), 1))
-            qX = np.swapaxes(qX,0,1)
-            qY = np.swapaxes(qY,0,1)
-            radii = np.swapaxes(radii,0,1)
+            b = 2.0 * (dx[None, :] * qx + dy[None, :] * qy)  # (C, R)
+            c = qx * qx + qy * qy - r * r                    # (C, 1)
+            disc = b * b - 4.0 * c
 
-            colX = np.tile(collisionPoints[0], (len(pointsRobots[0]), 1))
-            colY = np.tile(collisionPoints[1], (len(pointsRobots[0]), 1))
+            with np.errstate(invalid='ignore'):
+                sqrt_disc = np.sqrt(disc)
+            tc1 = (-b + sqrt_disc) * 0.5
+            tc2 = (-b - sqrt_disc) * 0.5
+            tc1 = np.where((disc > 0) & (tc1 >= 0), tc1, maxRange)
+            tc2 = np.where((disc > 0) & (tc2 >= 0), tc2, maxRange)
+            nearestCircleHit = np.amin(np.minimum(tc1, tc2), axis=0)
 
-            vX = colX - x1
-            vY = colY - y1
-            # normalize vector to a length of 1, so that the t parameters of the line-line intersection can be compared with the t's from cirle-line intersection
-            vLengthFact = 1/np.sqrt(vX**2 + vY**2) #again division costs too much for us poor students so we like to use multiplications with a factor
-            vX= vX * vLengthFact
-            vY= vY * vLengthFact
+            t1NearestHit = np.minimum(t1NearestHit, nearestCircleHit)
 
-            # a,b und c als Array zum Berechnen der Diskriminanten
-            a = vX * vX + vY * vY # array voll skalarere Werte
-            b = 2 * (vX * (x1 - qX) + vY * (y1 - qY))
-            c = (x1**2 + y1**2) + (qX**2 + qY**2) - (2 * (x1 * qX + y1*qY)) - radii**2
-
-            disc = b**2 - 4 * a * c
-            denominator = 1 / (2 * a)
-
-            # check if discriminat is negative ==> no collision
-            indices = np.where(disc > 0)
-
-            tc1 = np.full(disc.shape, -1.0)
-            tc1[indices] = (-b[indices] + np.sqrt(disc[indices])) * denominator[indices]
-
-            tc2 = np.full(disc.shape, -1.0)
-            tc2[indices] = (-b[indices] - np.sqrt(disc[indices])) * denominator[indices]
-
-            # throws RunTimewarnings
-            #tc1 = np.where((disc > 0), ((-b + np.sqrt(disc)) * denominator), -1)
-            #tc2 = np.where((disc > 0), ((-b - np.sqrt(disc)) * denominator), -1)
-
-            tc1 = np.where((tc1 >= 0), tc1, 2048)
-            tc2 = np.where((tc2 >= 0), tc2, 2048)
-
-            smallestTOfCircle = np.where((tc1<tc2), tc1, tc2)
-            smallestTOfCircle = np.amin(smallestTOfCircle, axis=0)
-
-            t1NearestHit = np.where(((smallestTOfCircle<2048) & (smallestTOfCircle<t1NearestHit)), smallestTOfCircle, t1NearestHit)
-
-        collisionPoints = np.array([x1+t1NearestHit* x2V[:,0], y1+t1NearestHit* y2V[:,0]]) #[:,0] returns the first column # Aufbau nach [x0,x1…x2], [y0,y1…yn]]
-
-        # if sensorOffset<0: t1NearestHit = t1NearestHit - (self.ownRadius-sensorOffset) #CHRISTIANS FRAGEN
-        collisionPoints = np.swapaxes(collisionPoints, 0, 1) # für Rückgabe in x,y-Paaren
+        collisionPoints = np.stack([ox + t1NearestHit * dx, oy + t1NearestHit * dy], axis=1)  # (R, 2)
 
         return [t1NearestHit, collisionPoints]
 
-    def shortestDistanceToCollidors(self, pos, lineSegments, circles, radii):
+    def shortestDistanceToCollidors(self, pos, segStart, segEnd, segLenSqInv, circles, radii):
+        """
+        Shortest distance from pos to each wall segment and circle collider.
+
+        :param segStart: segment start points - [[x1..xn], [y1..yn]]
+        :param segEnd: segment end points - [[x1..xn], [y1..yn]]
+        :param segLenSqInv: precomputed 1 / squared segment lengths
+        """
         x1, y1 = pos  # originX and originY
+        x2, y2 = segStart
+        x3, y3 = segEnd
 
-        x2, y2 = np.array([segment.getStart() for segment in lineSegments]).T  # lineStartXArray and lineStartYArray
-        x3, y3 = np.array([segment.getEnd() for segment in lineSegments]).T  # lineEndXArray and lineEndYArray
-
-        t = np.clip(((x1 - x2) * (x3 - x2) + (y1 - y2) * (y3 - y2)) / ((x2 - x3) ** 2 + (y2 - y3) ** 2), 0, 1)
+        t = np.clip(((x1 - x2) * (x3 - x2) + (y1 - y2) * (y3 - y2)) * segLenSqInv, 0, 1)
         dist = np.sqrt((x1 - (x2 + t * (x3 - x2))) ** 2 + (y1 - (y2 + t * (y3 - y2))) ** 2)
 
         if len(circles[0]) > 0:

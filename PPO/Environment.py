@@ -40,34 +40,41 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
     # training loop
     while i_episode < (max_episodes + 1):
         logger.episode = i_episode
-        #states = env.reset()
         next_states = env.reset()
         level_idx += 1
 
-        logger.set_number_of_agents(env.getNumberOfRobots())
-        # memory.robotsCount = env.getNumberOfRobots()
-        # memory.init()
-        memory.unroll_last_episode(env.getNumberOfRobots())
+        num_robots = env.getNumberOfRobots()
+        logger.set_number_of_agents(num_robots)
+        memory.unroll_last_episode(num_robots)
+
+        # robots drop out of the (compacted) env lists when they finish;
+        # active_ids maps each list position back to the original agent slot
+        active_ids = list(range(num_robots))
+        episode_goals = np.zeros(num_robots, dtype=bool)
+        next_observations = statesToObservationsNumpy(next_states)
 
         for t in range(max_timesteps):
-            current_states = next_states
-            # Run old policy
-            actions, action_logprob = ppo.select_action(statesToObservationsTensor(current_states))
+            observations = next_observations
+            # Run old policy (unclipped actions are stored, the env gets a clipped copy)
+            actions, action_logprob = ppo.select_action([torch.from_numpy(o) for o in observations])
 
-            next_states, rewards, dones, reached_goals = env.step(torchToNumpy(actions))
+            next_states, rewards, dones, reached_goals = env.step(np.clip(torchToNumpy(actions), -1, 1))
+            next_observations = statesToObservationsNumpy(next_states)
 
-            # memory.insertObservations(o_laser, o_orientation, o_distance, o_velocity)
             unrolled_rewards = [sum([value for value in reward.values()]) for reward in rewards]
-            memory.add(statesToObservationsNumpy(current_states), statesToObservationsNumpy(next_states), actions, action_logprob, unrolled_rewards, dones)
+            memory.add(observations, next_observations, actions, action_logprob, unrolled_rewards, dones, agent_ids=active_ids)
+
+            for i, reached in enumerate(reached_goals):
+                if reached:
+                    episode_goals[active_ids[i]] = True
 
             logger.add_objective(reached_goals)
             logger.add_reward(rewards)
             logger.add_step_agents(len(rewards))
 
             if len(memory) >= update_experience:
-                
+
                 print('{}. training with {} experiences'.format(training_counter, len(memory)), flush=True)
-                # memory.copyMemory()
                 ppo.update(memory, batches)
                 print('Time: {}'.format(time.time() - starttime), flush=True)
                 starttime = time.time()
@@ -75,8 +82,14 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
                 env.updateTrainingCounter(training_counter)
 
             if env.is_done():
-                env.update_level_manager(goals_reached=reached_goals)
+                env.update_level_manager(goals_reached=episode_goals.tolist())
                 break
+
+            # drop finished robots from the active set, keep the rest running
+            if any(dones):
+                keep = [i for i, done in enumerate(dones) if not done]
+                active_ids = [active_ids[i] for i in keep]
+                next_observations = [obs[keep] for obs in next_observations]
 
         if i_episode % log_interval == 0:
             running_reward, objective_reached = logger.log()

@@ -68,11 +68,11 @@ class RobotRepresentation:
                     painter.setPen(QPen(color, 1.5, Qt.DotLine))
                     painter.setBrush(QBrush(color, self.brushStyle))
 
-                    painter.drawLine(posX,
-                                     posY,
-                                     self.lidarHits[i][0] * self.scale,
-                                     self.lidarHits[i][1] * self.scale)
-                    painter.drawEllipse(self.lidarHits[i][0] * self.scale - 3, self.lidarHits[i][1] * self.scale - 3, 6, 6)
+                    painter.drawLine(int(posX),
+                                     int(posY),
+                                     int(self.lidarHits[i][0] * self.scale),
+                                     int(self.lidarHits[i][1] * self.scale))
+                    painter.drawEllipse(int(self.lidarHits[i][0] * self.scale - 3), int(self.lidarHits[i][1] * self.scale - 3), 6, 6)
 
 
 
@@ -80,28 +80,28 @@ class RobotRepresentation:
         self.lineColor.setAlphaF(1)
         painter.setPen(QPen(self.lineColor, self.thickness, Qt.DotLine))
 
-        painter.drawLine(self.posX,
-                         self.posY,
-                         self.posX + 1.25 * self.radius * (
-                                     self.dirV[0] * math.cos(self.direction) - self.dirV[1] * math.sin(self.direction)),
-                         self.posY + 1.25 * self.radius * (
-                                     self.dirV[0] * math.sin(self.direction) + self.dirV[1] * math.cos(self.direction)))
+        painter.drawLine(int(self.posX),
+                         int(self.posY),
+                         int(self.posX + 1.25 * self.radius * (
+                                     self.dirV[0] * math.cos(self.direction) - self.dirV[1] * math.sin(self.direction))),
+                         int(self.posY + 1.25 * self.radius * (
+                                     self.dirV[0] * math.sin(self.direction) + self.dirV[1] * math.cos(self.direction))))
 
         painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
         painter.setBrush(QBrush(self.fillColor, self.brushStyle))
-        painter.drawEllipse(self.posX - self.radius , self.posY - self.radius, self.width * self.scale, self.height * self.scale)
+        painter.drawEllipse(int(self.posX - self.radius), int(self.posY - self.radius), int(self.width * self.scale), int(self.height * self.scale))
 
         middlex = self.posX + self.radius
         middley = self.posY + self.radius
 
-        painter.drawLine(self.posX,
-                         self.posY,
-                         self.posX + self.radius * math.cos(self.direction),
-                         self.posY + self.radius * math.sin(self.direction))
+        painter.drawLine(int(self.posX),
+                         int(self.posY),
+                         int(self.posX + self.radius * math.cos(self.direction)),
+                         int(self.posY + self.radius * math.sin(self.direction)))
 
 
         painter.setPen(QPen(Qt.red, self.thickness, self.lineStyle))
-        painter.drawEllipse(self.posX-1, self.posY-1, 2, 2)
+        painter.drawEllipse(int(self.posX-1), int(self.posY-1), 2, 2)
 
         if self.hasPieSlice and self.pieSliceBorders != None:
             for border in self.pieSliceBorders:

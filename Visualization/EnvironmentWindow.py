@@ -82,7 +82,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
 
         self.newScaleFactorWidth = windowWidth / self.arenaWidth
 
-        self.setFixedHeight(self.arenaHeight * self.newScaleFactorWidth)
+        self.setFixedHeight(int(self.arenaHeight * self.newScaleFactorWidth))
 
         self.scaleFactor = self.newScaleFactorWidth
 
@@ -291,7 +291,7 @@ class SimulationWindow(QtWidgets.QMainWindow):
         self.width = int(self.arenaWidth * self.scaleFactor)
         self.height = int(self.arenaHeight * self.scaleFactor)
         self.newScaleFactorWidth = self.geometry().width() / self.arenaWidth
-        self.setFixedHeight(self.arenaHeight * self.newScaleFactorWidth)
+        self.setFixedHeight(int(self.arenaHeight * self.newScaleFactorWidth))
 
     def updateTrafficLights(self, proximity):
         self.selectedCategory = np.argmax(proximity)
