@@ -1,31 +1,13 @@
-from PyQt5.QtGui import QBrush, QPen, QColor
-from PyQt5.QtCore import Qt
-from Environment.Components.Border import ColliderLine
+from Visualization.RerunVisualizer import stationColorRGB
 
 class Station:
-    def __init__(self, posX, posY, radius, color, scaleFactor):
-        self.scaleFactor = scaleFactor
+    def __init__(self, posX, posY, radius, color):
         self.posX = posX
         self.posY = posY
 
         self.radius = radius
 
-        brightness = 235 - (int((color * 39) / 255) * 80)
-        brightness = 255
-        self.color = QColor.fromHsv((color * 39) % 255, 255, brightness)
-
-        self.lineColor = self.color  # Qt.red Qt.blue
-        self.fillColor = self.color  # Qt.red Qt.blue
-
-        self.thickness = 2
-        self.lineStyle = Qt.SolidLine
-        self.brushStyle = Qt.SolidPattern
-
-    def paint(self, painter):
-        painter.setPen(QPen(self.lineColor, self.thickness, self.lineStyle))
-        painter.setBrush(QBrush(self.fillColor, self.brushStyle))
-        painter.drawEllipse(int((self.posX-self.radius) * self.scaleFactor), int((self.posY-self.radius) * self.scaleFactor), int(self.radius*2 * self.scaleFactor), int(self.radius*2 * self.scaleFactor))
-        # painter.drawRect(self.posX * self.scaleFactor, self.posY * self.scaleFactor, self.width * self.scaleFactor, self.length * self.scaleFactor)
+        self.color = stationColorRGB(color)
 
     def setPos(self, pos):
         self.posX, self.posY = pos
@@ -53,12 +35,5 @@ class Station:
     def getRadius(self):
         return self.radius
 
-    def updateScale(self, scaleFactor):
-        self.scaleFactor = scaleFactor
-
     def setColor(self, i):
-        #brightness = 235 - (int((i * 39) / 255) * 80)
-        brightness = 255
-        self.color = QColor.fromHsv((i * 39) % 255, 255, brightness)
-        self.lineColor = self.color  # Qt.red Qt.blue
-        self.fillColor = self.color  # Qt.red Qt.blue
+        self.color = stationColorRGB(i)

@@ -10,18 +10,17 @@ class Environment:
     Defines the environment of the reinforcement learning algorithm
     """
 
-    def __init__(self, app, args, reward_func=None):
+    def __init__(self, args, reward_func=None, curriculum_func=None):
         """
-        :param app: PyQt5.QtWidgets.QApplication
         :param args: args defined in main
-        :param timeframes: int -
-            the amount of frames saved as a history by the robots to train the neural net
+        :param reward_func: optional custom reward function (see createReward)
+        :param curriculum_func: optional level-selection callback (see LevelManager)
         """
 
         self.args = args
         self.steps = args.steps
         self.steps_left = args.steps
-        self.simulation = Simulation(app, args)
+        self.simulation = Simulation(args, curriculum_func=curriculum_func)
         self.episode = -1
         self.timeframs = args.time_frames
         self.total_reward = 0.0
@@ -107,6 +106,9 @@ class Environment:
         dones = []
         reachedPickups = []
 
+        viz = self.simulation.viz
+        viz_rewards = np.zeros(len(robotsTermination)) if viz is not None else None
+
         for i, termination in enumerate(robotsTermination):
             if termination != (None, None, None):
                 state, reward, done, reachedPickup = self.extractRobotData(i, robotsTermination[i])
@@ -114,9 +116,14 @@ class Environment:
                 rewards.append(reward)
                 dones.append(int(done))
                 reachedPickups.append(reachedPickup)
+                if viz_rewards is not None:
+                    viz_rewards[i] = sum(reward.values())
             else:
                 # set robot to inactive if it has crashed with a wall or another robot
                 pass
+
+        if viz is not None:
+            viz.log_rewards(viz_rewards)
 
         return states, rewards, dones, reachedPickups
 
@@ -134,7 +141,7 @@ class Environment:
         ############ State Robot i ############
         next_state = self.get_observation(i)
 
-        ############ Euklidsche Distanz und Orientierung ##############
+        ############ Distanz zum Ziel und Orientierung ##############
 
         goal_pos_x = robot.getGoalX()
         goal_pos_y = robot.getGoalY()
@@ -144,11 +151,40 @@ class Environment:
         robot_pos_current_x = robot.getPosX()
         robot_pos_current_y = robot.getPosY()
 
-        distance_old = math.sqrt((robot_pos_old_x - goal_pos_x) ** 2 +
-                                 (robot_pos_old_y - goal_pos_y) ** 2)
-        distance_new = math.sqrt(
-            (robot_pos_current_x - goal_pos_x) ** 2 +
-            (robot_pos_current_y - goal_pos_y) ** 2)
+        # The reward shapes on geodesic (shortest-path) distance so that detours
+        # around obstacles are paid correctly -- Euclidean shaping creates local
+        # minima at every wall between robot and goal. This map knowledge is
+        # privileged training-time information only; the observation's distance
+        # to goal (Robot.lidarReading) deliberately stays Euclidean/map-free.
+        distance_old = distance_new = None
+        if robot.flowField is not None:
+            distance_old = robot.flowField.distance(robot_pos_old_x, robot_pos_old_y)
+            distance_new = robot.flowField.distance(robot_pos_current_x, robot_pos_current_y)
+        used_geodesic = distance_old is not None and distance_new is not None
+        if not used_geodesic:
+            distance_old = math.sqrt((robot_pos_old_x - goal_pos_x) ** 2 +
+                                     (robot_pos_old_y - goal_pos_y) ** 2)
+            distance_new = math.sqrt(
+                (robot_pos_current_x - goal_pos_x) ** 2 +
+                (robot_pos_current_y - goal_pos_y) ** 2)
+
+        # Geodesic and Euclidean distances are incommensurable: comparing the
+        # ratcheted bestGoalDist across a metric switch pays a huge spurious
+        # progress reward (geodesic best vs. straight-line current) and then
+        # locks the ratchet below any reachable geodesic value for the rest of
+        # the episode. Re-anchor in the new metric instead; this step pays no
+        # progress reward.
+        if used_geodesic != robot.bestGoalDistIsGeodesic:
+            robot.bestGoalDist = distance_new
+            robot.bestGoalDistIsGeodesic = used_geodesic
+            if not used_geodesic and not robot.fallbackWarned:
+                # a mid-episode fallback usually means the flow field has a hole:
+                # a passage sealed by inflation (flow_field_cell too coarse) or a
+                # position off-grid
+                print(f"[flowfield] robot {robot.idx} fell back to Euclidean reward at "
+                      f"({robot_pos_current_x:.2f}, {robot_pos_current_y:.2f}) in episode {self.episode}",
+                      flush=True)
+                robot.fallbackWarned = True
 
         ########### REWARD CALCULATION ################
 
@@ -184,16 +220,23 @@ class Environment:
         elif collision:
             reward['collision'] = r_collision
         else:
-            # Progress reward: proportional to the actual progress and symmetric, so
-            # retreating costs what approaching earns (potential-based shaping). The
-            # previous binary +0.1 made the agent indifferent between arriving and
-            # creeping towards the goal forever. Running out of time is intentionally
+            # Progress reward: one-sided against the best (smallest) goal distance
+            # achieved this episode. Backing out of dead ends and taking detours
+            # around obstacles costs nothing (symmetric shaping punished every step
+            # of a correct detour -> agents got stuck in alleys or died pushing
+            # into walls towards the goal). Paying against the episode-best instead
+            # of the previous step keeps loops unfarmable: re-covering old ground
+            # earns nothing, only a new closest approach pays, and total shaping is
+            # bounded by w_d * initial distance. Running out of time is intentionally
             # not punished: the time limit is a training artifact the agent cannot
             # observe, not part of the task.
-            reward['dist'] = w_d * (dist_old - dist_new)
+            progress = robot.bestGoalDist - dist_new
+            if progress > 0:
+                reward['dist'] = w_d * progress
+                robot.bestGoalDist = dist_new
 
-            # Minimal distance to obstacle (pre-noise lidar reading)
-            if np.min(robot.distances[0]) * robot.maxDistFact < 0.03:
+            # Minimal distance to obstacle (pre-noise lidar reading, in meters)
+            if np.min(robot.distances[0]) < 0.3:
                 reward['wall'] = w_w
 
             # Protect engine Reward
@@ -253,14 +296,6 @@ class Environment:
 
         states = [self.get_observation(i) for i in range(self.simulation.getCurrentNumberOfRobots())]
         return states
-
-    def setUISaveListener(self, observer, checkpoint_folder, env_name):
-        """
-        Sets a Listener for the save net button to detect if it's been pressed
-        :param observer: observing learning algorithm
-        """
-        if self.simulation.hasUI:
-            self.simulation.simulationWindow.setSaveListener(observer, checkpoint_folder, env_name)
 
     # returns number of robots in the simulation
     def getNumberOfRobots(self):

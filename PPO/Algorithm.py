@@ -1,5 +1,6 @@
 import torch.nn as nn
-from torch.distributions import MultivariateNormal
+from torch.distributions import Normal, Independent, TransformedDistribution
+from torch.distributions.transforms import TanhTransform
 import torch
 import os, warnings
 import numpy as np
@@ -8,7 +9,6 @@ from utils import initialize_output_weights, RunningMeanStd
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 from PPO.BigInput import BigInput
 from PPO.SmallInput import SmallInput
-from PPO.LegacyBigInput import LegacyBigInput
 
 from utils import statesToObservationsTensor, normalize
 
@@ -31,8 +31,6 @@ class Actor(nn.Module):
                 self.Inputspace = BigInput(scan_size)
             elif inputspace == 'small':
                 self.Inputspace = SmallInput(scan_size)
-            elif inputspace == 'legacy':
-                self.Inputspace = LegacyBigInput(scan_size)
         else:
             self.Inputspace = inputspace(scan_size)
 
@@ -44,11 +42,11 @@ class Actor(nn.Module):
 
     def forward(self, laser, orientation_to_goal, distance_to_goal, velocity):
         x = self.Inputspace(laser, orientation_to_goal, distance_to_goal, velocity)
-        mu = torch.tanh(self.mu(x))
+        # raw (pre-squash) mean -- the tanh lives in the TanhNormal distribution
+        mu = self.mu(x)
         std = torch.exp(self.log_std)
-        var = torch.pow(std, 2)
 
-        return mu, var
+        return mu, std
 
 
 class Critic(nn.Module):
@@ -68,8 +66,6 @@ class Critic(nn.Module):
                 self.Inputspace = BigInput(scan_size)
             elif inputspace == 'small':
                 self.Inputspace = SmallInput(scan_size)
-            elif inputspace == 'legacy':
-                self.Inputspace = LegacyBigInput(scan_size)
         else:
             self.Inputspace = inputspace(scan_size)
 
@@ -100,9 +96,13 @@ class ActorCritic(nn.Module):
         self.actor = Actor(scan_size, inputspace)
         self.critic = Critic(scan_size, inputspace)
 
-        # TODO statische var testen
-        #self.logstds_param = nn.Parameter(torch.full((n_actions,), 0.1))
-        #self.action_var = torch.full((action_dim, ), action_std * action_std).to(device)
+    @staticmethod
+    def get_distribution(action_mean, action_std):
+        # Tanh-squashed normal: correct log-probs at the [-1, 1] action bounds
+        # (clipping a plain Gaussian sample distorts them)
+        dist = TransformedDistribution(Normal(action_mean, action_std),
+                                       [TanhTransform(cache_size=1)])
+        return Independent(dist, 1)
 
     def act(self, states):
         """
@@ -115,17 +115,15 @@ class ActorCritic(nn.Module):
             laser, orientation, distance, velocity = (s.to(self.device) for s in states)
             # TODO: check if normalization of states is necessary
             # was suggested in: Implementation_Matters in Deep RL: A Case Study on PPO and TRPO
-            action_mean, action_var = self.actor(laser, orientation, distance, velocity)
+            action_mean, action_std = self.actor(laser, orientation, distance, velocity)
 
-            cov_mat = torch.diag(action_var)
-            dist = MultivariateNormal(action_mean, cov_mat)
+            dist = self.get_distribution(action_mean, action_std)
             ## logging of actions
             if self.logger is not None:
-                self.logger.add_actor_output(action_mean.mean(0)[0].item(), action_mean.mean(0)[1].item(), action_var[0].item(), action_var[1].item())
+                self.logger.add_actor_output(action_mean.mean(0)[0].item(), action_mean.mean(0)[1].item(), action_std[0].item() ** 2, action_std[1].item() ** 2)
 
-            # the unclipped sample and its log-prob are returned (and stored);
-            # the copy sent to the environment is clipped by the caller
-            action = dist.sample()
+            # the squashed sample already lives in (-1, 1)
+            action = dist.rsample()
             action_logprob = dist.log_prob(action)
 
             return action.cpu(), action_logprob.cpu()
@@ -139,9 +137,9 @@ class ActorCritic(nn.Module):
         """
         with torch.no_grad():
             laser, orientation, distance, velocity = (s.to(self.device) for s in states)
-            action, _ = self.actor(laser, orientation, distance, velocity)
+            action_mean, _ = self.actor(laser, orientation, distance, velocity)
 
-        return action.cpu()
+        return torch.tanh(action_mean).cpu()
 
     def evaluate(self, state, action):
         """
@@ -156,12 +154,13 @@ class ActorCritic(nn.Module):
         laser, orientation, distance, velocity = state
         state_value = self.critic(laser, orientation, distance, velocity)
 
-        action_mean, action_var = self.actor(laser, orientation, distance, velocity)
+        action_mean, action_std = self.actor(laser, orientation, distance, velocity)
 
-        cov_mat = torch.diag(action_var)
-        dist = MultivariateNormal(action_mean, cov_mat)
-        action_logprobs = dist.log_prob(action)
-        dist_entropy = dist.entropy()
+        dist = self.get_distribution(action_mean, action_std)
+        # keep atanh finite for stored actions that sit numerically on the bound
+        action_logprobs = dist.log_prob(action.clamp(-1 + 1e-6, 1 - 1e-6))
+        # TanhNormal has no closed-form entropy; the base normal's is a usable proxy
+        dist_entropy = Normal(action_mean, action_std).entropy().sum(dim=-1)
 
         return action_logprobs, state_value.squeeze(-1), dist_entropy
 
@@ -183,7 +182,9 @@ class PPO:
     :param ckpt: The checkpoint to restore from.
     """
 
-    def __init__(self, scan_size, inputspace, lr, betas, gamma, _lambda, K_epochs, eps_clip, logger, restore=False, ckpt=None, advantages_func=None):
+    def __init__(self, scan_size, inputspace, lr, betas, gamma, _lambda, K_epochs, eps_clip, logger, restore=False,
+                 ckpt=None, advantages_func=None, entropy_coeff=0.001, kl_early_stop=True, kl_target=0.02,
+                 lr_schedule='none', lr_tmax=1_000_000, torch_compile=False):
         # Algorithm parameters
         self.lr = lr
         self.betas = betas
@@ -191,6 +192,9 @@ class PPO:
         self._lambda = _lambda
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
+        self.entropy_coeff = entropy_coeff
+        self.kl_early_stop = kl_early_stop
+        self.kl_target = kl_target
         self.logger = logger
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -208,8 +212,23 @@ class PPO:
         if restore:
             self.load_model(Path(ckpt))
 
+        if torch_compile:
+            try:
+                self.policy.actor = torch.compile(self.policy.actor)
+                self.policy.critic = torch.compile(self.policy.critic)
+            except Exception as e:
+                warnings.warn(f"torch.compile failed, using eager mode: {e}")
+
         self.optimizer_a = torch.optim.Adam(self.policy.actor.parameters(), lr=lr, betas=betas, eps=1e-5)
         self.optimizer_c = torch.optim.Adam(self.policy.critic.parameters(), lr=lr, betas=betas, eps=1e-5)
+
+        # Optional LR annealing, stepped once per minibatch update
+        if lr_schedule == 'cosine':
+            self.scheduler_a = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer_a, T_max=lr_tmax)
+            self.scheduler_c = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer_c, T_max=lr_tmax)
+        else:
+            self.scheduler_a = None
+            self.scheduler_c = None
 
         self.MSE_loss = nn.MSELoss()
         self.running_reward_std = RunningMeanStd()
@@ -224,7 +243,10 @@ class PPO:
 
     def load_model(self, path):
         try:
-            self.policy.load_state_dict(torch.load(path, map_location="cpu", weights_only=True))
+            state_dict = torch.load(path, map_location="cpu", weights_only=True)
+            # checkpoints written while torch.compile was active carry an _orig_mod. prefix
+            state_dict = {k.replace('_orig_mod.', ''): v for k, v in state_dict.items()}
+            self.policy.load_state_dict(state_dict)
             return True
         except FileNotFoundError:
             warnings.warn(f"Could not restore model from {path}. Falling back to train mode.")
@@ -238,7 +260,9 @@ class PPO:
 
     def saveCurrentWeights(self, name):
         print('Saving current weights to ' + str(self.model_path.parent) + '/PPO_continuous_{}.pth'.format(name))
-        torch.save(self.policy.state_dict(), str(self.model_path.parent) + '/PPO_continuous_{}.pth'.format(name))
+        # strip the torch.compile wrapper prefix so checkpoints load in eager mode too
+        state_dict = {k.replace('_orig_mod.', ''): v for k, v in self.policy.state_dict().items()}
+        torch.save(state_dict, str(self.model_path.parent) + '/PPO_continuous_{}.pth'.format(name))
 
     def calculate_returns(self, rewards, normalize=False):
 
@@ -281,6 +305,15 @@ class PPO:
             returns[i] = gae + values[i]
 
         return torch.tensor(advantages, dtype=torch.float32), torch.tensor(returns, dtype=torch.float32)
+
+    @staticmethod
+    def calculate_explained_variance(values, returns):
+        """
+        How well the value function predicts the actual returns:
+        ev=1 perfect, ev=0 as good as predicting zero, ev<0 worse than zero.
+        """
+        var_returns = returns.var()
+        return 0.0 if var_returns == 0 else (1 - (returns - values).var() / var_returns).item()
 
     # def get_advantages_returns(self, states, actions, masks, rewards):
     #     # Advantages
@@ -353,11 +386,9 @@ class PPO:
                 returns.append(ret)
 
         # Merge all agent states, actions, rewards etc.
+        # (advantages are normalized per minibatch below; per-segment normalization
+        # would destroy the relative quality of episodes against each other)
         advantages = torch.cat(advantages)
-        # Normalize advantages once over the whole batch (per-segment normalization
-        # destroys the relative quality of episodes against each other).
-        if advantages.numel() > 1:
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         assert not torch.isnan(advantages).any(), f"Advantages are NaN: {advantages}"
         returns = torch.cat(returns)
         actions = torch.cat(actions)
@@ -374,20 +405,40 @@ class PPO:
         old_logprobs = old_logprobs.to(self.device)
 
         # Train policy for K epochs: sampling and updating
+        all_values = []
+        all_returns = []
+        kl_stop = False
         for _ in range(self.K_epochs):
             # Random sampling and no repetition. 'False' indicates that training will continue even if the number of samples in the last time is less than mini_batch_size
             for index in BatchSampler(SubsetRandomSampler(range(batch_size)), mini_batch_size, False):
+                # a 1-sample remainder batch cannot be advantage-normalized (std is NaN)
+                if len(index) < 2:
+                    continue
                 # Evaluate old actions and values using current policy
                 batch_states = tuple(s[index].to(self.device) for s in states)
                 batch_actions = actions[index]
+                batch_adv = advantages[index]
+                batch_adv = (batch_adv - batch_adv.mean()) / (batch_adv.std() + 1e-8)
                 logprobs, values, dist_entropy = self.policy.evaluate(batch_states, batch_actions)
                 # Importance ratio: p/q
-                ratios = torch.exp(logprobs - old_logprobs[index].detach())
+                # Clamp the log-ratio so a single diverged sample cannot overflow exp() into NaNs
+                log_ratio = torch.clamp(logprobs - old_logprobs[index].detach(), -10, 10)
+                ratios = torch.exp(log_ratio)
+
+                # Stop the whole update once the new policy diverges too far from the old one
+                # (unlike ROSHAN, which only breaks the current epoch's minibatch loop)
+                with torch.no_grad():
+                    approx_kl = (old_logprobs[index] - logprobs).mean()
+                    clip_fraction = ((ratios < 1 - self.eps_clip) | (ratios > 1 + self.eps_clip)).float().mean()
+                if self.kl_early_stop and approx_kl.item() >= self.kl_target:
+                    print(f"approx_kl ({approx_kl.item():.4f}) exceeded target ({self.kl_target}), stopping update early", flush=True)
+                    kl_stop = True
+                    break
 
                 # Actor loss using Surrogate loss
-                surr1 = ratios * advantages[index]
-                surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages[index]
-                entropy = 0.001 * dist_entropy
+                surr1 = ratios * batch_adv
+                surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * batch_adv
+                entropy = self.entropy_coeff * dist_entropy
                 actor_loss = ((-torch.min(surr1, surr2).type(torch.float32)) - entropy).mean()
 
                 # TODO CLIP VALUE LOSS ? Probably not necessary as according to:
@@ -397,6 +448,9 @@ class PPO:
                 if self.logger is not None:
                     self.logger.add_loss((actor_loss + critic_loss).item(), entropy=entropy.mean().item(),
                                          critic_loss=critic_loss.item(), actor_loss=actor_loss.item())
+                    self.logger.add_training_metrics(approx_kl=approx_kl.item(), clip_fraction=clip_fraction.item())
+                all_values.append(values.detach())
+                all_returns.append(returns[index].detach())
 
                 # Sanity checks
                 assert not torch.isnan(actor_loss).any(), f"Actor loss is NaN: {actor_loss}"
@@ -415,6 +469,19 @@ class PPO:
                 # Global gradient norm clipping https://vitalab.github.io/article/2020/01/14/Implementation_Matters.html
                 torch.nn.utils.clip_grad_norm_(self.policy.critic.parameters(), max_norm=0.5)
                 self.optimizer_c.step()
+
+                if self.scheduler_a is not None:
+                    self.scheduler_a.step()
+                    self.scheduler_c.step()
+            if kl_stop:
+                break
+
+        if self.logger is not None and all_values:
+            with torch.no_grad():
+                ev = self.calculate_explained_variance(torch.cat(all_values), torch.cat(all_returns))
+                self.logger.add_training_metrics(explained_variance=float(ev),
+                                                 action_std=torch.exp(self.policy.actor.log_std).mean().item(),
+                                                 lr=self.optimizer_a.param_groups[0]['lr'])
 
         # Clear memory
         memory.clear_memory()

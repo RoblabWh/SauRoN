@@ -1,6 +1,3 @@
-from PyQt5.QtGui import QPen
-from PyQt5.QtCore import Qt
-
 class ColliderLine:
     def __init__(self,x1, y1, x2, y2, xn = 0, yn = 0):
         self.a = (x1, y1)
@@ -32,15 +29,6 @@ class ColliderLine:
 
     def getEnd(self):
         return self.b
-
-    def paint(self, painter, scaleFactor, showNormals):
-        painter.setPen(QPen(Qt.black, 3))
-        painter.drawLine(int(self.a[0] * scaleFactor), int(self.a[1] * scaleFactor), int(self.b[0] * scaleFactor), int(self.b[1] * scaleFactor))
-        #Flächen-Normalen der Wände
-        painter.setPen(QPen(Qt.magenta))
-        if showNormals:
-            painter.drawLine(int(self.normalOrigin[0]*scaleFactor), int(self.normalOrigin[1]*scaleFactor),
-                         int((self.normalOrigin[0]+ (self.n[0]*0.15)) *scaleFactor), int((self.normalOrigin[1]+ (self.n[1]*0.15))*scaleFactor))
 
 import math
 
@@ -127,11 +115,6 @@ class CircleWall:
         self.posX = cx
         self.posY = cy
         self.radius = r
-
-    def paint(self, painter, scaleFactor):
-        self.scaleFactor = scaleFactor
-        painter.setPen(QPen(Qt.black, 3))
-        painter.drawEllipse(int((self.posX-self.radius) * self.scaleFactor), int((self.posY-self.radius) * self.scaleFactor), int(self.radius*2 * self.scaleFactor), int(self.radius*2 * self.scaleFactor))
 
     def getPosX(self):
         return self.posX

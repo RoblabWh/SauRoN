@@ -15,7 +15,8 @@ def initialize_output_weights(m, out_type):
     :param out_type: the type of the output layer (actor or critic)
     """
     if out_type == 'actor':
-        torch.nn.init.orthogonal_(m.weight.data, gain=1)
+        # small gain keeps the initial policy close to uniform over actions
+        torch.nn.init.orthogonal_(m.weight.data, gain=0.1)
         if m.bias is not None:
             torch.nn.init.constant_(m.bias.data, 0)
     elif out_type == 'critic':
@@ -28,16 +29,9 @@ def initialize_hidden_weights(m):
     Initialize the weights of the hidden layers of the actor and critic networks
     :param m: the layer to initialize
     """
-    if isinstance(m, torch.nn.Conv2d):
-        torch.nn.init.orthogonal_(m.weight.data, gain=1)
-        if m.bias is not None:
-            torch.nn.init.constant_(m.bias.data, 0)
-    elif isinstance(m, torch.nn.Linear):
-        torch.nn.init.orthogonal_(m.weight.data, gain=1)
-        if m.bias is not None:
-            torch.nn.init.constant_(m.bias.data, 0)
-    elif isinstance(m, torch.nn.Conv1d):
-        torch.nn.init.orthogonal_(m.weight.data, gain=1)
+    relu_gain = torch.nn.init.calculate_gain('relu')
+    if isinstance(m, (torch.nn.Conv2d, torch.nn.Linear, torch.nn.Conv1d)):
+        torch.nn.init.orthogonal_(m.weight.data, gain=relu_gain)
         if m.bias is not None:
             torch.nn.init.constant_(m.bias.data, 0)
 
@@ -183,8 +177,8 @@ def check_args(args):
     assert args.number_of_rays > 0, "Number of scans must be positive"
     assert args.update_experience > 0, "Update experience must be positive"
     assert args.update_experience > args.batches, "Update experience must be greater than batch size"
-    assert args.visualization == "none" or args.visualization == "single" or args.visualization == "all", "Visualization must be none, single or all"
-    assert args.inputspace == "big" or args.inputspace == "small" or args.inputspace == "legacy" or hasattr(args.inputspace, '__class__') and hasattr(args.inputspace, 'get_in_features') and hasattr(args.inputspace, 'forward'), "Input space must be big, small or legacy"
+    assert args.visualization == "none" or args.visualization == "rerun", "Visualization must be none or rerun"
+    assert args.inputspace == "big" or args.inputspace == "small" or hasattr(args.inputspace, '__class__') and hasattr(args.inputspace, 'get_in_features') and hasattr(args.inputspace, 'forward'), "Input space must be big or small"
     assert os.path.exists(args.ckpt_folder), "Checkpoint folder does not exist."
 
 class Logger(object):
@@ -206,6 +200,13 @@ class Logger(object):
         self.entropy = []
         self.critic_loss = []
         self.actor_loss = []
+
+        # training diagnostics
+        self.approx_kl = []
+        self.clip_fraction = []
+        self.explained_variance = []
+        self.action_std = []
+        self.lr = []
 
         self.actor_mean_linvel = []
         self.actor_mean_angvel = []
@@ -251,6 +252,24 @@ class Logger(object):
                                                 'entropy': np.mean(self.entropy),
                                                 'critic_loss': np.mean(self.critic_loss),
                                                 'actor loss': np.mean(self.actor_loss)}, self.episode)
+
+    def add_training_metrics(self, approx_kl=None, clip_fraction=None, explained_variance=None,
+                             action_std=None, lr=None):
+        for values, value in ((self.approx_kl, approx_kl), (self.clip_fraction, clip_fraction),
+                              (self.explained_variance, explained_variance),
+                              (self.action_std, action_std), (self.lr, lr)):
+            if value is not None:
+                values.append(value)
+
+    def summary_training_metrics(self):
+        if self.logging and self.episode > self.last_logging_episode:
+            for tag, values in (('training/approx_kl', self.approx_kl),
+                                ('training/clip_fraction', self.clip_fraction),
+                                ('training/explained_variance', self.explained_variance),
+                                ('training/action_std', self.action_std),
+                                ('training/lr', self.lr)):
+                if len(values) > 0:
+                    self.writer.add_scalar(tag, np.mean(values), self.episode)
 
     def add_step_agents(self, steps_agents):
         self.steps_agents += steps_agents
@@ -312,6 +331,7 @@ class Logger(object):
         self.summary_steps_agents()
         self.summary_actor_output()
         self.summary_loss()
+        self.summary_training_metrics()
 
         self.last_logging_episode = self.episode
         self.clear_summary()
@@ -326,6 +346,11 @@ class Logger(object):
         self.entropy = []
         self.critic_loss = []
         self.actor_loss = []
+        self.approx_kl = []
+        self.clip_fraction = []
+        self.explained_variance = []
+        self.action_std = []
+        self.lr = []
         self.objective_reached = 0
         self.steps_agents = 0
         self.reward = {}

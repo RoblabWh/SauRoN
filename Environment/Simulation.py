@@ -1,10 +1,8 @@
 #import Environment.SVGParser as SVGParser
-import Visualization.EnvironmentWindow as SimulationWindow
 from Environment.LevelManager import LevelManager
+from Environment.FlowField import FlowFieldCache
 import math, random
 import numpy as np
-
-closedFirst = False
 
 
 class Simulation:
@@ -12,33 +10,30 @@ class Simulation:
     Defines the simulation with different levels for the robots to train in
     """
 
-    def __init__(self, app, args):
+    def __init__(self, args, curriculum_func=None):
         """
-        Creates a simulation containing the robots, stations, levels and simulation window
-        :param app: PyQt5.QtWidgets.QApplication
+        Creates a simulation containing the robots, stations and levels
         :param args:
             args defined in main
-        :param timeframes: int -
-            the amount of frames saved as a history by the robots to train the neural net
+        :param curriculum_func:
+            optional callback choosing the next level (see LevelManager)
         """
-        global closedFirst
-        closedFirst = False
         self.args = args
-        self.levelManager = LevelManager(args.level_files)
+        self.levelManager = LevelManager(args.level_files, curriculum_func=curriculum_func)
         self.robots = None
+        # geodesic fields are memoized per (level, goal): station positions are
+        # fixed within a level, so each field is built exactly once per run
+        self.flowFields = FlowFieldCache() if getattr(args, 'geodesic_reward', True) else None
 
-        # Skalierungsparameter für Visualisierung
-        self.scaleFactor = args.scale_factor
         self.steps = args.steps
-        self.hasUI = app is not None
         self.episode = 0
 
-        self.simulationWindow = None
-        self.reset()
+        self.viz = None
+        if args.visualization == 'rerun':
+            from Visualization.RerunVisualizer import RerunVisualizer
+            self.viz = RerunVisualizer(args)
 
-        if self.hasUI:
-            self.simulationWindow = SimulationWindow.SimulationWindow(app, self.args, self.levelManager)
-            self.simulationWindow.show()
+        self.reset()
 
         self.simTime = 0  # s
         self.simTimestep = args.sim_time_step  # s
@@ -62,9 +57,37 @@ class Simulation:
         for robot in self.robots:
             robot.resetLidar(self.robots)
 
-        # Reprint the level if it has changed and the simulation window is open
-        if self.hasUI and self.simulationWindow is not None:
-            self.simulationWindow.levelChange(self.levelManager)
+        # Geodesic distance field per goal station: the reward shapes on
+        # shortest-path distance instead of straight-line distance, so detours
+        # around obstacles are paid correctly. Observations stay map-free.
+        if self.flowFields is not None:
+            walls = [(w.getStart(), w.getEnd()) for w in self.levelManager.get_walls()]
+            circles = [(c.getPosX(), c.getPosY(), c.getRadius()) for c in self.levelManager.circleWalls]
+            robotRadius = max(r.radius for r in self.robots)
+            cell = getattr(self.args, 'flow_field_cell', 0.1)
+            for robot in self.robots:
+                station = robot.station
+                # seed the zero-distance region with the actual success disk
+                # (collideWithTargetStationCircular: center dist < 1.2 * r_station
+                # - r_robot), not the station radius -- otherwise the shaping has
+                # a zero-gradient plateau before arrival actually triggers
+                seedRadius = max(cell, 1.2 * station.getRadius() - robot.radius)
+                robot.flowField = self.flowFields.get(
+                    self.levelManager.get_current_level(), walls, circles,
+                    station.getPosX(), station.getPosY(), seedRadius,
+                    robotRadius, cell,
+                    store=not self.levelManager.current_is_generated)
+                # high-water mark of the progress reward must start geodesic too
+                startDist = robot.flowField.distance(robot.getPosX(), robot.getPosY())
+                if startDist is not None:
+                    robot.bestGoalDist = startDist
+                    robot.bestGoalDistIsGeodesic = True
+
+        # Log the (possibly changed) level geometry to the viewer
+        if self.viz is not None:
+            self.viz.log_level(self.levelManager, self.robots)
+            if self.flowFields is not None:
+                self.viz.log_flow_field(self.robots)
 
     def update(self, robotsTarVels, stepsLeft, activations, proximity):
         """
@@ -124,22 +147,15 @@ class Simulation:
             else:
                 robotsTerminations.append((None, None, None))
 
-        if self.hasUI:
-            if self.simulationWindow is not None:
-                for i, robot in enumerate(self.robots):
-                    activationsR = activations[i] if activations is not None else None
-                    self.simulationWindow.updateRobot(robot, i, activationsR)
-                self.simulationWindow.updateTrafficLights(proximity)
-                self.simulationWindow.paintUpdates()
-                self.simulationWindow.updateInfotext(self.steps - stepsLeft, self.episode)
+        if self.viz is not None:
+            self.viz.log_step(self.robots)
         return robotsTerminations
 
     def getCurrentNumberOfRobots(self):
         return len(self.robots)
 
     def updateTrainingCounter(self, counter):
-        if self.hasUI:
-            self.simulationWindow.updateTrainingInfotext(counter)
+        pass
 
     # def isFarEnoughApart(self, stationPositions, randPos, minDist):
     #     """

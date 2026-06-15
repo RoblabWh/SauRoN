@@ -59,6 +59,7 @@ class Robot:
         self.netOutput = (0,0)
         self.distances = []
         self.lidarHits = []
+        self.lidarHitMask = []
         self.collisionDistances = []
         self.collisionDistancesRobots = []
         self.angularDeviation = 0
@@ -93,9 +94,10 @@ class Robot:
         #Factors for normalization
         #self.maxLinearVelocityFact = 1/self.maxLinearVelocity
         #self.maxAngularVelocityFact = 1/self.maxAngularVelocity
-        # Maximum distance in laserscan is 20 meters
-        self.maxDistFact = 1/10
-        #self.maxDistSim = 22
+        # Inverse-depth encoding x = d0 / (d0 + d): bounded in (0, 1] with no max
+        # sensor range; d0 sets where the resolution concentrates (x = 0.5 at d = d0)
+        self.lidarInvDepthScale = getattr(args, 'lidar_d0', 2.0)
+        self.goalDistScale = getattr(args, 'goal_d0', 10.0)
 
         #Pie Slice (chassy for better lidar detection as used with real robots)
         self.hasPieSlice = args.has_pie_slice
@@ -112,6 +114,14 @@ class Robot:
         #reward variables
         goalDist = math.sqrt((self.goalX - self.startposX) ** 2 + (self.goalY - self.startposY) ** 2)
         self.initialGoalDist = goalDist
+        self.bestGoalDist = goalDist
+        # which metric bestGoalDist is measured in -- geodesic and Euclidean
+        # distances must never be compared against each other in the ratchet
+        self.bestGoalDistIsGeodesic = False
+        self.fallbackWarned = False
+        # geodesic distance field for reward shaping, assigned by Simulation.reset
+        # after stations are randomized (None = Euclidean reward fallback)
+        self.flowField = None
         self.stepsAlive = 0
         self.maxSteps = args.steps
 
@@ -209,10 +219,17 @@ class Robot:
         self.collisionDistances = []
         self.collisionDistancesRobots = []
         self.lidarHits = []
+        self.lidarHitMask = []
         self.netOutput = (0, 0)
 
         # reward variables
         self.initialGoalDist = goalDist
+        self.bestGoalDist = goalDist
+        self.bestGoalDistIsGeodesic = False
+        self.fallbackWarned = False
+        # geodesic distance field for reward shaping, assigned by Simulation.reset
+        # after stations are randomized (None = Euclidean reward fallback)
+        self.flowField = None
         direction = (self.getDirectionAngle() + 2 * math.pi) % (2 * math.pi)
         self.rayCol = FastCollisionRay([posX, posY], self.args.number_of_rays, direction, self.radius, self.fieldOfView)
 
@@ -223,6 +240,16 @@ class Robot:
         self._colEnd = np.array([cl.getEnd() for cl in self._staticColliderLines], dtype=np.float64).T.reshape(2, -1)
         segLenSq = (self._colStart[0] - self._colEnd[0]) ** 2 + (self._colStart[1] - self._colEnd[1]) ** 2
         self._segLenSqInv = 1.0 / np.maximum(segLenSq, 1e-12)
+
+        # fill distance for rays that hit nothing: the level's bounding-box diagonal,
+        # so lidar hit points stay within the level for visualization while the
+        # inverse-depth encoding of a no-hit reading is still ~0
+        allCoords = np.concatenate([self._colStart, self._colEnd], axis=1)
+        if allCoords.size > 0:
+            extents = allCoords.max(axis=1) - allCoords.min(axis=1)
+            self.sensorFillRange = float(np.linalg.norm(extents))
+        else:
+            self.sensorFillRange = 100.0
 
         if self.hasPieSlice:
             self.posSensor = [posX + self.offsetSensorDist * directionX, posY + self.offsetSensorDist * directionY]
@@ -311,8 +338,10 @@ class Robot:
 
         self.stepsAlive += 1
 
-        # TODO Question: Should the linVel and angVel be saved with or without dt ?
-        frame = [posX, posY, directionVector[0], directionVector[1], linVel * dt, angVel * dt, goalX, goalY, goalDist, direction]
+        # raw velocities (m/s, rad/s): the norm getters divide by the physical
+        # velocity limits, so storing dt-scaled values would compress the
+        # observation channel and couple it to --sim_time_step
+        frame = [posX, posY, directionVector[0], directionVector[1], linVel, angVel, goalX, goalY, goalDist, direction]
 
         self.push_frame(frame)
 
@@ -422,7 +451,7 @@ class Robot:
         circlesPositions = np.array([circleX, circleY])
 
         self.rayCol.new_scan(position, dir)
-        distances, lidar_hits = (self.rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, circlesPositions, circleR, 1 / self.maxDistFact))
+        distances, lidar_hits = (self.rayCol.lineRayIntersectionPoint(colLinesStartPoints, colLinesEndPoints, circlesPositions, circleR, self.sensorFillRange))
 
         circleX = [r[0] for r in collidorCircleAllForTerminations]
         circleY = [r[1] for r in collidorCircleAllForTerminations]
@@ -431,12 +460,15 @@ class Robot:
         self.collisionDistances, self.collisionDistancesRobots = self.rayCol.shortestDistanceToCollidors([self.getPosX(), self.getPosY()], colLinesStartPoints, colLinesEndPoints, segLenSqInv, circlesPositionsAll, circleR)
 
         self.lidarHits = lidar_hits
+        # rays that hit nothing report exactly sensorFillRange; their synthetic
+        # endpoints must not be rendered as real obstacle points
+        self.lidarHitMask = distances < self.sensorFillRange
         self.distances = [distances]
 
         # calculate distance to goal
         distance_to_goal = np.linalg.norm(
             np.array([self.getPosX(), self.getPosY()]) - np.array([self.station.posX, self.station.posY]))
-        distance_to_goal_norm = distance_to_goal * self.maxDistFact
+        distance_to_goal_norm = distance_to_goal / (distance_to_goal + self.goalDistScale)
 
         # calculate the angle between the robot orientation and the target
         orientation_vec = np.array([self.getDirectionX(), self.getDirectionY()])
@@ -457,8 +489,9 @@ class Robot:
 
         noise = np.random.uniform(low=-0.04, high=0.04, size=distances.shape)
         distances = distances + noise
-        # bounded observation: sensor range caps at 1, noise cannot push it outside [0, 1]
-        laser = np.clip(distances * self.maxDistFact, 0, 1)
+        # inverse-depth encoding: close obstacles -> 1, free space fades smoothly to 0;
+        # clamping at 0 keeps noisy near-zero readings inside (0, 1]
+        laser = self.lidarInvDepthScale / (self.lidarInvDepthScale + np.maximum(distances, 0.0))
 
         robot_state = [laser,                                                       # 2D Laser Scan
                        np.asarray(orientation),                                     # Orientation to Goal

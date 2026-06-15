@@ -34,8 +34,6 @@ For MPI-based multi-environment training you additionally need a system MPI impl
 uv sync --extra mpi
 ```
 
-The pretrained model under `./pretrained` is stored with Git LFS — run `git lfs install && git lfs pull` to fetch it.
-
 Now you should be ready to run your simulation.
 
 ## Levels
@@ -57,9 +55,9 @@ Run `main.py` via uv with desired arguments:
 
 There are several other options for the hyperparameters, vizualization and robot settings you can look up in the `main.py`.
 
-There is a trained network provided under `./pretrained`. It was trained with an older version of the 'big' input space, which is preserved as `--inputspace legacy`. Note that the `small` and `big` input spaces were widened (the lidar embedding and trunk grew from 8/32 to 128/128 features), so checkpoints trained with the previous `small`/`big` networks are no longer loadable — only the `legacy` pretrained model is kept compatible. If the installation was successful the following command should run the pretrained network:
+The lidar scan is fed to the network as smooth inverse depth, `x = d0 / (d0 + d)` (`--lidar_d0`, default 2 m): close obstacles encode near 1, free space fades to 0, with no maximum sensor range — so arbitrarily large levels work without saturating the scan. The distance to the goal is squashed the same way via `--goal_d0`. Note that checkpoints trained with the previous linear distance encoding (including the formerly bundled pretrained model) are not compatible and need retraining.
 
-```uv run main.py --ckpt_folder ./pretrained --model_name batch_8 --mode test --inputspace legacy --level_files 'kreuzung.svg'```
+The progress reward shapes on **geodesic distance** (shortest obstacle-free path to the goal) instead of straight-line distance: each level is rasterized to a grid (`--flow_field_cell`, default 0.1 m), inflated by the robot radius and flooded from every goal once per level (cached across episodes). This removes the local minima that made agents get stuck in alleys or push into walls when the goal lies behind them. The map knowledge is used at training time only — observations stay map-free, so the deployed policy needs no map. Disable with `--geodesic_reward False` to compare against Euclidean shaping, and use `--viz_flow_field True` to overlay the distance raster, the wall/inflation cells and each robot's shortest path in the rerun viewer for debugging.
 
 To train run:
 
@@ -117,9 +115,22 @@ To train with MPI (requires `uv sync --extra mpi`, see Installation):
 
 
 ### Visualization and Managing Settings:
-`--visualization`: Choose the visualization mode: none, single or all. **Default: `"single"`**
 
-`--visualization_paused`: Start the visualization toggled to paused. **Default: `False`**
+The simulation is visualized with the [rerun](https://rerun.io) viewer: it runs in its own process and renders on the GPU, so it costs the training loop almost nothing. In the viewer you can pause and scrub back through past episodes while training continues, toggle the lidar point clouds per robot (entity visibility), zoom/pan, and watch the per-robot reward plots next to the 2D world. During training, typing `s` + Enter in the terminal saves the current network weights (replaces the old save button).
+
+`--visualization`: Choose the visualization mode: `none` (headless) or `rerun` (live viewer). **Default: `"rerun"`**
+
+`--rerun_save`: Record the visualization to a `.rrd` file instead of spawning the live viewer; replay it later with `rerun <file>`. **Default: `None`**
+
+`--rerun_memory_limit`: In-RAM history budget of the live viewer; the oldest events are dropped once it is exceeded. Percentage of system RAM (e.g. `25%`) or absolute (e.g. `2GB`). Two quirks of the viewer's garbage collector to be aware of: eviction works on data chunks, not episodes, so the oldest retained episodes may start mid-trajectory; and each cleanup pass frees **at least 25% of the used budget in one go** (by design, [rerun source](https://github.com/rerun-io/rerun/blob/0.33.0/crates/viewer/re_viewer/src/app.rs)), so the scrollback shrinks in big jumps rather than smoothly — with a large percentage budget those jumps are correspondingly large. An absolute limit like `4GB` makes the jumps smaller — but don't go far below `2GB`: the viewer's own UI and caches occupy tens of MB of the same budget, and below that floor the garbage collector compacts continuously no matter what. Log less data (`--viz_stride`, `--viz_lidar_stride`, `--viz_lidar_decimation`) for a longer window, or use `--rerun_save` for full history. **Default: `25%`**
+
+`--viz_stride`: Log the world state only every Nth sim step. **Default: 4 in train mode, 1 in test mode**
+
+`--viz_lidar_stride`: Log the lidar point clouds only every Nth logged step. **Default: 2**
+
+`--viz_lidar_decimation`: Log only every Nth lidar ray (angular downsampling of the visualized point cloud). **Default: 3**
+
+`--step_delay`: Sleep this many seconds per step in test mode to slow the simulation down for watching. **Default: 0**
 
 `--tensorboard`: Use tensorboard. **Default: `True`**
 
@@ -128,9 +139,3 @@ To train with MPI (requires `uv sync --extra mpi`, see Installation):
 `--solved_percentage`: Stop training if objective is reached to this percentage. **Default: 0.99**
 
 `--log_interval`: How many episodes to log into tensorboard. Also regulates how solved percentage is calculated. **Default: 30**
-
-`--render`: Whether to render the environment. **Default: `False`**
-
-`--scale_factor`: The scale factor for the environment. **Default: 55**
-
-`--display_normals`: Determines whether the normals of a wall are shown in the map. **Default: `True`**

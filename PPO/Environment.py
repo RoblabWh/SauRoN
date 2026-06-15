@@ -3,15 +3,36 @@ from PPO.SwarmMemory import SwarmMemory
 from PPO.CoolMemory import SwarmMemory as CoolSwarmMemory
 from utils import Logger
 import numpy as np
+import sys
+import threading
 import torch
 import time
 from utils import statesToObservationsTensor,statesToObservationsNumpy, torchToNumpy
 
 
+def startSaveHotkeyThread(ppo):
+    """
+    Replaces the save button of the old Qt window: typing 's' + Enter in the
+    terminal saves the current weights while training keeps running.
+    """
+    def watch():
+        try:
+            for line in sys.stdin:
+                if line.strip().lower() == 's':
+                    ppo.saveCurrentWeights('manuell')
+        except (ValueError, OSError):
+            pass  # stdin closed (e.g. running under nohup)
+
+    if sys.stdin is not None:
+        threading.Thread(target=watch, daemon=True).start()
+        print("Press 's' + Enter to save the current weights at any time.", flush=True)
+
+
 def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timesteps,
           update_experience, _lambda, K_epochs, eps_clip, gamma, lr,
           betas, ckpt_folder, restore, tensorboard, scan_size=121, log_interval=10,
-          batches=1, advantages_func=None):
+          batches=1, advantages_func=None, entropy_coeff=0.001, kl_early_stop=True,
+          kl_target=0.02, lr_schedule='none', lr_tmax=1_000_000, torch_compile=False):
 
     # Tensorboard
     logger = Logger(ckpt_folder, log_interval)
@@ -26,9 +47,11 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
 
     ppo = PPO(scan_size=scan_size, inputspace=inputspace, lr=lr,
               betas=betas, gamma=gamma, _lambda=_lambda, K_epochs=K_epochs, eps_clip=eps_clip,
-              logger=logger, restore=restore, ckpt=ckpt, advantages_func=advantages_func)
+              logger=logger, restore=restore, ckpt=ckpt, advantages_func=advantages_func,
+              entropy_coeff=entropy_coeff, kl_early_stop=kl_early_stop, kl_target=kl_target,
+              lr_schedule=lr_schedule, lr_tmax=lr_tmax, torch_compile=torch_compile)
 
-    env.setUISaveListener(ppo, ckpt_folder, env_name)
+    startSaveHotkeyThread(ppo)
 
     training_counter = 0
 
@@ -55,7 +78,7 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
 
         for t in range(max_timesteps):
             observations = next_observations
-            # Run old policy (unclipped actions are stored, the env gets a clipped copy)
+            # Run old policy (tanh-squashed actions already live in (-1, 1); the clip only guards float edges)
             actions, action_logprob = ppo.select_action([torch.from_numpy(o) for o in observations])
 
             next_states, rewards, dones, reached_goals = env.step(np.clip(torchToNumpy(actions), -1, 1))
@@ -121,16 +144,16 @@ def train(env_name, env, solved_percentage, inputspace, max_episodes, max_timest
         logger.close()
 
 
-def test(env_name, env, render, inputspace, _lambda,
+def test(env_name, env, inputspace, _lambda,
          K_epochs, eps_clip, gamma, lr, betas, ckpt_folder, test_episodes,
-         scan_size=121, advantages_func=None):
+         scan_size=121, advantages_func=None, step_delay=0.0, torch_compile=False):
 
     ckpt = ckpt_folder+'/PPO_continuous_'+env_name+'.pth'
     print('Load checkpoint from {}'.format(ckpt))
 
     ppo = PPO(scan_size, inputspace, lr, betas, gamma, _lambda,
               K_epochs, eps_clip, restore=True, ckpt=ckpt, logger=None,
-              advantages_func=advantages_func)
+              advantages_func=advantages_func, torch_compile=torch_compile)
 
     episode_reward, time_step = 0, 0
     avg_episode_reward, avg_length = 0, 0
@@ -149,8 +172,8 @@ def test(env_name, env, render, inputspace, _lambda,
 
             episode_reward += sum([sum([value for value in reward.values()]) for reward in rewards])
 
-            if render:
-                env.render()
+            if step_delay > 0:
+                time.sleep(step_delay)
 
             if env.is_done():
                 print('Episode {} \t Length: {} \t Reward: {}'.format(i_episode, time_step, episode_reward))

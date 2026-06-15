@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SauRoN Level Editor</title>
+<style>
+  :root {
+    --bg: #14161c; --panel: #1d2027; --panel2: #232732; --border: #343a46;
+    --text: #d6d9e0; --dim: #8a8f9c; --accent: #4e8cff; --danger: #e25555;
+    --ok: #66b32e; --warn: #e0a93d;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.4 system-ui, sans-serif;
+    user-select: none;
+  }
+  #topbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  #topbar .spacer { flex: 1; }
+  #main { display: flex; flex: 1; min-height: 0; }
+  #toolbar {
+    width: 178px; padding: 10px; background: var(--panel);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px;
+    overflow-y: auto;
+  }
+  #toolbar h3 { margin: 0; font-size: 11px; text-transform: uppercase; color: var(--dim); letter-spacing: .06em; }
+  #canvaswrap { flex: 1; position: relative; min-width: 0; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #statusbar {
+    display: flex; gap: 18px; padding: 5px 12px; background: var(--panel);
+    border-top: 1px solid var(--border); color: var(--dim); font-size: 12px;
+    align-items: center; min-height: 28px;
+  }
+  button, select, input[type=text], input[type=number] {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 4px; padding: 5px 9px; font: inherit;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.tool { text-align: left; width: 100%; }
+  button.tool.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.danger:hover { border-color: var(--danger); color: var(--danger); }
+  input[type=number] { width: 64px; }
+  label.row { display: flex; align-items: center; gap: 6px; color: var(--dim); }
+  .field { display: flex; align-items: center; gap: 6px; }
+  .field span { color: var(--dim); }
+  #warnings {
+    position: absolute; top: 10px; right: 10px; max-width: 360px; z-index: 5;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .warning {
+    background: #3a3322; border: 1px solid var(--warn); color: #f0d9a0;
+    border-radius: 5px; padding: 7px 10px; font-size: 12px;
+    display: flex; gap: 8px; align-items: start;
+  }
+  .warning button { padding: 0 6px; background: none; border: none; color: inherit; font-size: 14px; }
+  #toast {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 5px;
+    padding: 8px 16px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 5;
+  }
+  #toast.show { opacity: 1; }
+  #toast.error { border-color: var(--danger); color: #f2b8b8; }
+  .counts b { color: var(--text); font-weight: 600; }
+  kbd { background: var(--panel2); border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; font-size: 11px; }
+  .hint { color: var(--dim); font-size: 11px; }
+  #genSection summary {
+    font-size: 11px; font-weight: bold; text-transform: uppercase;
+    color: var(--dim); letter-spacing: .06em; cursor: pointer;
+  }
+  #genSection summary:hover { color: var(--text); }
+  #genSection .genbody { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  #genSection input.narrow { width: 42px; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <strong>SauRoN Level Editor</strong>
+  <select id="levelSelect" title="Level files in the svg/ folder"><option value="">— levels in svg/ —</option></select>
+  <button id="btnLoad" title="Load the selected level into the editor">Load</button>
+  <button id="btnNew" title="Start an empty level (uses the arena size from the sidebar)">New</button>
+  <span class="spacer"></span>
+  <div class="field" title="Filename to save under in svg/ (letters, digits, _ . - only)"><span>Save as</span><input type="text" id="saveName" placeholder="mylevel.svg" size="18"></div>
+  <button id="btnSave" class="primary" title="Validate and save the level into svg/ — it is then picked up by main.py via --level_files">Save</button>
+</div>
+
+<div id="main">
+  <div id="toolbar">
+    <h3>Tools</h3>
+    <button class="tool" data-tool="select" title="Click an element to select it, drag to move (line endpoints can be dragged individually). Shortcut: S"><u>S</u>elect / move</button>
+    <button class="tool" data-tool="line" title="Wall segment robots and lidar collide with. Click sets a point, each further click chains the next segment; Esc or right-click ends the chain, Shift locks to horizontal/vertical. Shortcut: W"><u>W</u>all line</button>
+    <button class="tool" data-tool="circle" title="Round wall obstacle. Click places it with a default radius, click-and-drag sets the radius. Shortcut: C"><u>C</u>ircle wall</button>
+    <button class="tool" data-tool="start" title="Fixed robot spawn point (red). Start 1 is paired with goal 1, start 2 with goal 2, … — there must be a goal for every start. Shortcut: A">Robot st<u>a</u>rt</button>
+    <button class="tool" data-tool="goal" title="Fixed goal station (green) the same-numbered robot must reach. Extra goals without a start are allowed. Shortcut: G"><u>G</u>oal</button>
+    <button class="tool" data-tool="orange" title="Candidate position for randomized spawns: each episode the simulator draws random start/goal pairs from all orange circles (up to 4 robots). Needs at least 3 circles to produce one robot, 9+ for four. Can be mixed with fixed starts/goals. Shortcut: O"><u>O</u>range pool</button>
+
+    <h3>Grid</h3>
+    <label class="row" title="Snap clicks and drags to the grid"><input type="checkbox" id="snapToggle" checked> Snap to grid</label>
+    <div class="field" title="Grid spacing in level units (px; the simulator converts ~28.35 px to 1 m)"><span>Size</span><input type="number" id="gridSize" value="10" min="1" step="1"></div>
+
+    <h3>Arena</h3>
+    <div class="field" title="Arena width in px (sets the SVG viewBox; ~28.35 px = 1 m in the simulator)"><span>W</span><input type="number" id="arenaW" value="620" min="20" step="10"></div>
+    <div class="field" title="Arena height in px (sets the SVG viewBox; ~28.35 px = 1 m in the simulator)"><span>H</span><input type="number" id="arenaH" value="280" min="20" step="10"></div>
+    <button id="btnBoundary" title="Insert four wall lines just inside the arena edge so robots cannot leave (the dashed viewBox border itself is not a collider)">Add boundary walls</button>
+
+    <h3>Edit</h3>
+    <button id="btnUndo" title="Undo the last change">Undo <kbd>Ctrl+Z</kbd></button>
+    <button id="btnDelete" class="danger" title="Delete the selected element; deleting a start or goal offers to remove its numbered partner too">Delete <kbd>Del</kbd></button>
+    <button id="btnFit" title="Zoom and center the view on the arena">Fit view</button>
+
+    <details id="genSection">
+      <summary title="Procedurally generate a random level">Generator</summary>
+      <div class="genbody">
+        <div class="field" title="Open: scattered blocks and circles. Maze: braided labyrinth without dead ends. Rooms: walls with door gaps, bottleneck-heavy. Pillars: jittered obstacle field (slalom)."><span>Preset</span>
+          <select id="genPreset">
+            <option value="maze" selected>Maze</option>
+            <option value="rooms">Rooms</option>
+            <option value="open">Open</option>
+            <option value="pillars">Pillars</option>
+          </select>
+        </div>
+        <div class="field" title="Random robot count range (1-4). Each robot gets a numbered start/goal pair proven reachable by pathfinding."><span>Robots</span>
+          <input type="number" id="genRobMin" class="narrow" value="1" min="1" max="4"> –
+          <input type="number" id="genRobMax" class="narrow" value="2" min="1" max="4">
+        </div>
+        <label class="row" title="Instead of fixed numbered pairs, place an orange spawn pool (2·robots+1 circles) — the simulator then draws random start/goal pairs from it every episode"><input type="checkbox" id="genPool"> Orange pool</label>
+        <div class="field" title="Minimum corridor / door width in meters. The robot is 0.35 m wide and the simulator's path field blocks passages much under 0.8 m. 1 m = 28.35 px."><span>Passage</span>
+          <input type="number" id="genPassage" value="1.2" min="0.8" max="3" step="0.1"><span>m</span>
+        </div>
+        <div class="field" title="How cluttered the level is. Open/Pillars: obstacle count. Maze: wall density (lower = more shortcuts). Rooms: room count."><span>Density</span>
+          <input type="number" id="genDensity" value="50" min="0" max="100" step="5"><span>%</span>
+        </div>
+        <div class="field" title="Reproducibility seed — the same seed with identical parameters and arena size regenerates the same level. Leave empty for random; the used seed is filled in after generating."><span>Seed</span>
+          <input type="text" id="genSeed" size="9">
+        </div>
+        <button id="btnGenerate" class="primary" title="Replace the current level with a generated one (undo with Ctrl+Z). Uses the arena size from the Arena section.">Generate</button>
+      </div>
+    </details>
+
+    <div class="hint">
+      Line tool: click to chain segments, <kbd>Esc</kbd>/right-click ends,
+      <kbd>Shift</kbd> locks axis. Wheel zooms, middle-drag or
+      <kbd>Space</kbd>-drag pans.
+    </div>
+  </div>
+
+  <div id="canvaswrap">
+    <canvas id="canvas"></canvas>
+    <div id="warnings"></div>
+    <div id="toast"></div>
+  </div>
+</div>
+
+<div id="statusbar">
+  <span id="cursorPos">x: – y: –</span>
+  <span class="counts" id="counts"></span>
+  <span id="validation" style="color: var(--warn)"></span>
+</div>
+
+<script>
+'use strict';
+
+/* ---------------------------------------------------------------- model */
+
+// All coordinates in raw SVG px — the simulator's parser applies its own
+// px→meter scaling, so the editor's contract is plain viewBox pixels.
+const START_R = 7.5;     // radii used across the existing level files
+const GOAL_R = 13.99;
+const ORANGE_R = 13.8;
+
+let level = newLevel();
+let importWarnings = [];   // pending notes about lossy imports
+let loadedFrom = null;     // filename the current level was loaded from
+
+function newLevel(w = 620, h = 280) {
+  return { width: w, height: h, lines: [], circles: [], starts: [], goals: [], orange: [] };
+}
+
+/* ----------------------------------------------------------------- undo */
+
+const undoStack = [];
+function pushUndo() {
+  undoStack.push(JSON.stringify(level));
+  if (undoStack.length > 100) undoStack.shift();
+}
+function undo() {
+  if (!undoStack.length) return;
+  level = JSON.parse(undoStack.pop());
+  selection = null;
+  syncArenaInputs();
+  render();
+}
+
+/* ------------------------------------------------------- view transform */
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let zoom = 1, panX = 0, panY = 0;
+
+function toWorld(sx, sy) { return { x: (sx - panX) / zoom, y: (sy - panY) / zoom }; }
+
+function fitView() {
+  const pad = 40;
+  const zx = (canvas.clientWidth - 2 * pad) / level.width;
+  const zy = (canvas.clientHeight - 2 * pad) / level.height;
+  zoom = Math.max(0.05, Math.min(zx, zy));
+  panX = (canvas.clientWidth - level.width * zoom) / 2;
+  panY = (canvas.clientHeight - level.height * zoom) / 2;
+  render();
+}
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  render();
+}
+window.addEventListener('resize', resizeCanvas);
+
+/* -------------------------------------------------------------- render */
+
+function render() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  ctx.save();
+  ctx.fillStyle = '#14161c';
+  ctx.fillRect(0, 0, w, h);
+  ctx.translate(panX, panY);
+  ctx.scale(zoom, zoom);
+
+  // grid
+  if (snapEnabled()) {
+    const g = gridStep();
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1 / zoom;
+    ctx.beginPath();
+    for (let x = 0; x <= level.width + 1e-6; x += g) { ctx.moveTo(x, 0); ctx.lineTo(x, level.height); }
+    for (let y = 0; y <= level.height + 1e-6; y += g) { ctx.moveTo(0, y); ctx.lineTo(level.width, y); }
+    ctx.stroke();
+  }
+
+  // arena bounds (viewBox — not a collider, drawn distinct from walls)
+  ctx.strokeStyle = '#4a5160';
+  ctx.setLineDash([8 / zoom, 6 / zoom]);
+  ctx.lineWidth = 1.5 / zoom;
+  ctx.strokeRect(0, 0, level.width, level.height);
+  ctx.setLineDash([]);
+
+  // start->goal pairing hints
+  ctx.strokeStyle = 'rgba(255,255,255,0.13)';
+  ctx.lineWidth = 1 / zoom;
+  ctx.setLineDash([4 / zoom, 5 / zoom]);
+  for (let i = 0; i < Math.min(level.starts.length, level.goals.length); i++) {
+    ctx.beginPath();
+    ctx.moveTo(level.starts[i].cx, level.starts[i].cy);
+    ctx.lineTo(level.goals[i].cx, level.goals[i].cy);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // walls
+  ctx.strokeStyle = '#b8bcc6';
+  ctx.lineWidth = 2.5 / zoom;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (const l of level.lines) { ctx.moveTo(l.x1, l.y1); ctx.lineTo(l.x2, l.y2); }
+  ctx.stroke();
+
+  // circle walls
+  for (const c of level.circles) {
+    ctx.beginPath();
+    ctx.arc(c.cx, c.cy, c.r, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
+
+  // orange pool
+  for (const c of level.orange) drawMarker(c.cx, c.cy, c.r, '#e0a93d', null);
+  // goals (green) then starts (red), numbered
+  level.goals.forEach((c, i) => drawMarker(c.cx, c.cy, c.r, '#66b32e', i + 1));
+  level.starts.forEach((c, i) => drawMarker(c.cx, c.cy, START_R, '#e52420', i + 1));
+
+  // selection highlight
+  if (selection) {
+    ctx.strokeStyle = '#4e8cff';
+    ctx.lineWidth = 1.5 / zoom;
+    const el = selection.el;
+    if (selection.kind === 'lines') {
+      ctx.beginPath(); ctx.moveTo(el.x1, el.y1); ctx.lineTo(el.x2, el.y2); ctx.stroke();
+      for (const [x, y] of [[el.x1, el.y1], [el.x2, el.y2]]) {
+        ctx.fillStyle = '#4e8cff';
+        ctx.fillRect(x - 4 / zoom, y - 4 / zoom, 8 / zoom, 8 / zoom);
+      }
+    } else {
+      const r = (selection.kind === 'starts' ? START_R : el.r) + 4 / zoom;
+      ctx.beginPath(); ctx.arc(el.cx, el.cy, r, 0, 2 * Math.PI); ctx.stroke();
+    }
+  }
+
+  // in-progress drawing preview
+  if (draft) {
+    ctx.strokeStyle = '#4e8cff';
+    ctx.lineWidth = 1.5 / zoom;
+    ctx.setLineDash([5 / zoom, 4 / zoom]);
+    ctx.beginPath();
+    if (draft.type === 'line') { ctx.moveTo(draft.x1, draft.y1); ctx.lineTo(draft.x2, draft.y2); }
+    else ctx.arc(draft.cx, draft.cy, Math.max(draft.r, 0.1), 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+  updateStatus();
+}
+
+function drawMarker(cx, cy, r, color, num) {
+  ctx.fillStyle = color + '55';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5 / zoom;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.stroke();
+  if (num != null) {
+    ctx.fillStyle = '#fff';
+    ctx.font = `${Math.max(r, 9 / zoom)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(num, cx, cy);
+  }
+}
+
+/* ------------------------------------------------------------ status bar */
+
+function updateStatus() {
+  const c = document.getElementById('counts');
+  c.innerHTML = `starts: <b>${level.starts.length}</b> · goals: <b>${level.goals.length}</b>` +
+    ` · orange: <b>${level.orange.length}</b> · walls: <b>${level.lines.length}</b>` +
+    ` · circle walls: <b>${level.circles.length}</b>`;
+  const problems = validate();
+  document.getElementById('validation').textContent =
+    problems.errors[0] || problems.warnings[0] || '';
+}
+
+/* ------------------------------------------------------------- snapping */
+
+function snapEnabled() { return document.getElementById('snapToggle').checked; }
+function gridStep() { return Math.max(1, +document.getElementById('gridSize').value || 10); }
+function snap(v) { return snapEnabled() ? Math.round(v / gridStep()) * gridStep() : v; }
+
+/* -------------------------------------------------------- tools & input */
+
+let tool = 'select';
+let draft = null;       // in-progress line/circle
+let selection = null;   // {kind, index, el, grab}
+let panning = null;
+let spaceDown = false;
+
+const TOOL_KEYS = { s: 'select', w: 'line', c: 'circle', a: 'start', g: 'goal', o: 'orange' };
+
+function setTool(t) {
+  tool = t;
+  draft = null;
+  document.querySelectorAll('button.tool').forEach(b =>
+    b.classList.toggle('active', b.dataset.tool === t));
+  canvas.style.cursor = t === 'select' ? 'default' : 'crosshair';
+  render();
+}
+document.querySelectorAll('button.tool').forEach(b =>
+  b.addEventListener('click', () => setTool(b.dataset.tool)));
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  const w = toWorld(e.offsetX, e.offsetY);
+  zoom = Math.min(50, Math.max(0.05, zoom * factor));
+  panX = e.offsetX - w.x * zoom;
+  panY = e.offsetY - w.y * zoom;
+  render();
+}, { passive: false });
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 1 || (e.button === 0 && spaceDown)) {
+    panning = { sx: e.offsetX, sy: e.offsetY, px: panX, py: panY };
+    e.preventDefault();
+    return;
+  }
+  if (e.button === 2) {  // right click ends a line chain
+    draft = null;
+    render();
+    return;
+  }
+  if (e.button !== 0) return;
+
+  const w = toWorld(e.offsetX, e.offsetY);
+  const x = snap(w.x), y = snap(w.y);
+
+  if (tool === 'line') {
+    if (!draft) {
+      draft = { type: 'line', x1: x, y1: y, x2: x, y2: y };
+    } else {
+      const [ex, ey] = axisLock(e.shiftKey, draft.x1, draft.y1, x, y);
+      if (ex !== draft.x1 || ey !== draft.y1) {
+        pushUndo();
+        level.lines.push({ x1: draft.x1, y1: draft.y1, x2: ex, y2: ey });
+        draft = { type: 'line', x1: ex, y1: ey, x2: ex, y2: ey };  // chain
+      }
+    }
+    render();
+  } else if (tool === 'circle' || tool === 'goal' || tool === 'orange') {
+    draft = { type: 'circ', tool, cx: x, cy: y, r: 0 };
+    render();
+  } else if (tool === 'start') {
+    pushUndo();
+    level.starts.push({ cx: x, cy: y });
+    render();
+  } else if (tool === 'select') {
+    selection = hitTest(w.x, w.y);
+    if (selection) {
+      pushUndo();
+      selection.lastX = w.x;
+      selection.lastY = w.y;
+    }
+    render();
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  const w = toWorld(e.offsetX, e.offsetY);
+  document.getElementById('cursorPos').textContent =
+    `x: ${w.x.toFixed(1)} y: ${w.y.toFixed(1)}`;
+
+  if (panning) {
+    panX = panning.px + (e.offsetX - panning.sx);
+    panY = panning.py + (e.offsetY - panning.sy);
+    render();
+    return;
+  }
+
+  if (draft) {
+    if (draft.type === 'line') {
+      [draft.x2, draft.y2] = axisLock(e.shiftKey, draft.x1, draft.y1, snap(w.x), snap(w.y));
+    } else {
+      draft.r = Math.hypot(snap(w.x) - draft.cx, snap(w.y) - draft.cy);
+    }
+    render();
+    return;
+  }
+
+  if (selection && e.buttons === 1) {  // dragging
+    const dx = w.x - selection.lastX, dy = w.y - selection.lastY;
+    const el = selection.el;
+    if (selection.kind === 'lines') {
+      if (selection.grab === 'a') { el.x1 = snap(el.x1 + dx); el.y1 = snap(el.y1 + dy); }
+      else if (selection.grab === 'b') { el.x2 = snap(el.x2 + dx); el.y2 = snap(el.y2 + dy); }
+      else { el.x1 += dx; el.y1 += dy; el.x2 += dx; el.y2 += dy; }
+    } else {
+      el.cx = snap(el.cx + dx); el.cy = snap(el.cy + dy);
+    }
+    selection.lastX = w.x;
+    selection.lastY = w.y;
+    render();
+  }
+});
+
+canvas.addEventListener('mouseup', e => {
+  panning = null;
+  if (draft && draft.type === 'circ') {
+    // click without drag → sensible default radius
+    const defaults = { circle: 15, goal: GOAL_R, orange: ORANGE_R };
+    const r = draft.r > 2 ? draft.r : defaults[draft.tool];
+    pushUndo();
+    if (draft.tool === 'circle') level.circles.push({ cx: draft.cx, cy: draft.cy, r });
+    else if (draft.tool === 'goal') level.goals.push({ cx: draft.cx, cy: draft.cy, r });
+    else level.orange.push({ cx: draft.cx, cy: draft.cy, r });
+    draft = null;
+    render();
+  }
+});
+
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space') { spaceDown = true; e.preventDefault(); return; }
+  if (e.key === 'Escape') { draft = null; selection = null; render(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelection(); return; }
+  const t = TOOL_KEYS[e.key.toLowerCase()];
+  if (t && !e.ctrlKey && !e.metaKey) setTool(t);
+});
+window.addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });
+
+function axisLock(active, x1, y1, x2, y2) {
+  if (!active) return [x2, y2];
+  return Math.abs(x2 - x1) >= Math.abs(y2 - y1) ? [x2, y1] : [x1, y2];
+}
+
+function hitTest(x, y) {
+  const tol = 7 / zoom;
+  // line endpoints first
+  for (let i = level.lines.length - 1; i >= 0; i--) {
+    const l = level.lines[i];
+    if (Math.hypot(x - l.x1, y - l.y1) < tol) return { kind: 'lines', index: i, el: l, grab: 'a' };
+    if (Math.hypot(x - l.x2, y - l.y2) < tol) return { kind: 'lines', index: i, el: l, grab: 'b' };
+  }
+  // markers and circles by center/ring distance (small ones win via order)
+  for (const kind of ['starts', 'goals', 'orange', 'circles']) {
+    const arr = level[kind];
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const c = arr[i];
+      const r = kind === 'starts' ? START_R : c.r;
+      const d = Math.hypot(x - c.cx, y - c.cy);
+      const inside = kind === 'circles' ? Math.abs(d - r) < tol : d < r + tol;
+      if (inside) return { kind, index: i, el: c, grab: 'move' };
+    }
+  }
+  // line bodies
+  for (let i = level.lines.length - 1; i >= 0; i--) {
+    if (pointSegDist(x, y, level.lines[i]) < tol)
+      return { kind: 'lines', index: i, el: level.lines[i], grab: 'move' };
+  }
+  return null;
+}
+
+function pointSegDist(px, py, l) {
+  const dx = l.x2 - l.x1, dy = l.y2 - l.y1;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 ? Math.max(0, Math.min(1, ((px - l.x1) * dx + (py - l.y1) * dy) / len2)) : 0;
+  return Math.hypot(px - (l.x1 + t * dx), py - (l.y1 + t * dy));
+}
+
+function deleteSelection() {
+  if (!selection) return;
+  pushUndo();
+  const { kind, index } = selection;
+  level[kind].splice(index, 1);
+  // keep start/goal pairing intact: offer to drop the index partner
+  if (kind === 'starts' && level.goals[index] &&
+      confirm(`Also delete goal ${index + 1} (its paired goal)?`)) {
+    level.goals.splice(index, 1);
+  } else if (kind === 'goals' && level.starts[index] &&
+      confirm(`Also delete start ${index + 1} (its paired start)?`)) {
+    level.starts.splice(index, 1);
+  }
+  selection = null;
+  render();
+}
+
+/* ----------------------------------------------------------- validation */
+
+function validate() {
+  const errors = [], warnings = [];
+  if (level.starts.length > level.goals.length)
+    errors.push(`more starts (${level.starts.length}) than goals (${level.goals.length}) — the simulator would crash`);
+  else if (level.goals.length > level.starts.length && level.starts.length > 0)
+    warnings.push(`${level.goals.length - level.starts.length} goal(s) without a paired start (extra stations are allowed but unused as targets)`);
+  if (level.starts.length === 0 && level.orange.length < 3)
+    errors.push('no robots: add start+goal pairs or ≥3 orange pool circles');
+  if (level.orange.length > 0 && level.orange.length < 3)
+    warnings.push(`${level.orange.length} orange circles produce zero random robots (need ≥3)`);
+  else if (level.orange.length >= 3 && level.orange.length < 9) {
+    const robots = Math.min(4, Math.floor((level.orange.length - 1) / 2));
+    warnings.push(`${level.orange.length} orange circles → only ${robots} random robot${robots > 1 ? 's' : ''} (9+ gives 4)`);
+  }
+  if (level.starts.length > 0 && level.orange.length >= 3)
+    warnings.push('mixing fixed starts/goals with an orange pool — pool robots are appended after the fixed ones');
+  return { errors, warnings };
+}
+
+/* ------------------------------------------------------ level generator */
+
+// Generation happens server-side (Environment/LevelGenerator.py) — the same
+// generator the simulator uses for gen: tokens in --level_files, so what you
+// preview here is exactly what training produces for the same seed.
+
+function hashSeed(s) { // FNV-1a, for non-numeric seed strings
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+async function generateLevel() {
+  const val = id => document.getElementById(id);
+  const seedStr = val('genSeed').value.trim();
+  const body = {
+    preset: val('genPreset').value,
+    robots_min: +val('genRobMin').value || 1,
+    robots_max: +val('genRobMax').value || 2,
+    pool: val('genPool').checked,
+    passage: +val('genPassage').value || 1.2,
+    density: Math.min(100, Math.max(0, +val('genDensity').value || 0)),
+    seed: seedStr ? (/^\d+$/.test(seedStr) ? parseInt(seedStr, 10) >>> 0 : hashSeed(seedStr)) : null,
+    width: level.width,
+    height: level.height,
+  };
+  let res, data;
+  try {
+    res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    data = await res.json();
+  } catch (err) {
+    return toast('generate failed: ' + err.message, true);
+  }
+  if (!res.ok) return toast(data.error, true);
+  const { lvl } = importSVG(data.svg, 'generated');
+  pushUndo();
+  level = lvl;
+  loadedFrom = null;
+  selection = null;
+  draft = null;
+  showWarnings([]);
+  val('genSeed').value = String(data.seed);
+  syncArenaInputs();
+  fitView();
+  toast(`generated ${body.preset}: ` +
+    (lvl.orange.length ? `${lvl.orange.length} pool circles` : `${lvl.starts.length} robot(s)`) +
+    `, seed ${data.seed}`);
+}
+
+document.getElementById('btnGenerate').onclick = generateLevel;
+
+/* ----------------------------------------------------------- SVG export */
+
+function fmt(v) { return +v.toFixed(3); }
+
+function exportSVG() {
+  const W = fmt(level.width), H = fmt(level.height);
+  const out = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
+  ];
+  level.goals.forEach((c, i) => out.push(
+    `  <circle id="goal_${i + 1}" cx="${fmt(c.cx)}" cy="${fmt(c.cy)}" r="${fmt(c.r)}" fill="#66b32e" stroke="#000000"/>`));
+  level.starts.forEach((c, i) => out.push(
+    `  <circle id="start_${i + 1}" cx="${fmt(c.cx)}" cy="${fmt(c.cy)}" r="${START_R}" fill="#e52420" stroke="#000000"/>`));
+  for (const c of level.orange) out.push(
+    `  <circle cx="${fmt(c.cx)}" cy="${fmt(c.cy)}" r="${fmt(c.r)}" fill="none" stroke="orange"/>`);
+  for (const c of level.circles) out.push(
+    `  <circle cx="${fmt(c.cx)}" cy="${fmt(c.cy)}" r="${fmt(c.r)}" fill="none" stroke="#000000"/>`);
+  for (const l of level.lines) out.push(
+    `  <line x1="${fmt(l.x1)}" y1="${fmt(l.y1)}" x2="${fmt(l.x2)}" y2="${fmt(l.y2)}" fill="none" stroke="#000000" stroke-width="2"/>`);
+  out.push('</svg>', '');
+  return out.join('\n');
+}
+
+/* ----------------------------------------------------------- SVG import */
+
+// Mirrors Environment/SVGParser.py, including its quirks, so what you see in
+// the editor is what the simulator sees.
+function importSVG(text, filename) {
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  if (doc.querySelector('parsererror')) throw new Error('not valid SVG/XML');
+  const svg = doc.documentElement;
+
+  const lvl = newLevel();
+  const warns = [];
+
+  const vb = (svg.getAttribute('viewBox') || '').trim().split(/\s+/);
+  if (vb.length === 4) {
+    lvl.width = parseFloat(vb[2]);
+    lvl.height = parseFloat(vb[3]);
+  } else {
+    lvl.width = parseFloat(svg.getAttribute('width')) || 620;
+    lvl.height = parseFloat(svg.getAttribute('height')) || 280;
+    warns.push('no usable viewBox — arena size taken from width/height');
+  }
+
+  const hidden = el => el.getAttribute('display') === 'none';
+  const all = tag => [...doc.getElementsByTagName(tag)];
+
+  for (const el of all('line')) {
+    if (hidden(el)) continue;
+    lvl.lines.push({
+      x1: +el.getAttribute('x1'), y1: +el.getAttribute('y1'),
+      x2: +el.getAttribute('x2'), y2: +el.getAttribute('y2'),
+    });
+  }
+
+  for (const el of all('rect')) {
+    if (hidden(el)) continue;
+    const w = +el.getAttribute('width'), h = +el.getAttribute('height');
+    const cx = +el.getAttribute('x') + w / 2, cy = +el.getAttribute('y') + h / 2;
+    let corners = [
+      [-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2],
+    ];
+    const tf = el.getAttribute('transform');
+    if (tf && tf.includes('(')) {
+      // the simulator takes the first 4 numbers as a 2x2 matrix applied about
+      // the rect center, ignoring any translation — replicate exactly
+      const m = tf.split('(')[1].split(/[\s,]+/).map(parseFloat);
+      const [a, b, c, d] = m;
+      corners = corners.map(([x, y]) => [a * x + c * y, b * x + d * y]);
+    }
+    corners = corners.map(([x, y]) => [x + cx, y + cy]);
+    for (let i = 0; i < 4; i++) {
+      const [x1, y1] = corners[i], [x2, y2] = corners[(i + 1) % 4];
+      lvl.lines.push({ x1, y1, x2, y2 });
+    }
+  }
+
+  const parsePoints = s => (s || '').trim().split(/\s+/).map(p => p.split(',').map(Number));
+  for (const el of all('polyline')) {
+    if (hidden(el)) continue;
+    const pts = parsePoints(el.getAttribute('points'));
+    for (let i = 0; i < pts.length - 1; i++)
+      lvl.lines.push({ x1: pts[i][0], y1: pts[i][1], x2: pts[i + 1][0], y2: pts[i + 1][1] });
+  }
+  for (const el of all('polygon')) {
+    // NOTE: the simulator ignores display="none" on polygons — so do we
+    const pts = parsePoints(el.getAttribute('points'));
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length];
+      lvl.lines.push({ x1: a[0], y1: a[1], x2: b[0], y2: b[1] });
+    }
+  }
+
+  for (const el of all('path')) {
+    const d = (el.getAttribute('d') || '').trim();
+    // the simulator only handles the relative "m x,y dx,dy ... z" form
+    if (/^[mM]\s*(-?[\d.eE+]+,-?[\d.eE+-]+\s*)+[zZ]$/.test(d)) {
+      const pairs = d.slice(1, -1).trim().split(/\s+/).map(p => p.split(',').map(Number));
+      let [px, py] = pairs[0];
+      const first = [px, py];
+      for (let i = 1; i < pairs.length; i++) {
+        const nx = px + pairs[i][0], ny = py + pairs[i][1];
+        lvl.lines.push({ x1: px, y1: py, x2: nx, y2: ny });
+        [px, py] = [nx, ny];
+      }
+      lvl.lines.push({ x1: px, y1: py, x2: first[0], y2: first[1] });
+    } else {
+      warns.push('unsupported <path> skipped (the simulator cannot parse it either); saving drops it');
+    }
+  }
+
+  for (const el of all('circle')) {
+    if (hidden(el)) continue;
+    const cx = +el.getAttribute('cx'), cy = +el.getAttribute('cy'), r = +el.getAttribute('r');
+    const id = el.getAttribute('id');
+    if (id !== null) {
+      if (id.includes('start')) lvl.starts.push({ cx, cy });
+      else if (id.includes('goal')) lvl.goals.push({ cx, cy, r });
+      else {
+        // the simulator silently DROPS circles with other ids; importing as a
+        // wall is almost always the author's intent, but flag the change
+        lvl.circles.push({ cx, cy, r });
+        warns.push(`circle id="${id}" is ignored by the simulator — it becomes a real wall when saved`);
+      }
+    } else if (el.getAttribute('stroke') === 'orange') {
+      lvl.orange.push({ cx, cy, r });
+    } else {
+      lvl.circles.push({ cx, cy, r });
+    }
+  }
+
+  if (/tareq/.test(filename || ''))
+    warns.push('"tareq" filename quirk: the simulator reverses line directions, which no longer has any effect');
+
+  return { lvl, warns };
+}
+
+/* -------------------------------------------------------------- warnings */
+
+function showWarnings(list) {
+  const box = document.getElementById('warnings');
+  box.innerHTML = '';
+  importWarnings = list;
+  for (const w of list) {
+    const div = document.createElement('div');
+    div.className = 'warning';
+    const span = document.createElement('span');
+    span.textContent = '⚠ ' + w;
+    const btn = document.createElement('button');
+    btn.textContent = '×';
+    btn.onclick = () => { div.remove(); importWarnings = importWarnings.filter(x => x !== w); };
+    div.append(span, btn);
+    box.append(div);
+  }
+}
+
+let toastTimer;
+function toast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 3500);
+}
+
+/* -------------------------------------------------------- server actions */
+
+async function refreshLevels() {
+  const res = await fetch('/api/levels');
+  const { levels } = await res.json();
+  const sel = document.getElementById('levelSelect');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— levels in svg/ —</option>' +
+    levels.map(l => `<option>${l}</option>`).join('');
+  sel.value = current;
+}
+
+async function loadLevel() {
+  const name = document.getElementById('levelSelect').value;
+  if (!name) return;
+  const res = await fetch('/api/level?name=' + encodeURIComponent(name));
+  if (!res.ok) return toast(`load failed: ${(await res.json()).error}`, true);
+  try {
+    const { lvl, warns } = importSVG(await res.text(), name);
+    pushUndo();
+    level = lvl;
+    loadedFrom = name;
+    selection = null;
+    document.getElementById('saveName').value = name;
+    syncArenaInputs();
+    showWarnings(warns);
+    fitView();
+    toast(`loaded ${name}`);
+  } catch (err) {
+    toast(`could not parse ${name}: ${err.message}`, true);
+  }
+}
+
+async function saveLevel() {
+  let name = document.getElementById('saveName').value.trim();
+  if (name && !name.toLowerCase().endsWith('.svg')) name += '.svg';
+  if (!/^[A-Za-z0-9_.-]{1,64}$/.test(name) || name.startsWith('.'))
+    return toast('invalid filename (letters, digits, _ . - only)', true);
+
+  const { errors, warnings } = validate();
+  if (errors.length) return toast(errors[0], true);
+  const confirmMsgs = [...warnings];
+  if (importWarnings.length && name === loadedFrom)
+    confirmMsgs.push('unresolved import warnings — overwriting the original file will drop those elements');
+  if (confirmMsgs.length && !confirm(confirmMsgs.join('\n\n') + '\n\nSave anyway?')) return;
+
+  const svg = exportSVG();
+  let res = await fetch('/api/level', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, svg }),
+  });
+  if (res.status === 409) {
+    if (!confirm(`${name} already exists. Overwrite?`)) return;
+    res = await fetch('/api/level', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, svg, overwrite: true }),
+    });
+  }
+  const body = await res.json();
+  if (res.ok) {
+    toast(`saved ${body.path}`);
+    loadedFrom = name;
+    importWarnings = [];
+    document.getElementById('warnings').innerHTML = '';
+    refreshLevels();
+  } else {
+    toast(`save failed: ${body.error}`, true);
+  }
+}
+
+/* ------------------------------------------------------------- UI wiring */
+
+function syncArenaInputs() {
+  document.getElementById('arenaW').value = fmt(level.width);
+  document.getElementById('arenaH').value = fmt(level.height);
+}
+
+document.getElementById('btnLoad').onclick = loadLevel;
+document.getElementById('btnSave').onclick = saveLevel;
+document.getElementById('btnNew').onclick = () => {
+  if ((level.lines.length || level.starts.length) &&
+      !confirm('Discard the current level?')) return;
+  pushUndo();
+  level = newLevel(+document.getElementById('arenaW').value, +document.getElementById('arenaH').value);
+  loadedFrom = null;
+  selection = null;
+  document.getElementById('saveName').value = '';
+  showWarnings([]);
+  fitView();
+};
+document.getElementById('btnUndo').onclick = undo;
+document.getElementById('btnDelete').onclick = deleteSelection;
+document.getElementById('btnFit').onclick = fitView;
+document.getElementById('btnBoundary').onclick = () => {
+  pushUndo();
+  const m = 2, W = level.width, H = level.height;
+  level.lines.push(
+    { x1: m, y1: m, x2: W - m, y2: m },
+    { x1: W - m, y1: m, x2: W - m, y2: H - m },
+    { x1: W - m, y1: H - m, x2: m, y2: H - m },
+    { x1: m, y1: H - m, x2: m, y2: m },
+  );
+  render();
+};
+for (const id of ['arenaW', 'arenaH']) {
+  document.getElementById(id).addEventListener('change', () => {
+    pushUndo();
+    level.width = Math.max(20, +document.getElementById('arenaW').value || level.width);
+    level.height = Math.max(20, +document.getElementById('arenaH').value || level.height);
+    render();
+  });
+}
+document.getElementById('snapToggle').addEventListener('change', render);
+document.getElementById('gridSize').addEventListener('change', render);
+
+setTool('line');
+resizeCanvas();
+fitView();
+refreshLevels();
+</script>
+</body>
+</html>

@@ -10,16 +10,18 @@ import Environment.Components.Robot as Robot
 
 class SVGLevelParser:
 
-    def __init__(self, filename, args):
+    def __init__(self, filename, args, svg_text=None):
 
-        file = 'svg/'+filename
         self.stations, self.robots, self.lines, self.circles = [], [], [], []
 
         dpiFactor = 1/28.35 #72 dotsPerInch converted  into DotsPerCentimeter
         #dpiFactor /= 10
 
-        svg = ET.parse(file)
-        svg = svg.getroot()
+        if svg_text is not None:
+            # generated level: filename is only the level id (gen: token)
+            svg = ET.fromstring(svg_text)
+        else:
+            svg = ET.parse('svg/'+filename).getroot()
 
         rects = svg.findall('.//{http://www.w3.org/2000/svg}rect')
         paths = svg.findall('.//{http://www.w3.org/2000/svg}path')
@@ -185,7 +187,7 @@ class SVGLevelParser:
                 stationsData += [goal]
 
         for i, data in enumerate(stationsData):
-            self.stations += [Station.Station(data[0], data[1], data[2], i, args.scale_factor)]
+            self.stations += [Station.Station(data[0], data[1], data[2], i)]
 
         self.stationsData = [stationsData[i][:-1] for i in range(0,len(stationsData))]
 
